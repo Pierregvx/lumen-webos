@@ -7,6 +7,12 @@ Its companion is [Lumen Gallery](https://github.com/ammar027/lumen-gallery-webos
 Tested on an LG 65UQ8040PSB (webOS 22, Chromium 87, 1.5 GB RAM). It needs a rooted TV with the
 [Homebrew Channel](https://www.webosbrew.org/); a few features (screen off, restart, picture mode, the Home-button takeover) use its root service.
 
+## Demo
+
+![A short walkthrough: moving along the dock, the second row, and Control Center](docs/demo/lumen-demo.gif)
+
+[Watch it as a video (MP4)](docs/demo/lumen-demo.mp4). Recorded from the dev preview with `node tools/record-demo.mjs`.
+
 ## Screenshots
 
 Made from the dev preview at 1920 x 1080 (`node tools/screenshots.mjs`); the wallpaper is a public-domain painting from the Cleveland Museum of Art.
