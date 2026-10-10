@@ -30,7 +30,7 @@ FONT64 = base64.b64encode(open(FONT, 'rb').read()).decode()
 splash = f'''<!doctype html><meta charset="utf-8"><style>@font-face{{font-family:G;font-weight:100 900;font-display:block;src:url(data:font/woff2;base64,{FONT64}) format("woff2")}}{style}
 html,body{{width:1920px;height:1080px}}body{{background:radial-gradient(120% 100% at 22% 8%,#2f2699 0%,#0d0f3d 55%,#05061c 100%);position:relative}}
 .w{{position:absolute;left:760px;top:250px;width:1024px;height:1024px;transform:scale(.390625);transform-origin:0 0;border-radius:230px;overflow:hidden;box-shadow:0 0 0 2px rgba(255,255,255,.12)}}
-.t{{position:absolute;left:0;width:1920px;top:690px;text-align:center;color:#fff;font:600 84px G,sans-serif;letter-spacing:-.01em}}</style>
+.t{{position:absolute;left:0;width:1920px;top:690px;text-align:center;color:#fff;font:400 62px G,sans-serif;letter-spacing:.015em;opacity:.88}}</style>
 <div class="w">{body}</div><div class="t">{NAME}</div>'''
 shot(splash, 1920, 1080, f'{OUT}/splash.png')
 print('splash.png', os.path.getsize(f'{OUT}/splash.png') // 1024, 'KB')
