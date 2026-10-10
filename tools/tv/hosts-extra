@@ -1,0 +1,6 @@
+# Extra names blocked on this TV, kept in /etc/hosts by watch.sh (the dashboard rebuilds its own table at boot and would drop hand edits).
+# Found on 2026-10-04 by capturing the TV's traffic while JioHotstar started playing a video.
+0.0.0.0	hesads.akamaized.net
+::	hesads.akamaized.net
+0.0.0.0	ad.doubleclick.net
+::	ad.doubleclick.net

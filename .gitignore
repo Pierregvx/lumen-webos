@@ -1,0 +1,11 @@
+app/
+node_modules/
+tools/node_modules/
+tools/logs/
+.DS_Store
+ref-*/
+# third-party brand icons/logos and other people's photographs are not published
+app-assets/public/icons/
+app-assets/public/iconpack/
+app-assets/public/wallpapers/
+tools/logos/
