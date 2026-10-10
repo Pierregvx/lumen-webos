@@ -482,8 +482,8 @@ export const EXTRA_APPS: CatalogApp[] = [
 
 export const DEFAULT_APP_IDS: string[] = [
 	'hotstar', 'netflix', 'amazon', 'youtube.leanback.v4', 'cdp-30', 'com.webos.app.mediadiscovery',
-	'com.webos.app.browser', 'org.webosbrew.hbchannel', 'com.tvweb.dashboard', 'com.halfbrick.fruitninja'
-];
+	'com.webos.app.browser', 'org.webosbrew.hbchannel', 'com.tvweb.dashboard'
+];   // Fruit Ninja stays in the catalogue (Settings > Apps) but is not on the home screen by default
 """)
 
 # ---------------------------------------------------------------- Settings must not be see-through; load every installed app by default
