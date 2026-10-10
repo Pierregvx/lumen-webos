@@ -5,8 +5,8 @@
 #  - When the TV's power state becomes "Screen Saver" (LG's screensaver is not a foreground app, so the power state is what shows it) and
 #    /var/lib/homehook/frame-screensaver exists: opens Frame in screensaver mode, then ends LG's screensaver (turnOnScreen) so Frame is what shows.
 # Never spins: reacts only when the app changes, and at most once every 3 s. Does nothing if the app is not installed.
-ME=works.partridge.webos-launcher
-FRAME=works.partridge.frame
+ME=com.ammar027.lumen
+FRAME=com.ammar027.lumen.gallery
 LGHOME=com.webos.app.home
 FLAG=/tmp/allow_lg_home
 SAVER_FLAG=/var/lib/homehook/frame-screensaver

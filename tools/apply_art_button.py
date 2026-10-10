@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Twenty-third patch layer: an "Art mode" round button in Control Center that opens the Frame app (works.partridge.frame, built in ~/Developer/webos-frame)."""
+"""Twenty-third patch layer: an "Art mode" round button in Control Center that opens the Frame app (com.ammar027.lumen.gallery, built in ~/Developer/webos-frame)."""
 import os
 APP = os.path.expanduser('~/Developer/webos-launcher-tvos/app')
 def P(p): return os.path.join(APP, p)
@@ -17,7 +17,7 @@ sub('src/components/ControlCenter.tsx', [
  ("					{round('startsaver', 'screensaver', 'Start now')}", "					{round('art', 'picture', 'Art mode')}\n					{round('startsaver', 'screensaver', 'Start now')}"),
 ])
 sub('src/app.tsx', [
- ("a === 'lg-home' ? {key: MISC.lgHome, label: 'LG Home'} : {key: 'screensaver', label: 'Screensaver'}", "a === 'lg-home' ? {key: MISC.lgHome, label: 'LG Home'} : a === 'art' ? {key: 'works.partridge.frame', label: 'Frame'} : {key: 'screensaver', label: 'Screensaver'}"),
+ ("a === 'lg-home' ? {key: MISC.lgHome, label: 'LG Home'} : {key: 'screensaver', label: 'Screensaver'}", "a === 'lg-home' ? {key: MISC.lgHome, label: 'LG Home'} : a === 'art' ? {key: 'com.ammar027.lumen.gallery', label: 'Frame'} : {key: 'screensaver', label: 'Screensaver'}"),
 ])
 css = open(P('src/theme/global.css')).read()
 css += "\n/* six round buttons in Control Center */\n.cc__round { width: 100px; }\n.cc__label { font-size: 19px; }\n"
