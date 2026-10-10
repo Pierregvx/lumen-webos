@@ -7,6 +7,15 @@ Its companion is [Lumen Gallery](https://github.com/ammar027/lumen-gallery-webos
 Tested on an LG 65UQ8040PSB (webOS 22, Chromium 87, 1.5 GB RAM). It needs a rooted TV with the
 [Homebrew Channel](https://www.webosbrew.org/); a few features (screen off, restart, picture mode, the Home-button takeover) use its root service.
 
+## Screenshots
+
+Made from the dev preview at 1920 x 1080 (`node tools/screenshots.mjs`); the wallpaper is a public-domain painting from the Cleveland Museum of Art.
+
+![Home screen: a glass dock of apps, date and weather top left, Inputs and Control Center top right](docs/screenshots/home.jpg)
+![Moving down: the second row of apps appears over a blurred wallpaper](docs/screenshots/more-apps.jpg)
+![Control Center: sound, picture, sleep timer, screensaver, quick actions and volume](docs/screenshots/control-center.jpg)
+![Settings, Options tab: a scrolling list with a scroll indicator](docs/screenshots/settings-options.jpg)
+
 ## What it adds
 
 - **tvOS navigation and look:** a glass dock row of apps, a second row of more apps and a Recent row that appear as you move down, focus lift with a name
