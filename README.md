@@ -34,6 +34,16 @@ Made from the dev preview at 1920 x 1080 (`node tools/screenshots.mjs`); the wal
 - **TV side** ([tools/tv/](tools/tv/)): a small watcher that turns the remote's Home button into "open Lumen" and starts Lumen Gallery when the TV's screensaver
   starts, plus an update-notification blocker.
 
+## Easy install: download the .ipk
+
+Don't want to build anything? Download `com.ammar027.lumen_1.0.0_all.ipk` from the [latest release](https://github.com/ammar027/lumen-webos/releases/latest) and install it on your TV:
+
+- **With a mouse and no command line:** open [Dev Manager Desktop](https://github.com/webosbrew/dev-manager-desktop/releases), add your TV, go to *Apps* and drop the `.ipk` onto the window.
+- **Or** with the webOS CLI: `npx -p @webos-tools/cli ares-install --device lgtv com.ammar027.lumen_1.0.0_all.ipk`.
+
+The release build leaves out third-party app logos and the default wallpapers are public-domain paintings; apps without an icon get a plain tile.
+Optional: to make the remote's **Home** button open Lumen, see the TV scripts under [tools/tv/](tools/tv/).
+
 ## How to build it
 
 `app/` is a clone of the upstream launcher and is not part of this repository. Everything changed is re-applied by the scripts in `tools/`.
