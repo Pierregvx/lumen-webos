@@ -29,39 +29,38 @@ await send('Page.navigate', {url: BASE}); await sleep(1200);
 await evalJs(`localStorage.clear(); localStorage.setItem('launcher-config-v2', ${JSON.stringify(JSON.stringify({weatherCity: 'London', wallpaper: 'local:0'}))});`);
 await send('Page.navigate', {url: BASE}); await sleep(3500);
 
-// Smooth capture: the page's clock is paused and advanced one frame (1/30 s) at a time, a screenshot is taken after each step, and the key presses
-// happen at exact times. So the animations play at a true 30 fps, whatever the speed of this computer.
-const FPS = 30;
-const STEP = 1000 / FPS;
+// Smooth capture: the page's animations run at 1/5 speed (Animation.setPlaybackRate) while screenshots are taken in real time, then each frame is
+// given 1/5 of its real duration. So the animations play at a true, smooth speed whatever the speed of this computer.
+const RATE = 0.2;
 const KEYS = {left: 37, up: 38, right: 39, down: 40, enter: 13, back: 8};
-// the script: [seconds, key]
+// the script: [seconds of video time, key]
 const SCRIPT = [[1.2, 'right'], [2.1, 'right'], [2.75, 'right'], [3.4, 'right'], [4.3, 'left'], [5.2, 'down'], [6.6, 'right'], [7.3, 'right'], [8.4, 'up'], [9.2, 'up'], [10.0, 'right'], [10.8, 'enter'],
 	[12.3, 'down'], [13.0, 'right'], [13.7, 'down'], [14.4, 'down'], [15.3, 'back']];
 const END = 16.8;
-await send('Emulation.setVirtualTimePolicy', {policy: 'pause'});
-const expiries = [];
-ws.addEventListener('message', (e) => { const m = JSON.parse(e.data); if (m.method === 'Emulation.virtualTimeBudgetExpired') { const r = expiries.shift(); if (r) r(); } });
-const advance = () => new Promise((res) => { expiries.push(res); send('Emulation.setVirtualTimePolicy', {policy: 'advance', budget: STEP}); });
+await send('Animation.enable');
+await send('Animation.setPlaybackRate', {playbackRate: RATE});
 const frames = [];
 let next = 0;
-for (let n = 0; n * STEP <= END * 1000; n++) {
-	const t = n * STEP / 1000;
+const t0 = Date.now();
+for (let n = 0; ; n++) {
+	const t = (Date.now() - t0) / 1000 * RATE;
+	if (t > END) break;
 	while (next < SCRIPT.length && SCRIPT[next][0] <= t) {
 		const c = KEYS[SCRIPT[next][1]];
 		await evalJs(`window.dispatchEvent(new KeyboardEvent('keydown',{keyCode:${c},which:${c},bubbles:true})); window.dispatchEvent(new KeyboardEvent('keyup',{keyCode:${c},which:${c},bubbles:true}));`);
 		next++;
 	}
-	await advance();
 	const r = await send('Page.captureScreenshot', {format: 'jpeg', quality: 82});
 	const name = `f${String(n).padStart(5, '0')}.jpg`;
 	writeFileSync(FRAMES + name, Buffer.from(r.data, 'base64'));
-	frames.push({name, t: n * STEP});
+	frames.push({name, t});
 }
+frames.forEach((f, i) => { f.d = i + 1 < frames.length ? frames[i + 1].t - f.t : 0.03; });
 ws.close(); chrome.kill();
 
 // frames have uneven timing: encode with their real durations
 const lines = [];
-frames.forEach((f) => { lines.push(`file '${FRAMES}${f.name}'`); lines.push(`duration ${(STEP / 1000).toFixed(5)}`); });
+frames.forEach((f) => { lines.push(`file '${FRAMES}${f.name}'`); lines.push(`duration ${f.d.toFixed(5)}`); });
 lines.push(`file '${FRAMES}${frames[frames.length - 1].name}'`);
 writeFileSync(FRAMES + 'list.txt', lines.join('\n'));
 const run = (args) => { const r = spawnSync(FF, ['-hide_banner', '-loglevel', 'error', '-y', ...args], {stdio: 'inherit'}); if (r.status !== 0) throw new Error('ffmpeg failed'); };
