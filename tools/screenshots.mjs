@@ -5,7 +5,7 @@ import {mkdirSync, writeFileSync} from 'node:fs';
 import {setTimeout as sleep} from 'node:timers/promises';
 
 const BASE = process.env.BASE || 'http://localhost:5199/';
-const OUT = new URL('../docs/screenshots/', import.meta.url).pathname;
+const OUT = process.env.OUT || new URL('../docs/screenshots/', import.meta.url).pathname;
 const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const PORT = 9333;
 mkdirSync(OUT, {recursive: true});
