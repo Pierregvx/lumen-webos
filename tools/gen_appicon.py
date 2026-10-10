@@ -1,41 +1,36 @@
 #!/usr/bin/env python3
-"""App icon (80x80, 130x130) and launch screen (1920x1080) for the launcher: four glass tiles on a deep gradient. Output goes to app/public/.
-Run: python3 tools/gen_appicon.py  (needs Google Chrome for the headless render)"""
-import os, subprocess, tempfile
+"""App icon (80x80, 130x130) and launch screen (1920x1080) for Lumen. The artwork is tools/icon-lumen.html (a glowing orb and a small glass dock on indigo),
+rendered once at 1024 px by headless Chrome and scaled down, so the small sizes stay crisp. Output goes to app/public/ (and app-assets/public/).
+Run: python3 tools/gen_appicon.py  (needs Google Chrome and macOS `sips`)"""
+import base64, os, re, subprocess, tempfile
 ROOT = os.path.expanduser('~/Developer/webos-launcher-tvos')
 OUT = f'{ROOT}/app/public'
 CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-FONT = f'{ROOT}/app/src/assets/inter-latin-wght.woff2'
+FONT = f'{ROOT}/app/src/assets/geist-wght.woff2'
 NAME = os.environ.get('APP_NAME', 'Lumen')
+ART = open(f'{ROOT}/tools/icon-lumen.html').read()
 
-def tiles(size_css):
-    # four rounded tiles in a 2x2 grid; the top-left one is solid white (the focused tile), the others are translucent
-    return f'''<div class="g" style="{size_css}"><i class="a"></i><i></i><i></i><i></i></div>'''
-
-PAGE = '''<!doctype html><meta charset="utf-8"><style>
-@font-face{font-family:Inter;font-weight:100 900;src:url("file://%(font)s") format("woff2")}
-*{box-sizing:border-box;margin:0}html,body{width:%(w)dpx;height:%(h)dpx;overflow:hidden;background:#000;font-family:Inter,sans-serif}
-.bg{width:%(w)dpx;height:%(h)dpx;display:flex;flex-direction:column;align-items:center;justify-content:center;
- background:radial-gradient(120%% 90%% at 18%% 12%%,#6a49d8 0%%,#2c2a8f 42%%,#0b0f33 100%%)}
-.g{display:grid;grid-template-columns:1fr 1fr;gap:%(gap)dpx}
-.g i{display:block;border-radius:%(rad)dpx;background:rgba(255,255,255,.34);box-shadow:inset 0 %(hl)dpx 0 rgba(255,255,255,.55)}
-.g i.a{background:#fff;box-shadow:0 %(sh)dpx %(shb)dpx rgba(0,0,0,.35)}
-.t{color:#fff;font-weight:300;letter-spacing:.04em;margin-top:%(tm)dpx;font-size:%(fs)dpx;text-shadow:0 4px 24px rgba(0,0,0,.35)}
-</style><div class="bg">%(body)s</div>'''
-
-def render(name, w, h, body, **k):
+def shot(html, w, h, dst):
     with tempfile.NamedTemporaryFile('w', suffix='.html', delete=False) as f:
-        f.write(PAGE % dict(font=FONT, w=w, h=h, body=body, tm=0, fs=0, **k)); src = f.name
-    dst = f'{OUT}/{name}'
+        f.write(html); src = f.name
     subprocess.run([CHROME, '--headless=new', '--disable-gpu', '--hide-scrollbars', f'--window-size={w},{h}', '--force-device-scale-factor=1',
                     '--virtual-time-budget=1500', f'--screenshot={dst}', f'file://{src}'], capture_output=True)
-    os.unlink(src); print(name, os.path.getsize(dst) // 1024, 'KB')
+    os.unlink(src)
 
-render('icon.png', 80, 80, tiles('width:44px;height:44px'), gap=4, rad=9, hl=1, sh=2, shb=4)
-render('largeIcon.png', 130, 130, tiles('width:72px;height:72px'), gap=6, rad=14, hl=1, sh=3, shb=6)
-splash = tiles('width:230px;height:230px') + f'<div class="t">{NAME}</div>'
-with tempfile.NamedTemporaryFile('w', suffix='.html', delete=False) as f:
-    f.write((PAGE % dict(font=FONT, w=1920, h=1080, body=splash, tm=0, fs=0, gap=22, rad=44, hl=3, sh=14, shb=30)).replace('margin-top:0px;font-size:0px', 'margin-top:56px;font-size:64px')); src = f.name
-subprocess.run([CHROME, '--headless=new', '--disable-gpu', '--hide-scrollbars', '--window-size=1920,1080', '--force-device-scale-factor=1',
-                '--virtual-time-budget=1500', f'--screenshot={OUT}/splash.png', f'file://{src}'], capture_output=True)
-os.unlink(src); print('splash.png', os.path.getsize(f'{OUT}/splash.png') // 1024, 'KB')
+master = '/tmp/lumen-icon-1024.png'
+shot(ART, 1024, 1024, master)
+for size, name in ((130, 'largeIcon.png'), (80, 'icon.png')):
+    subprocess.run(['sips', '-z', str(size), str(size), master, '--out', f'{OUT}/{name}'], capture_output=True)
+    print(name, os.path.getsize(f'{OUT}/{name}') // 1024, 'KB')
+
+# launch screen: the same colours, the icon in the middle with the name under it
+body = re.search(r'<div class="i">.*</div>\s*$', ART, re.S).group(0)
+style = re.search(r'<style>(.*?)</style>', ART, re.S).group(1)
+FONT64 = base64.b64encode(open(FONT, 'rb').read()).decode()
+splash = f'''<!doctype html><meta charset="utf-8"><style>@font-face{{font-family:G;font-weight:100 900;font-display:block;src:url(data:font/woff2;base64,{FONT64}) format("woff2")}}{style}
+html,body{{width:1920px;height:1080px}}body{{background:radial-gradient(120% 100% at 22% 8%,#2f2699 0%,#0d0f3d 55%,#05061c 100%);position:relative}}
+.w{{position:absolute;left:760px;top:250px;width:1024px;height:1024px;transform:scale(.390625);transform-origin:0 0;border-radius:230px;overflow:hidden;box-shadow:0 0 0 2px rgba(255,255,255,.12)}}
+.t{{position:absolute;left:0;width:1920px;top:690px;text-align:center;color:#fff;font:600 84px G,sans-serif;letter-spacing:-.01em}}</style>
+<div class="w">{body}</div><div class="t">{NAME}</div>'''
+shot(splash, 1920, 1080, f'{OUT}/splash.png')
+print('splash.png', os.path.getsize(f'{OUT}/splash.png') // 1024, 'KB')
