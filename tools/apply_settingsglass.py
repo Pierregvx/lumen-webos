@@ -8,8 +8,8 @@ s += """
 /* Settings: frosted and see-through like the dock (the blurred wallpaper copy on a faded layer behind the content) */
 .screen.screen--settings, .wp-image .screen.screen--settings, .wp-video .screen.screen--settings { background: transparent !important; background-image: none !important; isolation: isolate; }
 .screen--settings::before {
-	content: ''; position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: -1; pointer-events: none; opacity: 0.84; animation: none;
-	background-image: linear-gradient(rgba(10, 12, 22, 0.30), rgba(10, 12, 22, 0.42)), var(--wp-blur, none);
+	content: ''; position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: -1; pointer-events: none; opacity: 0.9; animation: none;
+	background-image: linear-gradient(rgba(10, 12, 22, 0.46), rgba(10, 12, 22, 0.58)), var(--wp-blur, none);
 	background-size: cover; background-position: center; background-repeat: no-repeat; background-color: rgb(24, 28, 40);
 }
 html.light .screen--settings::before {
