@@ -24,17 +24,21 @@ PLACES = {  # place -> Mixkit video ids (checked by hand: scenic, no flags or pe
 def head(u):
     r = subprocess.run(['curl', '-sI', '-m', '15', u], capture_output=True, text=True).stdout
     return r.split('\n')[0].strip().endswith('200') or ' 200' in r.split('\n')[0]
+TITLES = json.load(open(f'{ROOT}/tools/mixkit_titles.json'))
+TITLES = json.load(open(f'{ROOT}/tools/mixkit_titles.json'))
 out = {}
 for place, ids in PLACES.items():
     for i in ids:
         for q in ('1080', '720'):
             u = f'https://assets.mixkit.co/videos/{i}/{i}-{q}.mp4'
-            if head(u): out.setdefault(place, []).append(u); break
+            if head(u): out.setdefault(place, []).append((u, TITLES.get(str(i), ''))); break
         else: print('no file for', i)
 s = open(P).read()
-s = re.sub(r"\t\{name: \"[^\"]+\", url: \"https://assets\.mixkit\.co[^\"]+\"\},\n", '', s)
-new = ''.join(f'\t{{name: {json.dumps(p)}, url: {json.dumps(u)}}},\n' for p, urls in out.items() for u in urls)
+s = re.sub(r"\t\{name: \"[^\"]+\", (?:title: \"[^\"]*\", )?url: \"https://assets\.mixkit\.co[^\"]+\"\},\n", '', s)
+new = ''.join(f'\t{{name: {json.dumps(p)}, title: {json.dumps(ti, ensure_ascii=False)}, url: {json.dumps(u)}}},\n' for p, urls in out.items() for u, ti in urls)
 s = s.replace('WALLPAPER_VIDEOS: WallpaperVideo[] = [\n', 'WALLPAPER_VIDEOS: WallpaperVideo[] = [\n' + new, 1)
 s = s.replace("// Apple's tvOS aerial screensaver videos (1080p H.264, ~6 Mbps), from Apple's own server. Streamed, not bundled.", "// Mixkit's free stock videos of European places (mixkit.co licence: free use, no attribution needed) and Apple's tvOS aerial screensaver videos (1080p H.264, ~6 Mbps), each from its own server. Streamed, not bundled.")
+open(P, 'w').write(s)
+s = s.replace('export interface WallpaperVideo { name: string; url: string }', 'export interface WallpaperVideo { name: string; title?: string; url: string }')
 open(P, 'w').write(s)
 print({k: len(v) for k, v in out.items()})

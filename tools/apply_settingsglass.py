@@ -18,6 +18,9 @@ html.light .screen--settings::before {
 }
 html.light.wp-video .screen--settings::before { background-color: transparent; background-blend-mode: normal; }
 html.in-settings .screen:not(.screen--settings) { visibility: hidden; }
+/* over the video the glass is clear, so Settings gets a stronger fill: the text must stay readable */
+html.wp-video .screen--settings::before { background-image: linear-gradient(rgba(10, 12, 22, 0.76), rgba(10, 12, 22, 0.84)); opacity: 1; }
+html.light.wp-video .screen--settings::before { background-image: linear-gradient(rgba(246, 247, 251, 0.84), rgba(240, 242, 248, 0.90)); }
 """
 open(p, 'w').write(s)
 

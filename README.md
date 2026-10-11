@@ -28,6 +28,10 @@ Made from the dev preview at 1920 x 1080 (`node tools/screenshots.mjs`); the wal
   under the tile, a wallpaper library (cloud and bundled, shuffle per category, favourites, auto-change, night dimming), folders, hold-OK menu
   (move, remove, add to folder), and a Settings app in the same style.
 - **Control Center:** sound, picture mode, sleep timer, screensaver start time, LG Home, Settings, Art mode, start screensaver, screen off, restart and volume.
+- **Appearance:** Light, Dark or Auto (dark from 7 pm to 6 am), in Settings and in the Control Center; the dock can slide away with Down or after a few idle seconds.
+- **Video wallpaper:** Settings > Wallpaper > Video. Pick one or several places (Switzerland, Norway, Iceland, Italy, Greece, Germany, Czechia, Spain, the Netherlands,
+  Portugal and more, plus Apple's aerial videos); it streams from the internet and pauses LG's screensaver while it plays.
+- **Language and clock:** nine languages for the menus, dates and weather, and a 12 / 24-hour option. **Weather:** pick a country and a city (about 180 cities).
 - **Top left:** date, time and weather (Open-Meteo, optional city); top right: Inputs and Control Center.
 - **Cheap on purpose:** no live blur or SVG filters. The "glass" is a pre-blurred copy of the wallpaper seen through the glass shapes, with static rim lights;
   only `transform` and `opacity` animate. See [RESEARCH.md](RESEARCH.md).
@@ -36,10 +40,10 @@ Made from the dev preview at 1920 x 1080 (`node tools/screenshots.mjs`); the wal
 
 ## Easy install: download the .ipk
 
-Don't want to build anything? Download `com.ammar027.lumen_1.0.1_all.ipk` from the [latest release](https://github.com/ammar027/lumen-webos/releases/latest) and install it on your TV:
+Don't want to build anything? Download `com.ammar027.lumen_1.0.8_all.ipk` from the [latest release](https://github.com/ammar027/lumen-webos/releases/latest) and install it on your TV:
 
 - **With a mouse and no command line:** open [Dev Manager Desktop](https://github.com/webosbrew/dev-manager-desktop/releases), add your TV, go to *Apps* and drop the `.ipk` onto the window.
-- **Or** with the webOS CLI: `npx -p @webos-tools/cli ares-install --device lgtv com.ammar027.lumen_1.0.1_all.ipk`.
+- **Or** with the webOS CLI: `npx -p @webos-tools/cli ares-install --device lgtv com.ammar027.lumen_1.0.8_all.ipk`.
 
 The release build leaves out third-party app logos and the default wallpapers are public-domain paintings; apps without an icon get a plain tile.
 Optional: to make the remote's **Home** button open Lumen, see the TV scripts under [tools/tv/](tools/tv/).
