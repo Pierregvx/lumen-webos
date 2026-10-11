@@ -9,10 +9,17 @@ PLACES = {  # place -> Mixkit video ids (checked by hand: scenic, no flags or pe
  'Switzerland': [31939, 4396, 4283, 4435],
  'Norway': [8657, 4036, 8665, 8661, 8655, 11042],
  'Iceland': [26939, 48407, 8031, 8025, 8016, 8049, 8017, 8015, 8053, 8086, 48402],
- 'Italy (Tuscany)': [8175, 8173, 25189, 8203, 46296, 46295],
+ 'Italy': [8175, 8173, 25189, 8203, 46296, 46295, 8675, 4402, 4101, 15102],
+ 'Greece (Athens)': [31651, 30379, 30369, 30527, 30376, 30348, 30347, 31649, 44912],
+ 'Germany (Berlin)': [31719, 30511, 26941, 27092, 30427, 27102, 26937, 30405, 27282],
+ 'Czechia (Prague)': [11167, 44880, 27963, 27452, 27380, 27427, 27863],
+ 'Spain (Madrid)': [27292, 26469, 25405, 4146, 22633],
+ 'Netherlands': [25131, 27732, 27308, 10985, 4015, 27939],
  'Portugal': [48399, 17100, 21750],
+ 'Scotland (Edinburgh)': [11295, 11407],
  'Austria': [8607],
- 'Netherlands': [27939],
+ 'Denmark': [22059],
+ 'Sweden': [30978],
 }
 def head(u):
     r = subprocess.run(['curl', '-sI', '-m', '15', u], capture_output=True, text=True).stdout
