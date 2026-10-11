@@ -10,6 +10,7 @@ FRAME=com.ammar027.lumen.gallery
 LGHOME=com.webos.app.home
 FLAG=/tmp/allow_lg_home
 SAVER_FLAG=/var/lib/homehook/frame-screensaver
+VIDEO_FLAG=/var/lib/homehook/video-wallpaper
 APPS=/media/developer/apps/usr/palm/applications
 EXTRA=/var/lib/homehook/hosts-extra
 prev=""
@@ -41,7 +42,15 @@ while true; do
       ;;
     *) prev="other" ;;
   esac
-  if [ -f "$SAVER_FLAG" ] && [ -d "$APPS/$FRAME" ]; then
+  # video wallpaper on and the launcher in front: no screensaver, LG's is ended as soon as it starts
+  vid=0
+  if [ -f "$VIDEO_FLAG" ]; then case "$out" in *'"appId":"'$ME'"'*) vid=1 ;; esac; fi
+  if [ "$vid" -eq 1 ]; then
+    pw=$(luna-send -n 1 luna://com.webos.service.tvpower/power/getPowerState '{}' </dev/null 2>/dev/null)
+    case "$pw" in
+      *'"Screen Saver"'*) luna-send -n 1 luna://com.webos.service.tvpower/power/turnOnScreen '{}' </dev/null >/dev/null 2>&1; echo "$(date +%T) ended screensaver (video wallpaper)" >> /tmp/homehook.log ;;
+    esac
+  elif [ -f "$SAVER_FLAG" ] && [ -d "$APPS/$FRAME" ]; then
     pw=$(luna-send -n 1 luna://com.webos.service.tvpower/power/getPowerState '{}' </dev/null 2>/dev/null)
     case "$pw" in
       *'"Screen Saver"'*)
