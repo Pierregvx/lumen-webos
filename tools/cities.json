@@ -113,6 +113,11 @@
     "name": "Nagpur",
     "lat": 21.15,
     "lon": 79.08
+   },
+   {
+    "name": "Bardoli",
+    "lat": 21.12,
+    "lon": 73.11
    }
   ]
  },

@@ -5,7 +5,7 @@ import json, os, time, urllib.parse, urllib.request
 OUT = os.path.expanduser('~/Developer/webos-launcher-tvos/tools/cities.json')
 C = {
  'PK': ('Pakistan', ['Karachi', 'Lahore', 'Islamabad', 'Faisalabad', 'Rawalpindi', 'Multan', 'Peshawar', 'Quetta', 'Hyderabad']),
- 'IN': ('India', ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Chennai', 'Kolkata', 'Ahmedabad', 'Surat', 'Pune', 'Jaipur', 'Lucknow', 'Nagpur']),
+ 'IN': ('India', ['Mumbai', 'Delhi', 'Bengaluru', 'Hyderabad', 'Chennai', 'Kolkata', 'Ahmedabad', 'Surat', 'Pune', 'Jaipur', 'Lucknow', 'Nagpur', 'Bardoli']),
  'AE': ('United Arab Emirates', ['Dubai', 'Abu Dhabi', 'Sharjah', 'Al Ain']),
  'SA': ('Saudi Arabia', ['Riyadh', 'Jeddah', 'Mecca', 'Medina', 'Dammam']),
  'QA': ('Qatar', ['Doha']), 'KW': ('Kuwait', ['Kuwait City']), 'BH': ('Bahrain', ['Manama']), 'OM': ('Oman', ['Muscat']),
