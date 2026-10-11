@@ -42,6 +42,12 @@ html.light.wp-video {
 	--wp-blur: linear-gradient(rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.42)) !important;
 	--wp-bg: linear-gradient(rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.58)) !important;
 }
+/* over the video the glass is see-through: no opaque base colour, just a light tint */
+html.light.wp-video .row:not(.row--dock)::before, html.light.wp-video .clock, html.light.wp-video .row--dock .tile__box, html.light.wp-video .wp__chip, html.light.wp-video .option, html.light.wp-video .settings__button,
+html.light.wp-video .pill, html.light.wp-video .panel, html.light.wp-video .tabbar, html.light.wp-video .topcap {
+	background-color: transparent;
+	background-blend-mode: normal;
+}
 html.light .row:not(.row--dock)::before { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.85), 0 18px 40px rgba(20, 24, 40, 0.20); }
 html.light .row:not(.row--dock)::after { display: none; }
 html.light .clock, html.light .row--dock .tile__box { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.85), 0 8px 18px rgba(20, 24, 40, 0.18); }
