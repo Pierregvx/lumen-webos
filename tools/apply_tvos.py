@@ -52,7 +52,7 @@ sub('src/lib/storage.ts', [
 ])
 
 # ---------------------------------------------------------------- wallpaper plumbing
-write('src/config/wallpaperVideos.ts', open('/tmp/wallpaperVideos.ts').read() if os.path.exists('/tmp/wallpaperVideos.ts') else "export interface WallpaperVideo { name: string; url: string }\nexport const WALLPAPER_VIDEOS: WallpaperVideo[] = [];\n")
+write('src/config/wallpaperVideos.ts', open(os.path.expanduser('~/Developer/webos-launcher-tvos/tools/wallpaperVideos.ts')).read() if True else "export interface WallpaperVideo { name: string; url: string }\nexport const WALLPAPER_VIDEOS: WallpaperVideo[] = [];\n")
 
 write('src/lib/wallpaper.ts', '''// Still wallpaper behind the home screen. Choices: local:N (bundled in the app, always works), cloud:<id> (from the cloud
 // library in config/wallpapers.ts, loaded over the internet when picked), shuffle (a random cloud one each launch), none.
