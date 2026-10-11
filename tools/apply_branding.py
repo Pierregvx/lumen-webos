@@ -9,7 +9,7 @@ s = re.sub(r'"title": "[^"]*"', f'"title": "{NAME}"', s, 1)
 if '"bgImage"' not in s:
     s = s.replace('"largeIcon": "largeIcon.png",', '"largeIcon": "largeIcon.png",\n  "bgImage": "splash.png",\n  "splashBackground": "splash.png",')
 s = s.replace('"id": "works.partridge.webos-launcher"', '"id": "com.ammar027.lumen"').replace('"vendor": "works.partridge.webos-launcher"', '"vendor": "ammar027"')
-s = s.replace('"version": "1.0.0"', '"version": "1.0.5"')
+s = s.replace('"version": "1.0.0"', '"version": "1.0.6"')
 open(P('public/appinfo.json'), 'w').write(s)
 c = open(P('src/config/constants.ts')).read()
 open(P('src/config/constants.ts'), 'w').write(c.replace("'works.partridge.webos-launcher'", "'com.ammar027.lumen'"))
