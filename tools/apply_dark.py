@@ -28,9 +28,8 @@ sub('src/app.tsx', [
 p = P('src/theme/global.css')
 s = open(p).read()
 s += """
-/* dark mode: dark glass instead of the light frosted look, and a dimmer picture or video behind it */
-html.dark { --wp-blur: linear-gradient(rgba(36, 38, 50, 0.93), rgba(20, 22, 32, 0.97)) !important; --wp-bg: linear-gradient(rgba(36, 38, 50, 0.93), rgba(20, 22, 32, 0.97)) !important; }
-html.dark #wpimage { opacity: 0.55; }
-html.dark #bgvideo { opacity: 0.6; }
+/* dark mode: the original blurred-wallpaper glass, and a slightly dimmer picture or video behind it */
+html.dark #wpimage { opacity: 0.75; }
+html.dark #bgvideo { opacity: 0.7; }
 """
 open(p, 'w').write(s)
