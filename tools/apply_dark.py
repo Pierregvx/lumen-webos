@@ -28,8 +28,6 @@ sub('src/app.tsx', [
 p = P('src/theme/global.css')
 s = open(p).read()
 s += """
-/* dark mode: the original blurred-wallpaper glass, and a slightly dimmer picture or video behind it */
-html.dark #wpimage { opacity: 0.75; }
-html.dark #bgvideo { opacity: 0.7; }
+/* dark mode: the original blurred-wallpaper glass (the picture or video is not dimmed) */
 """
 open(p, 'w').write(s)
