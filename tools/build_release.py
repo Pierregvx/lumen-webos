@@ -25,6 +25,7 @@ A = f'{REL}/app'
 
 # 1. no third-party icon tiles or extra app icons (only what the upstream project itself ships stays)
 shutil.rmtree(f'{A}/public/iconpack', ignore_errors=True)
+shutil.rmtree(f'{A}/public/private', ignore_errors=True)   # the private SF font (Apple's licence: never in a release)
 for f in untracked: os.path.exists(f'{A}/{f}') and os.remove(f'{A}/{f}')
 open(f'{A}/src/config/iconpack.ts', 'w').write('// Release build: no third-party icon tiles.\nexport const ICON_PACK: Record<string, string> = {};\n')
 
