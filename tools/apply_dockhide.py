@@ -50,7 +50,7 @@ sub('src/app.tsx', [
  ("		} else if (optionId === OPTION.darkMode)", "		} else if (optionId === OPTION.dockHide) {\n			const modes = ['off', 'down', 'idle', 'both'];\n			updateConfig({...config, dockHide: modes[(modes.indexOf(config.dockHide) + 1) % modes.length]});\n		} else if (optionId === OPTION.darkMode)"),
 ])
 s = open(P('src/theme/global.css')).read()
-s += "\n/* the dock slides away (Hide the dock) */\n.rows { transition: top 240ms cubic-bezier(0.2, 0.7, 0.2, 1), transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 220ms ease; }\n.rows--hidden { transform: translateY(420px) !important; opacity: 0; pointer-events: none; }\n"
+s += "\n/* the dock slides away (Hide the dock) */\n.rows { transition: top 240ms cubic-bezier(0.2, 0.7, 0.2, 1), transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 220ms ease; }\n.rows--hidden { transform: translateY(900px) !important; opacity: 0; pointer-events: none; }\n"
 open(P('src/theme/global.css'), 'w').write(s)
 
 sub('tools/tv/watch.sh', [
