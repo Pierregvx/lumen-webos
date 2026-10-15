@@ -58,8 +58,8 @@ mode, no hosts blocking, no clock fix and no system-wide Recent row; Lumen itsel
 - [ ] Recents button: rebind it with Input Hook to launch Lumen with `{"view":"recent"}` (needs the launch-parameter check above).
 - [ ] Colour buttons: which does this remote have, and which key codes reach the app?
 - [ ] Chrome DevTools on the TV: which method works on webOS 25 (Dev Manager Desktop inspect, `ares-inspect`). Needed for Phase 4 traces.
-- [ ] Settings keys: read works for `picture/backlight`, `picture/eyeComfortMode`, `sound/soundOutput` (`docs/spikes.md`). Backlight and Eye Comfort set work. Still to do: setting
-      sound output, and the `soundOutput` values for ARC, optical and Bluetooth.
+- [x] Settings keys: read works for `picture/backlight`, `picture/eyeComfortMode`, `sound/soundOutput` (`docs/spikes.md`). Backlight and Eye Comfort set work. Sound output
+      dropped: TV speakers only.
 - [ ] Live TV channel service, for the Freeview tiles idea in Later.
 - [ ] `backdrop-filter` on the dock only, behind a temporary flag: 60 fps while moving focus and while the video wallpaper plays?
 - [ ] `https://sylvan.apple.com/` videos play directly (then the plain HTTP fallback in `lib/wallpaperVideo.ts` goes).
@@ -148,7 +148,6 @@ Done when: the three numbers are recorded before and after, none got worse, and 
 
 ## Phase 5: Control Center additions (needs the settings keys spike)
 
-- [ ] Sound output: TV speakers, soundbar (ARC or optical), Bluetooth
 - [ ] Backlight slider
 - [ ] Eye Comfort toggle
 
@@ -164,7 +163,6 @@ Only if the colour-button spike found buttons that reach the app.
   - Screen off
   - Sleep timer (cycle)
   - Picture mode (cycle)
-  - Sound output (cycle)
   - Start screensaver / ambient
   - Nothing
 - [ ] These work while Lumen is in front (normal key events).
@@ -204,7 +202,7 @@ In rough order of value:
 3. YouTube subscriptions row (YouTube Data API, TV sign-in with a code), opening videos in youtube-webos with its `contentTarget` launch
    parameter (`{"contentTarget":"v=<id>"}` is documented; `target` is not).
 4. Long-press shortcuts per app (for example YouTube: Subscriptions, Search).
-5. Bedtime button: lower backlight, Eye Comfort and sleep timer together.
+5. Bedtime button: lower backlight, Eye Comfort and sleep timer together (all three work as root).
 6. Auto-switch to an HDMI input when its device turns on; power off when idle.
 7. Profiles, and a kids mode with a PIN and allowed hours.
 8. Privacy page: LG ad and Live Plus settings, plus hosts-level blocking of LG ad and tracking hosts (check what the Homebrew Channel's own
