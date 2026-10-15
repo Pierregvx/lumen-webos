@@ -23,3 +23,7 @@ Read as root with `settingsservice/getSystemSettings`:
 - `sound` / `soundOutput`: `"tv_external_speaker"` (`dimension: {audioOutput: "default"}`). The other values (soundbar over ARC or optical,
   Bluetooth) are still unknown: switch output in LG's settings and read it again.
 Setting `backlight` as root works (80 then back to 100, visibly dimmed, `returnValue:true`). Eye Comfort `"on"`/`"off"` set the same way works (visibly warmer). Sound output: not needed (TV speakers only), so not tested.
+
+## Clock after a reboot (2026-10-15)
+`clockfix.sh` moved aside, then `reboot`. After boot `date` gave `Thu Oct 15 21:33:52 BST 2026`: right zone, right time. `clockfix.sh`
+deleted. Only a software reboot was tried, not a power cut at the wall. The boot hook started `watch.sh` on its own.

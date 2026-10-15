@@ -41,10 +41,8 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [ ] Hide app names and Reduce motion in Settings > Options; the top-right button's label no longer shows above Control Center.
 
 ### Put the TV scripts in place
-`watch.sh` is probably not running (it did not seem to work). Without it there is no video-wallpaper screensaver suppression, no Frame art
-mode, no hosts blocking, no clock fix and no system-wide Recent row; Lumen itself works without it.
-- [ ] Copy `tools/tv/watch.sh`, `clockfix.sh`, `hosts-extra`, `stop_watch.sh` to `/var/lib/homehook/` and `60-homehook` to
-      `/var/lib/webosbrew/init.d/`, `chmod +x` them, start it, and check `ps -ef | grep watch.sh` (plain `ps` on webOS 25 does not show it).
+- [x] `tools/tv/watch.sh`, `hosts-extra`, `stop_watch.sh` in `/var/lib/homehook/`, `60-homehook` in `/var/lib/webosbrew/init.d/`. Check with
+      `ps -ef | grep watch.sh` (plain `ps` on webOS 25 does not show it). Starts on its own after a reboot (seen 2026-10-15).
 - [x] Home button: LG Input Hook owns it. `watch.sh` only takes over LG Home when `/var/lib/homehook/home-takeover` exists (off by default;
       it would still be useful for the cold-boot case where LG Home is the first thing on screen).
 - [x] `watch.sh` running (one copy; the boot hook now checks `/proc`, plain `ps` missed it and started duplicates).
@@ -52,8 +50,8 @@ mode, no hosts blocking, no clock fix and no system-wide Recent row; Lumen itsel
       on the home screen, only the 6-app glass row and 2 apps below it. Find out why (row not rendered, or the file not read).
 
 ### Spikes (yes/no answers, noted in `docs/spikes.md`)
-- [ ] Does the clock go wrong after a cold boot here? If no, delete `clockfix.sh` and its line in `watch.sh`. (It no longer forces
-      Asia/Kolkata and gets the time over HTTPS; `TZ_NAME` at the top forces a zone if one is needed.)
+- [x] Does the clock go wrong after a reboot here? No: right time and BST with the clock fix moved aside. `clockfix.sh` deleted (it is in git
+      history if the clock ever goes wrong after a power cut).
 - [x] Does the TV kill background apps? Lumen yes, YouTube no (see `docs/spikes.md`). Cold start stays the thing to make fast.
 - [ ] Recents button: rebind it with Input Hook to launch Lumen with `{"view":"recent"}` (needs the launch-parameter check above).
 - [ ] Colour buttons: which does this remote have, and which key codes reach the app?
@@ -88,7 +86,7 @@ mode, no hosts blocking, no clock fix and no system-wide Recent row; Lumen itsel
       (`webOSRelaunch`) focuses the Recent row (`lib/launchParams.ts`). **(verify)**
 - [x] Recent row merges `/var/lib/homehook/recent` (written by `watch.sh`) with Lumen's own list (`lib/recent.ts`). **(verify)**
 - [x] `watch.sh`: Home takeover behind a flag, recent-apps file, `hosts-extra` only copies `0.0.0.0 <name>` / `:: <name>` lines, duplicate
-      function definitions removed. `clockfix.sh`: TV's own zone unless `TZ_NAME` is set, HTTPS time. **(verify)**
+      function definitions removed. `clockfix.sh` since deleted (not needed here).
 - [x] Settings: Hide app names, Reduce motion. Control Center no longer shows the top button's label through it.
 - [x] Error log (seen on the TV): it caught `timer/sleep/getRemainTime` being denied. Sleep timer read and set moved to `lib/root.ts`.
 - [x] Lazy-loading Settings and Control Center: tried and dropped. The build is one IIFE script because the app loads from `file://`, where

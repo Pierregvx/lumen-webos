@@ -104,8 +104,6 @@ while true; do
   fi
   # keep the extra blocked names in /etc/hosts (about every 30 s; the dashboard rewrites the table at boot)
   ticks=$((ticks + 1))
-  # the clock: shortly after start, then every 10 minutes (see clockfix.sh)
-  if [ "$ticks" -eq 5 ] || [ $((ticks % 600)) -eq 0 ]; then sh /var/lib/homehook/clockfix.sh </dev/null >/dev/null 2>&1 & fi
   if [ $((ticks % 30)) -eq 1 ] && [ -f "$EXTRA" ]; then
     # only "0.0.0.0 <name>" or ":: <name>" lines are ever copied, so a stray line in the file cannot point a name somewhere real
     grep -E '^(0\.0\.0\.0|::)[[:space:]]+[A-Za-z0-9.-]+[[:space:]]*$' "$EXTRA" | while IFS= read -r l; do
