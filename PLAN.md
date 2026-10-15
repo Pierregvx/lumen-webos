@@ -46,8 +46,9 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [x] Home button: LG Input Hook owns it. `watch.sh` only takes over LG Home when `/var/lib/homehook/home-takeover` exists (off by default;
       it would still be useful for the cold-boot case where LG Home is the first thing on screen).
 - [x] `watch.sh` running (one copy; the boot hook now checks `/proc`, plain `ps` missed it and started duplicates).
-- [ ] Recent row: `watch.sh` writes `/var/lib/homehook/recent` correctly (seen 2026-10-15: PlxNative, YouTube), but no Recent row was seen
-      on the home screen, only the 6-app glass row and 2 apps below it. Find out why (row not rendered, or the file not read).
+- [ ] Recent row: `watch.sh` writes `/var/lib/homehook/recent` correctly (seen 2026-10-15: PlxNative, YouTube). The row was there but drawn
+      below the screen (going down slid the rows a fixed 300px, enough for the second row only); now each row slides into view. **(verify)**:
+      press Down twice from the glass row.
 
 ### Spikes (yes/no answers, noted in `docs/spikes.md`)
 - [x] Does the clock go wrong after a reboot here? No: right time and BST with the clock fix moved aside. `clockfix.sh` deleted (it is in git
@@ -139,6 +140,10 @@ Still wrong, seen on the TV:
       back 300 ms after the backdrop has gone). Options: crossfade the two glass looks as two stacked layers (opacity only); or give the
       glass a fixed-offset `scroll` background (as `.panel` already does) so it never needs `background-attachment: fixed` and can move
       with the rows; or drop the picture from the dock glass entirely and use a tint everywhere.
+
+Next try (2026-10-15): Settings > Options > Live blur (test). Every glass shape and the lower backdrop use `backdrop-filter`; no picture is
+swapped in or out, so nothing can change late on the way back up. **(verify)** whether it looks right and stays smooth, with the still picture
+and with the video wallpaper. If it is still bad: go back to the transition from before 167253b and try a different approach.
 
 Done when: the three numbers are recorded before and after, none got worse, and Recents opens Lumen on the Recent row.
 

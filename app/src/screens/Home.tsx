@@ -1,6 +1,6 @@
 import {t as tr} from '../lib/i18n';
 import {VideoCaption} from '../components/VideoCaption';
-import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
+import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import {Clock} from '../components/Clock';
 import {Glyph} from '../components/Glyph';
 import {Row} from '../components/Row';
@@ -377,6 +377,15 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 		const t = setTimeout(() => setSettling(false), 300);
 		return () => clearTimeout(t);
 	}, [lower]);
+	// going down slides the rows up 300px, enough for the second row; rows below it slide further, by their distance from the second row
+	const rowsRef = useRef<HTMLDivElement>(null);
+	useLayoutEffect(() => {
+		const el = rowsRef.current;
+		if (!el) return;
+		const kids = el.children as HTMLCollectionOf<HTMLElement>;
+		const extra = lower && kids[rowIndex] && kids[1] ? kids[rowIndex].offsetTop - kids[1].offsetTop : 0;
+		el.style.setProperty('--lower-extra', extra + 'px');
+	});
 	const overlay = n.zone === 'panel' || n.zone === 'menu' || n.zone === 'ctx' || n.zone === 'folder';
 	const topPointer = (i: number) => () => { if (!overlay) { n.mode = 'pointer'; n.engaged = true; n.zone = 'top'; n.topIndex = i; render(); } };
 	const focusedTop = (i: number) => n.engaged && n.zone === 'top' && i === n.topIndex;
@@ -411,7 +420,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 					</div>
 				))}
 			</div>
-			<div class={`rows${lower ? ' rows--lower' : ''}${n.dockHidden ? ' rows--hidden' : ''}`} onMouseDown={() => { n.mode = 'pointer'; holdStart(); }} onMouseUp={holdCancel}>
+			<div ref={rowsRef} class={`rows${lower ? ' rows--lower' : ''}${n.dockHidden ? ' rows--hidden' : ''}`} onMouseDown={() => { n.mode = 'pointer'; holdStart(); }} onMouseUp={holdCancel}>
 				{rows.map((row, i) => (
 					<Row
 						key={row.id}

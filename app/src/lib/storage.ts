@@ -53,6 +53,8 @@ export interface UserConfig {
 	reduceMotion: boolean;
 	/** no app names under the tiles on the home screen */
 	hideNames: boolean;
+	/** test: glass blurs what is behind it live (backdrop-filter) instead of showing a pre-blurred copy of the wallpaper */
+	liveBlur: boolean;
 	/** false on a fresh install until the installed apps have been put on the home screen once */
 	seeded: boolean;
 }
@@ -82,6 +84,7 @@ export const DEFAULT_CONFIG: UserConfig = {
 	folders: [],
 	reduceMotion: false,
 	hideNames: false,
+	liveBlur: false,
 	seeded: false
 };
 
@@ -127,6 +130,7 @@ export function parseConfig (raw: string): UserConfig {
 		folders: Array.isArray(parsed.folders) ? parsed.folders : [],
 		reduceMotion: parsed.reduceMotion === true,
 		hideNames: parsed.hideNames === true,
+		liveBlur: parsed.liveBlur === true,
 		seeded: parsed.seeded !== false
 	};
 }

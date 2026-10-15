@@ -29,7 +29,7 @@ type Screen = 'home' | 'settings';
 
 const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock', recent: 'recent'} as const;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
+const OPTION = {liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 15, 30, 60];
 const IDLE_CHOICES = [0, 5, 10, 20, 30];
 const RECENT_MAX = 8;
@@ -178,6 +178,7 @@ export function App () {
 	}, [config.darkMode]);
 	useEffect(() => { document.documentElement.classList.toggle('reduce-motion', config.reduceMotion); }, [config.reduceMotion]);
 	useEffect(() => { document.documentElement.classList.toggle('hide-names', config.hideNames); }, [config.hideNames]);
+	useEffect(() => { document.documentElement.classList.toggle('liveblur', config.liveBlur); }, [config.liveBlur]);
 	useEffect(() => setVideoChoice(config.videoPlaces), [config.videoPlaces]);
 	useEffect(() => setVideoWallpaper(config.videoWallpaper), [config.videoWallpaper]);
 	useEffect(() => { setVideoPaused(screen === 'settings'); document.documentElement.classList.toggle('in-settings', screen === 'settings'); }, [screen]);
@@ -329,12 +330,18 @@ export function App () {
 			value: config.reduceMotion
 		},
 		{
+			id: OPTION.liveBlur,
+			label: 'Live blur (test)',
+			description: 'The glass blurs whatever is behind it, live, instead of showing a blurred copy of the wallpaper. Smoother to look at, harder work for the TV.',
+			value: config.liveBlur
+		},
+		{
 			id: OPTION.showAmPm,
 			label: 'AM/PM on the clock',
 			description: 'Show AM or PM beside the time when the TV is set to a 12-hour clock.',
 			value: config.showAmPm
 		}
-	], [config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion]);
+	], [config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur]);
 
 	const wallpaper: WallpaperTab = useMemo(() => {
 		const entries: WallpaperEntry[] = [
@@ -453,6 +460,7 @@ export function App () {
 		}
 		else if (optionId === OPTION.hideNames) updateConfig({...config, hideNames: !config.hideNames});
 		else if (optionId === OPTION.reduceMotion) updateConfig({...config, reduceMotion: !config.reduceMotion});
+		else if (optionId === OPTION.liveBlur) updateConfig({...config, liveBlur: !config.liveBlur});
 		else if (optionId === OPTION.nightDim) updateConfig({...config, nightDim: !config.nightDim});
 		else if (optionId === OPTION.wpAuto) updateConfig({...config, wpAutoMinutes: WP_AUTO_CHOICES[(WP_AUTO_CHOICES.indexOf(config.wpAutoMinutes) + 1) % WP_AUTO_CHOICES.length]});
 		else if (optionId === OPTION.idle) updateConfig({...config, idleMinutes: IDLE_CHOICES[(IDLE_CHOICES.indexOf(config.idleMinutes) + 1) % IDLE_CHOICES.length]});

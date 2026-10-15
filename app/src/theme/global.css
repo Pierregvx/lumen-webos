@@ -1010,7 +1010,7 @@ html.wp-video .lowerveil { background-color: transparent; background-image: line
 .screen--dockhidden .lowerveil { display: none; }
 
 .rows, html.wp-video .rows { transition: transform 240ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 220ms ease; }
-.rows--lower, html.wp-video .rows--lower { top: var(--layout-rows-top); transform: translateY(-300px); }
+.rows--lower, html.wp-video .rows--lower { top: var(--layout-rows-top); transform: translateY(calc(-300px - var(--lower-extra, 0px))); }
 
 html:not(.wp-video) .screen--plainglass { --wp-blur: linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)); }
 html.light:not(.wp-video) .screen--plainglass { --wp-blur: linear-gradient(rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.42)); }
@@ -1028,3 +1028,28 @@ html.light:not(.wp-video) .screen--plainglass { --wp-blur: linear-gradient(rgba(
 html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after { transition: none !important; animation: none !important; }
 /* Settings > Hide app names (home screen only) */
 html.hide-names .rows .tile__label, html.hide-names .panel--folder .tile__label { display: none; }
+
+/* ---------- Settings > Live blur (test): every glass shape blurs what is behind it (backdrop-filter), with no picture swapped in or out ----------
+   The pre-blurred wallpaper copy (--wp-blur, --wp-bg) is emptied on the home screen and Control Center, so nothing changes picture when the
+   rows go down or come back; the lower backdrop is a live blur that only fades. Settings keeps its own backdrop. */
+html.liveblur .screen:not(.screen--settings), html.liveblur .screen:not(.screen--settings) *, html.liveblur .panel--cc {
+	--wp-blur: linear-gradient(transparent, transparent) !important;
+	--wp-bg: linear-gradient(transparent, transparent) !important;
+}
+html.liveblur .row:not(.row--dock)::before, html.liveblur .topcap, html.liveblur .topbar > .pill, html.liveblur .panel {
+	-webkit-backdrop-filter: blur(30px) saturate(1.5);
+	backdrop-filter: blur(30px) saturate(1.5);
+	background-attachment: scroll !important;
+	background-color: rgba(30, 36, 50, 0.24) !important;
+	background-blend-mode: normal !important;
+	opacity: 1;
+}
+html.liveblur.light .row:not(.row--dock)::before, html.liveblur.light .topcap, html.liveblur.light .topbar > .pill, html.liveblur.light .panel {
+	background-color: rgba(255, 255, 255, 0.34) !important;
+}
+html.liveblur .lowerveil {
+	background-color: rgba(0, 0, 0, 0.26);
+	background-image: none;
+	-webkit-backdrop-filter: blur(48px) saturate(1.3);
+	backdrop-filter: blur(48px) saturate(1.3);
+}
