@@ -169,6 +169,18 @@ every later change against the numbers.
       the Input Hook or a cold boot never appears. `watch.sh` already sees every foreground app change; have it keep the last eight distinct
       app ids in `/var/lib/homehook/recent`, and have Lumen read that file through root at start and merge it with its own list.
 
+### Lower rows transition (Down from the dock to the blurred backdrop)
+Done so far (commit 167253b, dev 1.0.9003): the rows slide with `transform` instead of `top`; the blurred backdrop is a permanent
+`.lowerveil` layer that only fades; the glass shows a plain tint (`.screen--plainglass`) while lower and for 300 ms after, instead of the
+fixed-position wallpaper copy; the lower rows stay painted at opacity 0. Going down is better on the TV.
+Still wrong, seen on the TV:
+- [ ] Coming back up is now noticeably laggy. Likely cause: after the 300 ms the glass switches back to the fixed-position picture, so
+      every glass shape repaints at once, and the lower rows fading out may still repaint. Trace it on the TV before changing anything.
+- [ ] The backgrounds don't change together: the glass flips to a plain tint at once while the backdrop fades over 220 ms (and flips
+      back 300 ms after the backdrop has gone). Options: crossfade the two glass looks as two stacked layers (opacity only); or give the
+      glass a fixed-offset `scroll` background (as `.panel` already does) so it never needs `background-attachment: fixed` and can move
+      with the rows; or drop the picture from the dock glass entirely and use a tint everywhere.
+
 ### Blur
 - [ ] If the Phase 2 blur spike passed: a Graphics setting, Low (current pre-blurred glass) / High (live blur on the dock only). If it failed,
       nothing to do here.
