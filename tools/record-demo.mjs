@@ -4,6 +4,8 @@ import {spawn, spawnSync} from 'node:child_process';
 import {mkdirSync, rmSync, writeFileSync} from 'node:fs';
 import {setTimeout as sleep} from 'node:timers/promises';
 
+// CHROME (and BASE, OUT) can be set in the environment or in the repo-root .env
+try { process.loadEnvFile(new URL('../.env', import.meta.url)); } catch { /* no .env */ }
 const BASE = process.env.BASE || 'http://localhost:5199/';
 const OUT = new URL('../docs/demo/', import.meta.url).pathname;
 const FF = new URL('./node_modules/ffmpeg-static/ffmpeg', import.meta.url).pathname;

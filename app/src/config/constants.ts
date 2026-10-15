@@ -1,6 +1,7 @@
 // App-wide constants that are not visual tokens (see theme/tokens.ts for those).
 
-export const APP_ID = 'com.ammar027.lumen';
+/** This build's own app id, set by the build from LUMEN_APP_ID (see .env.example at the repo root). */
+export const APP_ID: string = __LUMEN_APP_ID__;
 
 /** webOS app IDs the launcher itself needs. */
 export const SYSTEM_APP = {

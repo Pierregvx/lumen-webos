@@ -6,7 +6,7 @@ import './theme/global.css';
 applyTokens();
 // SF Pro, only when the private font file was added to this build (see tools/make_sf_font.py); otherwise nothing happens and Geist is used
 if ('FontFace' in window) {
-	new FontFace('SF Private', `url(${new URL('private/sf.woff2', location.href).href})`, {weight: '1 1000'}).load().then((face) => { document.fonts.add(face); }).catch(() => undefined);
+	new FontFace('SF Private', `url(${new URL('fonts/sf.woff2', location.href).href})`, {weight: '1 1000'}).load().then((face) => { document.fonts.add(face); }).catch(() => undefined);
 }
 render(<App />, document.getElementById('root')!);
 

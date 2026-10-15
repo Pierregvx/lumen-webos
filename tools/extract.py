@@ -2,7 +2,7 @@
 """Pull one still frame (1920 wide) + a thumbnail from every wallpaper video in /tmp/wp-ok.json (the checked list).
 Writes app/public/wallpapers/{full,thumb}/<id>.jpg and tools/wallpapers.json (id, name, source, category)."""
 import json, re, subprocess, sys, os, concurrent.futures as cf, unicodedata
-ROOT = os.path.expanduser('~/Developer/webos-launcher-tvos')
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FF = f'{ROOT}/tools/node_modules/ffmpeg-static/ffmpeg'
 OUT = f'{ROOT}/app/public/wallpapers'
 es = json.load(open('/tmp/wp-ok.json'))

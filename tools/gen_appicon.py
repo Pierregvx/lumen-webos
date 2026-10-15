@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """App icon (80x80, 130x130) and launch screen (1920x1080) for Lumen. The artwork is tools/icon-lumen.html (a glowing orb and a small glass dock on indigo),
-rendered once at 1024 px by headless Chrome and scaled down, so the small sizes stay crisp. Output goes to app/public/ (and app-assets/public/).
-Run: python3 tools/gen_appicon.py  (needs Google Chrome and macOS `sips`)"""
+rendered once at 1024 px by headless Chrome and scaled down, so the small sizes stay crisp. Output goes to app/public/.
+Run: python3 tools/gen_appicon.py  (needs Google Chrome, or CHROME set, and macOS `sips`)"""
 import base64, os, re, subprocess, tempfile
-ROOT = os.path.expanduser('~/Developer/webos-launcher-tvos')
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = f'{ROOT}/app/public'
-CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+CHROME = os.environ.get('CHROME', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
 FONT = f'{ROOT}/app/src/assets/geist-wght.woff2'
 NAME = os.environ.get('APP_NAME', 'Lumen')
 ART = open(f'{ROOT}/tools/icon-lumen.html').read()

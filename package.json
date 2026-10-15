@@ -1,0 +1,11 @@
+{
+  "name": "lumen-webos",
+  "private": true,
+  "description": "Lumen, a launcher for rooted LG webOS TVs. The app is in app/, the tools in tools/.",
+  "scripts": {
+    "build:ipk": "sh tools/build_ipk.sh",
+    "deploy": "sh tools/deploy.sh",
+    "dev": "npm --prefix app run dev",
+    "release": "python3 tools/build_release.py"
+  }
+}

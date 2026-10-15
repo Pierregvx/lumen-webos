@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """PRIVATE, local only: turns the SF Pro font that ships with macOS (/System/Library/Fonts/SFNS.ttf) into a small Latin web font for YOUR OWN TV's build, so Lumen
-uses the same typeface as tvOS. Apple's licence does not allow redistributing SF, so the result goes to app/public/private/ (never committed, never in the release:
-tools/build_release.py removes that folder). Needs: pip install fonttools brotli (in a throwaway venv).
+uses the same typeface as tvOS. Apple's licence does not allow redistributing SF, so the result goes to app/private/fonts/ (gitignored; a build with
+LUMEN_PRIVATE=0, such as tools/build_release.py, leaves app/private/ out). Needs: pip install fonttools brotli (in a throwaway venv).
 Run: <venv>/bin/python tools/make_sf_font.py"""
 import os
 from fontTools.ttLib import TTFont
 from fontTools.varLib import instancer
 from fontTools import subset
 SRC = '/System/Library/Fonts/SFNS.ttf'
-OUT = os.path.expanduser('~/Developer/webos-launcher-tvos/app/public/private')
+OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'app', 'private', 'fonts')
 os.makedirs(OUT, exist_ok=True)
 font = TTFont(SRC)
 font = instancer.instantiateVariableFont(font, {'wdth': 100, 'GRAD': 400})   # keep weight and optical size, drop the other two axes

@@ -50,22 +50,28 @@ Optional: to make the remote's **Home** button open Lumen, see the TV scripts un
 
 ## How to build it
 
-`app/` is a clone of the upstream launcher and is not part of this repository. Everything changed is re-applied by the scripts in `tools/`.
-See [REBUILD.md](REBUILD.md) for the exact order.
+`app/` is the launcher's source: a fork of the upstream launcher with this project's changes committed on top. Settings live in `.env` at the repo root.
 
 ```sh
-git clone https://github.com/partridgeworks/webos-launcher app
-cd app && npm install
-# then the steps in REBUILD.md
+cp .env.example .env        # app id, tile name, the TV's ssh address
+npm run build:ipk           # -> build/<app-id>_<version>_all.ipk
+npm run deploy              # builds, copies the .ipk to the TV over ssh, installs and launches it
 ```
 
-Brand icons and logos of third-party apps, and the bundled default wallpapers, are **not** included here (trademarks and other people's photographs).
-`tools/gen_iconpack.py` and `tools/build_iconpack.py` build the icon tiles from logos you put in `tools/logos/` and from your own TV's app icons.
+The default app id is `com.ammar027.lumen.dev` ("Lumen Dev"), so a dev build installs beside the stable one. For stable, set
+`LUMEN_APP_ID=com.ammar027.lumen` and `LUMEN_APP_TITLE=Lumen`. `npm run dev` starts the preview in a browser on port 5199.
+
+Brand icons and logos of third-party apps, your own photographs and the private SF font are **not** included here. Put them in `app/private/`
+(gitignored); the build lays that folder over the app if it is there. The layout is described at the top of `app/vite.config.ts`.
+`tools/gen_iconpack.py` builds icon tiles into it from logos you put in `tools/logos/` and from your own TV's app icons.
+`npm run release` builds the public `.ipk` (stable id, no `app/private/`) into `release/`.
 
 ## Install on the TV
 
+`npm run deploy` needs a rooted TV with SSH. Without root, use the webOS CLI:
+
 ```sh
-ares-setup-device           # add your TV as "lgtv" (developer mode on, or rooted)
+ares-setup-device           # add your TV as "lgtv" (developer mode on)
 npx -p @webos-tools/cli ares-install --device lgtv build/*.ipk
 ```
 

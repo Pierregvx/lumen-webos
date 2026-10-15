@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Adds Mixkit's free stock videos of beautiful European places to tools/wallpaperVideos.ts (Apple's aerial videos stay). Mixkit's licence allows free use, with no
+"""Adds Mixkit's free stock videos of beautiful European places to app/src/config/wallpaperVideos.ts (Apple's aerial videos stay). Mixkit's licence allows free use, with no
 attribution needed. The pictures are streamed from Mixkit's server, never bundled. Picks 1080p when it exists, else 720p.
-Run: python3 tools/harvest_mixkit.py   (then rebuild; apply_tvos.py copies the file into the app)"""
+Run: python3 tools/harvest_mixkit.py   (then rebuild)"""
 import json, os, re, subprocess
-ROOT = os.path.expanduser('~/Developer/webos-launcher-tvos')
-P = f'{ROOT}/tools/wallpaperVideos.ts'
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+P = f'{ROOT}/app/src/config/wallpaperVideos.ts'
 PLACES = {  # place -> Mixkit video ids (checked by hand: scenic, no flags or people)
  'Switzerland': [31939, 4396, 4283, 4435],
  'Norway': [8657, 4036, 8665, 8661, 8655, 11042],
@@ -24,7 +24,6 @@ PLACES = {  # place -> Mixkit video ids (checked by hand: scenic, no flags or pe
 def head(u):
     r = subprocess.run(['curl', '-sI', '-m', '15', u], capture_output=True, text=True).stdout
     return r.split('\n')[0].strip().endswith('200') or ' 200' in r.split('\n')[0]
-TITLES = json.load(open(f'{ROOT}/tools/mixkit_titles.json'))
 TITLES = json.load(open(f'{ROOT}/tools/mixkit_titles.json'))
 out = {}
 for place, ids in PLACES.items():

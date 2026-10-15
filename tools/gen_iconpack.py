@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Generates the tvOS-style icon pack: 800x480 (5:3) tiles, flat brand colour + centred logo, into app/public/iconpack/.
+"""Generates the tvOS-style icon pack: 800x480 (5:3) tiles, flat brand colour + centred logo, into app/private/iconpack/ (gitignored: these are other people's logos).
 Plain rectangles with hard corners, like Apple's spec - the launcher rounds the corners and adds the focus effects.
  - Logos that Simple Icons has (Netflix, YouTube, Plex, ...): its official glyph path + brand colours (tools/glyphs.json,
    made by `node icons_spec.mjs`).
  - Apps installed on this TV whose own icon is a logo on a flat colour (JioHotstar, Prime Video, Homebrew ...): the colour is
    read from the icon's corner, extended over the tile, and the icon sits in the middle - no visible square.
-Run: python3 tools/gen_iconpack.py && python3 tools/build_iconpack.py"""
+Run: python3 tools/gen_iconpack.py   (the build picks the tiles up from there; CHROME in .env or the environment if not on macOS)"""
 import json, os, struct, subprocess, tempfile, zlib
 
-ROOT = os.path.expanduser('~/Developer/webos-launcher-tvos')
-OUT = f'{ROOT}/app/public/iconpack'
-ICONS = f'{ROOT}/app/public/icons/apps'
-CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = f'{ROOT}/app/private/iconpack'
+ICON_DIRS = [f'{ROOT}/app/private/icons/apps', f'{ROOT}/app/public/icons/apps']   # icons of apps on your TV first, then the upstream ones
+CHROME = os.environ.get('CHROME', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
 GLYPHS = json.load(open(f'{ROOT}/tools/glyphs.json'))
 os.makedirs(OUT, exist_ok=True)
 
@@ -115,7 +115,7 @@ if __name__ == '__main__':
         n = render(title, f'background:linear-gradient(to bottom,{top},{bot});', img)
         print(f'{title:13s} {n // 1024} KB (logo)')
     for title, icon, mode, h, extra in OWN_TILES:
-        p = f'{ICONS}/{icon}'
+        p = next((f'{d}/{icon}' for d in ICON_DIRS if os.path.exists(f'{d}/{icon}')), f'{ICON_DIRS[-1]}/{icon}')
         if mode == 'flat':
             c = extra or corner_color(p) or '#222'
             bg = f'background:{c};'   # solid, so the icon's own square can't show

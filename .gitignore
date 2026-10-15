@@ -4,8 +4,10 @@ tools/logs/
 .DS_Store
 ref-*/
 # third-party brand icons/logos and other people's photographs are not published
-app-assets/public/icons/
-app-assets/public/iconpack/
-app-assets/public/wallpapers/
 tools/logos/
 release/
+# settings and build output
+.env
+build/
+# personal assets (other people's logos and photos, the private SF font): see app/vite.config.ts
+app/private/

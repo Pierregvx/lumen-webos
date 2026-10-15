@@ -1,5 +1,11 @@
-import {defineConfig, type Plugin} from 'vite';
+import {cpSync, existsSync, readFileSync, readdirSync, statSync, writeFileSync} from 'node:fs';
+import {dirname, join, normalize, resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {defineConfig, loadEnv, type Plugin} from 'vite';
 import preact from '@preact/preset-vite';
+
+const APP_DIR = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = resolve(APP_DIR, '..');
 
 // webOS 6.x runs Chrome 79. Two things matter for that engine:
 //  1. Module scripts (`<script type="module">`) are refused when loaded from file://
@@ -12,31 +18,98 @@ const BROWSER_TARGET = 'chrome79';
 /** Rewrites Vite's module entry tag into a classic deferred script tag. */
 function classicScriptTag (): Plugin {
 	return {
-		name: 'classic-script-tag',
-		enforce: 'post',
-		transformIndexHtml (html) {
-			return html
-				.replace(/<script type="module" crossorigin src="([^"]+)"><\/script>/g, '<script defer src="$1"></script>')
-				.replace(/<link rel="stylesheet" crossorigin href="/g, '<link rel="stylesheet" href="');
-		}
-	};
-}
+			name: 'classic-script-tag',
+			enforce: 'post',
+			transformIndexHtml (html) {
+				return html
+					.replace(/<script type="module" crossorigin src="([^"]+)"><\/script>/g, '<script defer src="$1"></script>')
+					.replace(/<link rel="stylesheet" crossorigin href="/g, '<link rel="stylesheet" href="');
+			}
+		};
+	}
 
-export default defineConfig({
-	base: './',            // the app is loaded from a local file path on the TV
-	plugins: [preact(), classicScriptTag()],
-	build: {
-		target: BROWSER_TARGET,
-		outDir: 'dist',
-		modulePreload: false,
-		cssTarget: BROWSER_TARGET,
-		rollupOptions: {
-			output: {
-				format: 'iife',
-				inlineDynamicImports: true,
-				entryFileNames: 'assets/app.js',
-				assetFileNames: 'assets/[name][extname]'
+	/**
+	 * Build settings from the repo-root `.env` (see `.env.example`); variables already set in the environment win.
+	 *  - LUMEN_APP_ID, LUMEN_APP_TITLE: stamped into dist/appinfo.json and the APP_ID constant. Default: the dev build.
+	 *  - LUMEN_PRIVATE=0: build without app/private/ (what the public release is).
+	 */
+	function lumenSettings (mode: string) {
+		const env = loadEnv(mode, REPO_ROOT, 'LUMEN_');
+		const privateDir = join(APP_DIR, 'private');
+		return {
+			appId: env.LUMEN_APP_ID || 'com.ammar027.lumen.dev',
+			title: env.LUMEN_APP_TITLE || 'Lumen Dev',
+			privateDir: env.LUMEN_PRIVATE !== '0' && existsSync(privateDir) ? privateDir : ''
+		};
+	}
+
+	const PRIVATE_MODULE = 'virtual:lumen-private';
+	const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+	/**
+	 * Personal assets that are never committed or released live in app/private/ (gitignored). Its layout mirrors dist/, and the build lays it over dist/:
+	 *   private/iconpack/*.png|jpg|webp   icon tiles, matched to apps by file name (tools/gen_iconpack.py)
+	 *   private/icons/apps/<id>.png       extra system app icons
+	 *   private/wallpapers/default-N*.jpg your own default wallpapers, with private/wallpapers.json: [{"title": ..., "file": "wallpapers/default-N.jpg"}]
+	 *   private/fonts/sf.woff2            the private SF font (tools/make_sf_font.py)
+	 * The dev server serves the same files. Without the folder (or with LUMEN_PRIVATE=0) the build is the public one.
+	 */
+	function lumenPrivate (privateDir: string, appId: string, title: string): Plugin {
+		let outDir = 'dist';
+		return {
+			name: 'lumen-private',
+			configResolved (config) { outDir = resolve(config.root, config.build.outDir); },
+			resolveId (id) { return id === PRIVATE_MODULE ? '\0' + PRIVATE_MODULE : undefined; },
+			load (id) {
+				if (id !== '\0' + PRIVATE_MODULE) return undefined;
+				const packDir = privateDir && join(privateDir, 'iconpack');
+				const pack: Record<string, string> = {};
+				if (packDir && existsSync(packDir)) {
+					for (const f of readdirSync(packDir).sort()) if (/\.(png|jpe?g|webp)$/i.test(f)) pack[slug(f.replace(/\.[^.]+$/, ''))] = f;
+				}
+				const wpFile = privateDir && join(privateDir, 'wallpapers.json');
+				const wallpapers = wpFile && existsSync(wpFile) ? JSON.parse(readFileSync(wpFile, 'utf8')) : null;
+				return `export const ICON_PACK = ${JSON.stringify(pack)};\nexport const PRIVATE_WALLPAPERS = ${JSON.stringify(wallpapers)};\n`;
+			},
+			configureServer (server) {
+				if (!privateDir) return;
+				server.middlewares.use((req, res, next) => {
+					const path = decodeURIComponent((req.url || '').split('?')[0]);
+					const file = normalize(join(privateDir, path));
+					if (!file.startsWith(privateDir + '/') || file.endsWith('wallpapers.json') || !existsSync(file) || !statSync(file).isFile()) { next(); return; }
+					res.end(readFileSync(file));
+				});
+			},
+			writeBundle () {
+				if (privateDir) cpSync(privateDir, outDir, {recursive: true, filter: (src) => !src.endsWith('wallpapers.json') && !src.endsWith('.DS_Store')});
+				const infoPath = join(outDir, 'appinfo.json');
+				const info = JSON.parse(readFileSync(infoPath, 'utf8'));
+				info.id = appId;
+				info.title = title;
+				writeFileSync(infoPath, JSON.stringify(info, null, 2) + '\n');
+			}
+		};
+	}
+
+	export default defineConfig(({mode}) => {
+		const lumen = lumenSettings(mode);
+		return {
+		base: './',            // the app is loaded from a local file path on the TV
+		plugins: [preact(), classicScriptTag(), lumenPrivate(lumen.privateDir, lumen.appId, lumen.title)],
+		define: {__LUMEN_APP_ID__: JSON.stringify(lumen.appId)},
+		build: {
+			target: BROWSER_TARGET,
+			outDir: 'dist',
+			modulePreload: false,
+			cssTarget: BROWSER_TARGET,
+			rollupOptions: {
+				output: {
+					format: 'iife',
+					inlineDynamicImports: true,
+					entryFileNames: 'assets/app.js',
+					assetFileNames: 'assets/[name][extname]'
+				}
 			}
 		}
-	}
+	};
 });

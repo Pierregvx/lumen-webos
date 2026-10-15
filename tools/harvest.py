@@ -9,7 +9,7 @@ SUBS = [  # (subreddit, category shown in the picker)
  ('Amoledbackgrounds','Dark'), ('MinimalWallpaper','Minimal'), ('WaterPorn','Water'), ('AutumnPorn','Autumn')]
 PER_SUB = 100
 ONLY = sys.argv[1:]            # e.g. harvest.py CityPorn SeaPorn: only these, merged into the existing catalog
-CATALOG = os.path.expanduser('~/Developer/webos-launcher-tvos/tools/catalog.json')
+CATALOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'catalog.json')
 
 def sh(cmd, **kw): return subprocess.run(cmd, capture_output=True, **kw)
 

@@ -4,6 +4,8 @@ import {spawn} from 'node:child_process';
 import {mkdirSync, writeFileSync} from 'node:fs';
 import {setTimeout as sleep} from 'node:timers/promises';
 
+// CHROME (and BASE, OUT) can be set in the environment or in the repo-root .env
+try { process.loadEnvFile(new URL('../.env', import.meta.url)); } catch { /* no .env */ }
 const BASE = process.env.BASE || 'http://localhost:5199/';
 const OUT = process.env.OUT || new URL('../docs/screenshots/', import.meta.url).pathname;
 const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';

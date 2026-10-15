@@ -5,5 +5,4 @@ build/
 .DS_Store
 
 # local, per-person settings
-tv.env
 src/config/catalog.local.ts

@@ -4,9 +4,11 @@
 import {spawn} from 'node:child_process';
 import {mkdirSync, writeFileSync} from 'node:fs';
 import {setTimeout as sleep} from 'node:timers/promises';
-const BASE = 'http://localhost:5199/';
+// CHROME (and BASE, OUT) can be set in the environment or in the repo-root .env
+try { process.loadEnvFile(new URL('../.env', import.meta.url)); } catch { /* no .env */ }
+const BASE = process.env.BASE || 'http://localhost:5199/';
 const OUT = process.argv[2] || new URL('../docs/screenshots/', import.meta.url).pathname;
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME = process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const PORT = 9336;
 mkdirSync(OUT, {recursive: true});
 const chrome = spawn(CHROME, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--autoplay-policy=no-user-gesture-required', `--remote-debugging-port=${PORT}`, '--window-size=1920,1080', '--force-device-scale-factor=1', '--user-data-dir=/tmp/lumen-shots2-profile', 'about:blank'], {stdio: 'ignore'});
