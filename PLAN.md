@@ -8,174 +8,122 @@ clock fix to the no-live-blur rule, is an assumption here until it has been test
 
 This is a personal fork. Nothing goes back to partridgeworks/webos-launcher. Features are tried against this TV first and kept only if they work here.
 
-Each phase ends with a check on the TV before the next one starts. Items marked **(spike)** are answered in Phase 2; items marked **(verify)**
-depend on something not yet tested on this TV.
+Work is split in two: what can be built without the TV, and what needs someone at the TV. Code that needs a TV answer is still written when it
+can be written defensively (it does nothing harmful if the answer is no), and is marked **(verify)** until it has been seen working on the TV.
+Every push to a branch other than `main` reaches the TV as a Homebrew Channel update, so "verify" means: update in the Channel, try it, report back.
 
 ---
 
-## Phase 0: Safety net
+## Where things stand (2026-10-15)
 
-Goal: the working install on the TV is never at risk while we change things.
-
-- [ ] Find the `.ipk` that is actually installed (the GitHub release ipk is the logo-free one; the installed app directory on the TV is not an ipk).
-      If it is not on disk anywhere, rollback is simply "never uninstall the stable copy", which the side-by-side install below gives us.
-- [ ] Note the current Lumen settings (dock order, folders, wallpaper, options) so they can be recreated. Settings are per app id, so the dev
-      build starts empty.
-- [x] `tools/tv/watch.sh` only knows `com.ammar027.lumen` (`ME=` at the top). Change it to a list of app ids so the Home takeover and the
-      video-wallpaper screensaver suppression work for whichever build is in front. The flag files under `/var/lib/homehook/` are shared by both
-      builds; that is fine as long as only one is in front at a time.
-      Done in the repo (Home opens whichever build was last in front). Still to copy to `/var/lib/homehook/` on the TV. The old copy there
-      only knows `com.ammar027.lumen`, so until it is replaced the Home takeover and the screensaver suppression ignore `com.samrenfrew.lumen`.
-- [ ] Decide which thing owns the Home button: LG Input Hook (already set up on this TV) or the LG Home polling in `watch.sh`. Both fire today.
-      Keep one, remove the other from the TV. **(spike)** if unsure which is faster.
-
-Done when: the stable build is still installed and working, and `watch.sh` on the TV accepts more than one app id.
+- Phase 0 and Phase 1 are done apart from the TV-side items below. The app is built from this repo and installed on the TV from the Homebrew
+  Channel (`com.samrenfrew.lumen`, dev channel). LG Input Hook owns the Home button.
+- Built without the TV, waiting to be checked on it: everything in **Verify on the TV** below.
+- Next without the TV: the rest of **No TV needed**.
 
 ---
 
-## Phase 1: The rewrite, confirmed by a build and a deploy
+## On the TV
 
-Goal: `app/` becomes real source in this repo, one command builds it, one command puts it on the TV, and the result is the same app as 1.0.9.
-No behaviour changes in this phase. That is what makes it checkable: the build from committed source must match the build from the patch pipeline.
+### Verify on the TV (built, not yet seen working)
+Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or later).
+- [ ] Settings backup: change something in Lumen, wait 5 s, then `cat /var/lib/homehook/lumen-config.json` over ssh. Then uninstall and
+      reinstall (or install the other id): the settings should come back with a "Settings restored from the TV" message.
+- [ ] Error log: `cat /var/lib/homehook/lumen.log`. It should exist after anything has failed (for example turning on Live app list with the
+      Homebrew service stopped). Empty is fine if nothing failed.
+- [ ] Control Center: picture mode, sound mode and screensaver time still read and change (they now go through `lib/root.ts`).
+- [ ] Weather: shows nothing until Settings > Options > Weather city is set. **Your current setup will lose the weather** until you pick
+      Auto or a city, because "no city" used to mean Auto.
+- [ ] Launch parameter: `luna-send -n 1 luna://com.webos.applicationManager/launch '{"id":"com.samrenfrew.lumen","params":{"view":"recent"}}'`,
+      once with Lumen closed and once with it in front. Both should land on the Recent row. This is the launch-parameter spike as well.
+- [ ] Hide app names and Reduce motion in Settings > Options; the top-right button's label no longer shows above Control Center.
 
-### Fork
-- [x] Clone partridgeworks/webos-launcher into `app/`, record the upstream commit in `THIRD_PARTY_NOTICES.md`, run the REBUILD.md pipeline
-      once (on a machine where the hardcoded `~/Developer/webos-launcher-tvos` path can be satisfied, a symlink is enough), and commit the result.
-- [x] Prove it: build `dist/` from the committed source and from the pipeline, diff them. They must be identical before anything else changes.
-      Done against the published 1.0.9 release ipk instead, which is stronger: the pipeline itself did not reproduce 1.0.9 (version 1.0.7 and
-      one hand-edited icon colour were missing), so both were added to the committed source. Remaining difference: the post-1.0.9 fix 497e918.
-- [x] Delete every `tools/apply_*.py` (all 50-odd of them, including the three that were never in the pipeline: `apply_clearer_glass.py`,
-      `apply_motion.py`, `apply_launchfx.py`). Their job is done once the source is committed.
-- [x] Fix the hardcoded `~/Developer/webos-launcher-tvos` path in the scripts that stay: `build_release.py`, `harvest.py`, `harvest_mixkit.py`,
-      `blur_defaults.py`, `extract.py`, `gen_iconpack.py`, `gen_cities.py`, `make_sf_font.py`, `build_catalog.py`, `build_iconpack.py`,
-      `gen_appicon.py`. Paths relative to the repo root. (`build_iconpack.py` was deleted instead: the build makes the icon list now.)
+### Put the TV scripts in place
+`watch.sh` is probably not running (it did not seem to work). Without it there is no video-wallpaper screensaver suppression, no Frame art
+mode, no hosts blocking, no clock fix and no system-wide Recent row; Lumen itself works without it.
+- [ ] Copy `tools/tv/watch.sh`, `clockfix.sh`, `hosts-extra`, `stop_watch.sh` to `/var/lib/homehook/` and `60-homehook` to
+      `/var/lib/webosbrew/init.d/`, `chmod +x` them, start it, and check `ps | grep watch.sh` and `/tmp/homehook.log`.
+- [x] Home button: LG Input Hook owns it. `watch.sh` only takes over LG Home when `/var/lib/homehook/home-takeover` exists (off by default;
+      it would still be useful for the cold-boot case where LG Home is the first thing on screen).
+- [ ] Recent row from `watch.sh`: open two apps from LG's own launcher, then Lumen: both should be on the Recent row
+      (`cat /var/lib/homehook/recent`).
 
-### Build
-- [x] `.env` (gitignored) with `.env.example` committed. Holds at least `LUMEN_APP_ID` (default `com.ammar027.lumen.dev`), `LUMEN_APP_TITLE`
-      (default `Lumen Dev`), `LUMEN_TV_HOST`. The build reads it and stamps `appinfo.json` and the app id constant in the source; nothing in the
-      source hardcodes the id any more. Stable is `.env` with `LUMEN_APP_ID=com.ammar027.lumen`.
-- [x] Single build command, `npm run build:ipk`, that produces the `.ipk` into `build/`.
-- [x] Personal assets (third-party app logos, the private SF font, personal wallpapers) live in one gitignored directory, for example
-      `app/private/`, and the build copies them in if present. `build_release.py` currently finds them with `git ls-files --others` inside `app/`,
-      which stops working once `app/` is committed here. Replace that with "build without `app/private/`".
-- [x] Keep `tools/screenshots.mjs` working as a visual check (it defaults to the macOS Chrome path; take it from `.env` or `CHROME`).
-
-### Deploy
-- [x] `npm run deploy`: scp the `.ipk` to `LUMEN_TV_HOST` and install it with the Homebrew Channel install service, or `ares-install` if that is
-      simpler. One command from a clean clone to the app running on the TV. **(verify)** Written and dry-run with a fake ssh; the
-      `appInstallService/dev/install` call has not been run on webOS 25 yet.
-- [x] Homebrew Channel repository instead of a LAN server: every push to a branch other than `main` builds the public `.ipk`, publishes it as
-      the rolling `dev` release and writes `hbc-repo/dev/apps.json`; a `v*` tag does the same into `hbc-repo/stable/`. The TV has the dev
-      repository added and `com.samrenfrew.lumen` installed from it, so updating is a push plus Update in the Channel.
-      Two consequences: (1) this is the public build, without `app/private/` (no third-party logos, no SF font, no personal wallpapers);
-      (2) dev versions are `1.0.9xxx`, so the next tagged stable must be at least `1.1.0`, or the Channel will see it as older than the dev
-      build already installed under the same id.
-- [ ] Use it for a day and note anything that differs from 1.0.9 (apart from the missing private assets).
-
-Done when: a fresh clone with a `.env` builds and deploys with two commands, the build from this repo is on the TV and updates from the Channel,
-and it is indistinguishable from 1.0.9 apart from the private assets. Status: done apart from a day of use; `npm run deploy` over SSH is still
-untried on webOS 25 and only matters if a private build is wanted on the TV.
-
----
-
-## Phase 2: Spikes on this TV
-
-Goal: answer every open question about this TV with a throwaway test on the dev build, before building anything on top of the answer.
-Each spike is a yes/no with a note in `docs/spikes.md`. Nothing from a spike is kept in the app unless it is trivially small.
-
-### How the TV behaves
-- [ ] Does the clock go wrong after a cold boot here? (`clockfix.sh` exists for that bug on the old TV. If no, delete the script.)
-- [ ] Does the TV kill background apps? It looks like it: the Recents button cold-loads the last app every time. Confirm with Lumen: open it,
-      open Plex, press Home, does Lumen cold start? If yes, "resume" is off the table and cold-start time is the number that matters.
-- [ ] Launch parameters: when Lumen is launched with `{"params":{...}}` while not running, does it see them at start (`webOSLaunch` /
-      `PalmSystem.launchParams`)? When it is already in front, does `webOSRelaunch` fire? Both are needed later (Recents button, colour
-      buttons, ambient mode).
-- [ ] Recents button: Input Hook can rebind Home, so it can rebind this. Confirm a launch with `{"view":"recent"}` reaches Lumen as a
-      parameter (this is the launch-parameter spike above, with a real use).
-- [ ] Colour buttons: which does this remote have, and which key codes reach the app? Some Magic Remotes only show them on the on-screen 123 pad.
-- [ ] Attaching Chrome DevTools to the dev build on the TV: which method works on webOS 25 (Dev Manager Desktop inspect, `ares-inspect`).
-
-### Settings keys on webOS 25
-- [ ] The ones the app already uses through root: `pictureMode`, `soundMode`, `screenSaverTimer`. Do the same `setSystemSettings` calls work?
-- [ ] New ones: backlight, Eye Comfort, sound output (TV speakers, ARC/optical, Bluetooth). Find the category and key for each.
+### Spikes (yes/no answers, noted in `docs/spikes.md`)
+- [ ] Does the clock go wrong after a cold boot here? If no, delete `clockfix.sh` and its line in `watch.sh`. (It no longer forces
+      Asia/Kolkata and gets the time over HTTPS; `TZ_NAME` at the top forces a zone if one is needed.)
+- [ ] Does the TV kill background apps? Open Lumen, open Plex, press Home: does Lumen cold start?
+- [ ] Recents button: rebind it with Input Hook to launch Lumen with `{"view":"recent"}` (needs the launch-parameter check above).
+- [ ] Colour buttons: which does this remote have, and which key codes reach the app?
+- [ ] Chrome DevTools on the TV: which method works on webOS 25 (Dev Manager Desktop inspect, `ares-inspect`). Needed for Phase 4 traces.
+- [ ] Settings keys: new ones for backlight, Eye Comfort, sound output (TV speakers, ARC/optical, Bluetooth). Category and key for each.
 - [ ] Live TV channel service, for the Freeview tiles idea in Later.
+- [ ] `backdrop-filter` on the dock only, behind a temporary flag: 60 fps while moving focus and while the video wallpaper plays?
+- [ ] `https://sylvan.apple.com/` videos play directly (then the plain HTTP fallback in `lib/wallpaperVideo.ts` goes).
+- [ ] Immich: endpoint paths against the server's `/api` docs and which permissions a read-only key needs.
+- [ ] `hosts-extra`: capture what this TV calls (LG ads and tracking) and fill it in. It is empty now; the old entries were JioHotstar's.
 
-### Graphics
-- [ ] `backdrop-filter` on the dock only, behind a temporary flag: does the dock hold 60 fps while moving focus and while the video wallpaper plays?
-      This decides the Graphics: Low/High setting in Phase 4. The no-live-blur rule in RESEARCH.md was written for a Mali-T820; this chip is
-      different, but still entry level.
-- [ ] `https://sylvan.apple.com/` videos play directly on this TV (the plain HTTP fallback exists because the old TV refused Apple's certificate).
-
-### Network and services
-- [ ] Immich: endpoint paths against the server's own `/api` docs (albums, favourites, random, memories, thumbnail and preview sizes) and
-      which permissions a read-only key needs. `memory.read`, `asset.read`, `album.read` exist; `asset.view` may also be needed for thumbnails.
-
-Done when: every line above has an answer in `docs/spikes.md`, and the dev build on the TV is back to the Phase 1 state.
+### Also at the TV
+- [ ] Note the current Lumen settings, in case the backup does not work.
+- [ ] Use the build for a day and note anything that differs from 1.0.9 (apart from the missing private assets, see Phase 1).
+- [ ] `npm run deploy` over SSH: untried on webOS 25; only needed for a private build with your logos and font.
+- [ ] Lower rows transition: trace coming back up (see Phase 4) before changing more.
 
 ---
 
-## Phase 3: Fixes and plumbing
+## No TV needed
 
-Goal: the known correctness and privacy issues are gone, and the dev loop has the tools it needs. Each fix is shaped by its Phase 2 answer.
+### Done (2026-10-15)
+- [x] Every root shell command in one module, `app/src/lib/root.ts`, with fixed commands, setting keys and values from a list, paths checked,
+      everything shell-quoted, and files written as base64.
+- [x] Settings backup to `/var/lib/homehook/lumen-config.json` after each change, restored on a fresh install (`lib/backup.ts`). Shared by
+      stable, dev and reinstalls.
+- [x] On-TV error log (`lib/log.ts`): failed Luna calls (root included) and failed fetches go to `/var/lib/homehook/lumen.log`, capped at
+      64 KB, buffered in `localStorage` so a failing root service does not lose its own failure.
+- [x] Weather location is opt-in: no city means no weather and no request; Auto (ipwho.is) has to be picked.
+- [x] Launch parameters: `{"view":"recent"}` on a cold start (`webOSSystem.launchParams` / `PalmSystem.launchParams`) or a relaunch
+      (`webOSRelaunch`) focuses the Recent row (`lib/launchParams.ts`). **(verify)**
+- [x] Recent row merges `/var/lib/homehook/recent` (written by `watch.sh`) with Lumen's own list (`lib/recent.ts`). **(verify)**
+- [x] `watch.sh`: Home takeover behind a flag, recent-apps file, `hosts-extra` only copies `0.0.0.0 <name>` / `:: <name>` lines, duplicate
+      function definitions removed. `clockfix.sh`: TV's own zone unless `TZ_NAME` is set, HTTPS time. **(verify)**
+- [x] Settings: Hide app names, Reduce motion. Control Center no longer shows the top button's label through it.
+- [x] Lazy-loading Settings and Control Center: tried and dropped. The build is one IIFE script because the app loads from `file://`, where
+      ES module chunks do not load; splitting would need a second classic script, and the two are a small share of the 186 KB bundle anyway.
+      Revisit only if the Phase 4 trace shows script parse time matters.
 
-### Correctness and privacy
-- [ ] `tools/tv/clockfix.sh`: delete if the spike said the clock is fine. Otherwise: no forced `Asia/Kolkata` (use the TV's own zone or a
-      variable at the top), and get the time over HTTPS, not from the `Date` header of plain HTTP requests.
-- [ ] `tools/tv/hosts-extra`: the entries are JioHotstar ad hosts from the old TV. Replace with whatever this TV actually calls, or empty it.
-- [ ] `watch.sh`: only append `hosts-extra` lines that match `0.0.0.0 <hostname>` or `:: <hostname>`.
-- [ ] Weather location: ipwho.is becomes opt-in. Default to no city until one is chosen.
-- [ ] Remove the plain HTTP fallback for `sylvan.apple.com` if the spike said HTTPS plays; otherwise make it a setting.
-- [ ] Every root shell command in one module with a fixed allowlist. Shell-quote or validate any value inserted into a command, including the
-      three that are safe today (picture mode, sound mode, screensaver minutes).
-
-### Settings export and import
-- [ ] Export the Lumen config to `/var/lib/homehook/lumen-config.json` via root, import on first launch or on demand. Needed because dev, stable
-      and any reinstall each keep separate settings. The JSON goes through the root command as base64, never as a quoted string (that is the
-      injection problem the allowlist above exists for).
-
-### On-TV error log
-- [ ] Failures from root commands, Luna calls and network requests go to a size-capped file readable over `ssh`. Buffer in `localStorage` and
-      flush through root, so a failing root service does not also lose the log of its own failure.
-
-### Home-network repository
-Done another way in Phase 1: the repository is served from the `hbc-repo` branch on GitHub over HTTPS, so no LAN server and no HTTP question.
-- [x] A static `apps.json` in the Homebrew Channel format (`paging` wrapper, `packages[]`, each with a `manifest` carrying `id`, `version`,
-      `type: "web"`, `title`, `appDescription`, `iconUri`, `sourceUrl`, `rootRequired`, `ipkUrl`, `ipkHash.sha256`, `ipkSize`) plus the `.ipk`,
-      generated by the build and served from a machine on the LAN. HTTP or HTTPS per the spike.
-- [x] Add it on the TV once.
-- [ ] Tag a first stable (`v1.1.0`) and switch the TV to the `stable` repository once the dev build has been lived with.
-
-Done when: the dev build behaves the same as 1.0.9 apart from the fixes above, settings survive a reinstall, and a failure shows up in the log.
-
----
-
-## Phase 4: Performance
-
-Goal: know how fast Lumen is on this TV, make cold start faster (the TV kills background apps, so every Home press is a cold start), and check
-every later change against the numbers.
-
-### Measure
-- [ ] Record three numbers as the baseline, with DevTools traces (method from Phase 2):
-  - Home press to home screen visible (this is cold start on this TV)
-  - Key press to focus moving (frame time while moving along the dock)
-  - Cold start to interactive
+### Next
+- [ ] Pop-up list picker for long options (weather city, country, language, picture mode, sound mode) instead of stepping through with OK.
+- [ ] Settings: focus highlight strength; tiles per dock row (5, 6, 7); video wallpaper only between set hours.
+- [ ] Settings: import from the backup on demand (today only automatic on a fresh install).
+- [ ] Wallpaper: `img.decode()` before the swap (it already waits for `onload`).
+- [ ] `content-visibility: auto` on off-screen rows and panels; video wallpaper at 720p (the Mixkit catalogue has both).
 - [ ] Frame-rate counter in dev builds only.
+- [ ] Settings descriptions: check the rest against what the app does now.
+- [ ] Tag `v1.1.0` and switch the TV to the stable repository once the dev build has been lived with.
 
-### Cold start
-- [ ] Load Settings and Control Center only when first opened, so the home screen parses less JavaScript at start.
-- [ ] Draw the first row first (already done), then defer everything else until the first frame is up.
-- [ ] Decode the next wallpaper or photo before swapping it in (`img.decode()` or `createImageBitmap`).
-- [ ] `content-visibility: auto` on off-screen rows and panels.
-- [ ] Images at screen size or smaller. Video wallpaper at 720p rather than 1080p (the Mixkit catalogue already has both).
-- [ ] Handle `webOSRelaunch` and launch parameters at start, per the Phase 2 spike, so a launch with `{"view":"recent"}` lands on the Recent row.
+---
 
-### Recents button
-- [ ] Rebind the Recents button with LG Input Hook to launch Lumen with `{"view":"recent"}`, the same way Home is already rebound. Lumen's
-      Recent row is the app switcher; LG's own recents window is not needed. The TV's "go back to the last app" is a cold load either way, so
-      going through Lumen costs nothing extra and gives a choice.
-- [ ] Make the Recent row truthful. Today it only records apps opened from Lumen (`recentIds` in storage), so anything opened through LG Home,
-      the Input Hook or a cold boot never appears. `watch.sh` already sees every foreground app change; have it keep the last eight distinct
-      app ids in `/var/lib/homehook/recent`, and have Lumen read that file through root at start and merge it with its own list.
+## Phase 1 notes: the rewrite, build and deploy (done)
+
+- `app/` is the committed source (fork of webos-launcher at 1e2c39b); the `tools/apply_*.py` pipeline is gone. Proven against the published
+  1.0.9 ipk.
+- `.env` (from `.env.example`) sets `LUMEN_APP_ID`, `LUMEN_APP_TITLE`, `LUMEN_TV_HOST`; `npm run build:ipk` builds into `build/`;
+  `npm run deploy` installs over SSH; personal assets live in gitignored `app/private/`.
+- Homebrew Channel repository instead of a LAN server: every push to a branch other than `main` builds the public `.ipk`, publishes it as the
+  rolling `dev` release and writes `hbc-repo/dev/apps.json`; a `v*` tag does the same into `hbc-repo/stable/`. The TV has the dev
+  repository added, so updating is a push plus Update in the Channel. Two consequences: (1) this is the public build, without `app/private/`
+  (no third-party logos, no SF font, no personal wallpapers); (2) dev versions are `1.0.9xxx`, so the next tagged stable must be at least
+  `1.1.0`, or the Channel will see it as older than the dev build already installed under the same id.
+
+---
+
+## Phase 4: Performance (needs DevTools on the TV)
+
+Goal: know how fast Lumen is on this TV, make cold start faster, and check every later change against the numbers.
+
+- [ ] Record three numbers as the baseline, with DevTools traces: Home press to home screen visible; key press to focus moving; cold start to
+      interactive.
+- [ ] Then the cold-start items: draw the first row first (done), defer the rest until the first frame is up, images at screen size or smaller.
+- [ ] Graphics setting Low/High, only if the blur spike passed.
 
 ### Lower rows transition (Down from the dock to the blurred backdrop)
 Done so far (commit 167253b, dev 1.0.9003): the rows slide with `transform` instead of `top`; the blurred backdrop is a permanent
@@ -189,37 +137,21 @@ Still wrong, seen on the TV:
       glass a fixed-offset `scroll` background (as `.panel` already does) so it never needs `background-attachment: fixed` and can move
       with the rows; or drop the picture from the dock glass entirely and use a tint everywhere.
 
-### Blur
-- [ ] If the Phase 2 blur spike passed: a Graphics setting, Low (current pre-blurred glass) / High (live blur on the dock only). If it failed,
-      nothing to do here.
-
 Done when: the three numbers are recorded before and after, none got worse, and Recents opens Lumen on the Recent row.
 
 ---
 
-## Phase 5: UI tweaks
+## Phase 5: Control Center additions (needs the settings keys spike)
 
-- [ ] Pop-up list picker for long options (weather city, country, language, picture mode, sound mode) instead of stepping through values with OK.
-- [ ] Fix the focus label of the top-right button ("Control Center") showing through above the open Control Center panel.
-- [ ] New settings:
-  - [ ] Focus highlight strength
-  - [ ] Tiles per dock row (5, 6, 7)
-  - [ ] Hide app names under focused tiles
-  - [ ] Video wallpaper only between set hours
-  - [ ] Reduce motion (no animations)
-- [ ] Control Center, using the keys found in Phase 2:
-  - [ ] Sound output: TV speakers, soundbar (ARC or optical), Bluetooth
-  - [ ] Backlight slider
-  - [ ] Eye Comfort toggle
-- [ ] Update the Settings descriptions that are out of date (video wallpaper text still says only Apple's aerials).
-
-Done when: each new setting works on the TV and the Phase 4 numbers have not got worse.
+- [ ] Sound output: TV speakers, soundbar (ARC or optical), Bluetooth
+- [ ] Backlight slider
+- [ ] Eye Comfort toggle
 
 ---
 
 ## Phase 6: Colour buttons
 
-Only if the Phase 2 spike found buttons that reach the app.
+Only if the colour-button spike found buttons that reach the app.
 
 - [ ] Settings > Remote: an action per colour button (red, green, yellow, blue). Actions:
   - Open a chosen app
