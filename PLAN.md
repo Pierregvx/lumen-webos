@@ -58,8 +58,8 @@ mode, no hosts blocking, no clock fix and no system-wide Recent row; Lumen itsel
 - [ ] Recents button: rebind it with Input Hook to launch Lumen with `{"view":"recent"}` (needs the launch-parameter check above).
 - [ ] Colour buttons: which does this remote have, and which key codes reach the app?
 - [ ] Chrome DevTools on the TV: which method works on webOS 25 (Dev Manager Desktop inspect, `ares-inspect`). Needed for Phase 4 traces.
-- [ ] Settings keys: read works for `picture/backlight`, `picture/eyeComfortMode`, `sound/soundOutput` (`docs/spikes.md`). Backlight set works. Still to do: setting
-      Eye Comfort and sound output, and the `soundOutput` values for ARC, optical and Bluetooth.
+- [ ] Settings keys: read works for `picture/backlight`, `picture/eyeComfortMode`, `sound/soundOutput` (`docs/spikes.md`). Backlight and Eye Comfort set work. Still to do: setting
+      sound output, and the `soundOutput` values for ARC, optical and Bluetooth.
 - [ ] Live TV channel service, for the Freeview tiles idea in Later.
 - [ ] `backdrop-filter` on the dock only, behind a temporary flag: 60 fps while moving focus and while the video wallpaper plays?
 - [ ] `https://sylvan.apple.com/` videos play directly (then the plain HTTP fallback in `lib/wallpaperVideo.ts` goes).
