@@ -342,11 +342,24 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 
 	const n = nav.current;
 	const rowIndex = clamp(n.rowIndex, 0, Math.max(0, rows.length - 1));
+	const lower = n.zone === 'rows' && rowIndex >= 1;
+	// the glass stays a plain tint until the rows have slid back (see .screen--plainglass in global.css)
+	const [settling, setSettling] = useState(false);
+	const wasLower = useRef(false);
+	useEffect(() => {
+		const leaving = wasLower.current && !lower;
+		wasLower.current = lower;
+		if (!leaving) return;
+		setSettling(true);
+		const t = setTimeout(() => setSettling(false), 300);
+		return () => clearTimeout(t);
+	}, [lower]);
 	const overlay = n.zone === 'panel' || n.zone === 'menu' || n.zone === 'ctx' || n.zone === 'folder';
 	const topPointer = (i: number) => () => { if (!overlay) { n.mode = 'pointer'; n.engaged = true; n.zone = 'top'; n.topIndex = i; render(); } };
 	const focusedTop = (i: number) => n.engaged && n.zone === 'top' && i === n.topIndex;
 	return (
-		<div class={`screen${n.zone === 'rows' && rowIndex >= 1 ? ' screen--lower' : ''}${n.moving ? ' screen--moving' : ''}${n.dockHidden ? ' screen--dockhidden' : ''}`}>
+		<div class={`screen${lower ? ' screen--lower' : ''}${lower || settling ? ' screen--plainglass' : ''}${n.moving ? ' screen--moving' : ''}${n.dockHidden ? ' screen--dockhidden' : ''}`}>
+			<div class="lowerveil" />
 			<Status weatherText={weatherText} showPeriod={showPeriod} />
 			<VideoCaption />
 			<div class="dockhint" onClick={() => { n.dockHidden = false; render(); }}><svg viewBox="0 0 48 28" aria-hidden="true"><path d="M6 22 24 6l18 16" /></svg></div>
@@ -375,7 +388,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 					</div>
 				))}
 			</div>
-			<div class={`rows${n.zone === 'rows' && rowIndex >= 1 ? ' rows--lower' : ''}${n.dockHidden ? ' rows--hidden' : ''}`} onMouseDown={() => { n.mode = 'pointer'; holdStart(); }} onMouseUp={holdCancel}>
+			<div class={`rows${lower ? ' rows--lower' : ''}${n.dockHidden ? ' rows--hidden' : ''}`} onMouseDown={() => { n.mode = 'pointer'; holdStart(); }} onMouseUp={holdCancel}>
 				{rows.map((row, i) => (
 					<Row
 						key={row.id}

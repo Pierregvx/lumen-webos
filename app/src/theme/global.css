@@ -987,3 +987,36 @@ html.wp-video .screen--lower::before { background-color: transparent; background
 /* Settings labels read as secondary text, not muted grey, on the frosted background */
 .wp__title { color: var(--color-text-secondary); }
 .wp__item--focused .wp__title { color: var(--color-text-primary); }
+
+/* ---------- going down to the lower rows: compositor-only ----------
+   Before: the rows moved with `top` (layout and repaint every frame), the full-screen blurred backdrop was created on the spot as a
+   ::before with an animation, and every glass shape switched to a different picture at the same moment. Now:
+   - the backdrop is a permanent layer (.lowerveil) that is always painted and only fades;
+   - the rows slide with transform;
+   - while lower (and for a moment after, .screen--plainglass) the glass shows a plain tint instead of the fixed-position wallpaper copy:
+     a fixed background is repainted on every frame of movement, and a transformed ancestor would misplace it. Over the strongly
+     blurred backdrop the plain tint looks the same. */
+.screen--lower::before { content: none; animation: none; }
+.screen.screen--lower { --wp-blur: inherit; }
+.lowerveil {
+	position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none;
+	opacity: 0; transition: opacity 220ms ease-out; will-change: opacity;
+	background-color: #10131c;
+	background-image: linear-gradient(rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.26)), var(--wp-bg, none);
+	background-size: auto, cover; background-position: 0 0, center; background-repeat: no-repeat;
+}
+.screen--lower .lowerveil { opacity: 1; }
+html.wp-video .lowerveil { background-color: transparent; background-image: linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42)); }
+.screen--dockhidden .lowerveil { display: none; }
+
+.rows, html.wp-video .rows { transition: transform 240ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 220ms ease; }
+.rows--lower, html.wp-video .rows--lower { top: var(--layout-rows-top); transform: translateY(-300px); }
+
+html:not(.wp-video) .screen--plainglass { --wp-blur: linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)); }
+html.light:not(.wp-video) .screen--plainglass { --wp-blur: linear-gradient(rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.42)); }
+.screen--plainglass .row::before, .screen--plainglass .tile__box, .screen--plainglass .clock,
+.screen--plainglass .pill, .screen--plainglass .topcap { background-attachment: scroll !important; }
+
+/* the lower rows stay painted (opacity 0 rather than visibility: hidden), so showing them is a fade, not a first paint of every tile */
+.rows > .row:not(:first-child) { will-change: opacity, transform; }
+.rows > .row.row--hidden { visibility: visible; transition: opacity 160ms ease-out, transform 160ms ease-out; }
