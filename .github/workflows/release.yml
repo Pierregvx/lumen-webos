@@ -1,6 +1,7 @@
 # Builds the public .ipk (no app/private/) and publishes it as a GitHub release.
 #  - a tag v* (v1.1.0): a release of that name; with a hyphen (v1.1.0-rc.1) a prerelease
-#  - a push to any branch other than main: replaces the rolling prerelease "dev" with a build of that commit
+#  - a push to any branch other than main: adds a build of that commit to the rolling prerelease "dev", which keeps the last 5 builds (so a
+#    Channel that still lists the previous build can install it)
 name: release
 on:
   push:
@@ -8,6 +9,10 @@ on:
     branches-ignore: [main]
 permissions:
   contents: write
+# one run at a time: two pushes close together must not race on the dev release or the hbc-repo branch
+concurrency:
+  group: release
+  cancel-in-progress: false
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -40,15 +45,19 @@ jobs:
         run: |
           IPK=$(ls release/*.ipk)
           SUM=$(sha256sum "$IPK" | cut -d' ' -f1)
-          if [ "$REF_TYPE" = tag ]; then
-            TAG=$REF; PRE=; case "$TAG" in *-*) PRE=--prerelease ;; esac
-          else
-            TAG=dev; PRE=--prerelease
-            gh release delete dev --yes --cleanup-tag 2>/dev/null || true
-          fi
           printf 'Built from %s.\n\nInstall: drop the .ipk onto Dev Manager, or `ares-install --device lgtv %s`.\n\nSHA-256: `%s`\n' \
             "$GITHUB_SHA" "$(basename "$IPK")" "$SUM" > notes.md
-          gh release create "$TAG" "$IPK" --target "$GITHUB_SHA" --title "Lumen $TAG ($REF, ${GITHUB_SHA:0:7})" --notes-file notes.md $PRE
+          if [ "$REF_TYPE" = tag ]; then
+            TAG=$REF; PRE=; case "$TAG" in *-*) PRE=--prerelease ;; esac
+            gh release create "$TAG" "$IPK" --target "$GITHUB_SHA" --title "Lumen $TAG ($REF, ${GITHUB_SHA:0:7})" --notes-file notes.md $PRE
+          else
+            # add this build to "dev" instead of replacing the release, then drop all but the newest 5 builds
+            TAG=dev
+            gh release view dev >/dev/null 2>&1 || gh release create dev --target "$GITHUB_SHA" --title "Lumen dev" --notes-file notes.md --prerelease
+            gh release upload dev "$IPK" --clobber
+            gh release edit dev --title "Lumen dev ($REF, ${GITHUB_SHA:0:7})" --notes-file notes.md
+            gh release view dev --json assets -q '.assets[].name' | grep '\.ipk$' | sort -V | head -n -5 | while read -r old; do gh release delete-asset dev "$old" --yes; done
+          fi
           echo "TAG=$TAG" >> "$GITHUB_ENV"
       - name: Homebrew Channel repository
         # The Channel reads the index with XHR, so it is served from raw.githubusercontent.com (CORS allowed) on the hbc-repo branch:
