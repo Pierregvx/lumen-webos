@@ -1,11 +1,15 @@
 #!/bin/sh
-# Keeps this TV's clock right. After a cold boot it falls back to a factory time zone (GMT-3:30) and a clock that is hours out, with network time refused.
-# Sets the time zone to India and, if the clock is more than a minute off, sets it from the Date header of an ordinary web server. Run by watch.sh.
-TZF=/usr/share/zoneinfo/Asia/Kolkata
-[ "$(readlink /var/luna/preferences/localtime)" = "$TZF" ] || ln -sf "$TZF" /var/luna/preferences/localtime
+# Keeps the TV's clock right. On the previous TV a cold boot left a factory time zone and a clock hours out, with network time refused; whether
+# this TV does the same is an open question (PLAN Phase 2). If it does not, delete this script and its line in watch.sh.
+# If the clock is more than a minute off, sets it from the Date header of an HTTPS request (certificate checked). Run by watch.sh.
+# TZ_NAME: leave empty to keep the TV's own time zone, or set a zone (for example Europe/London) to force it after each boot.
+TZ_NAME=""
+if [ -n "$TZ_NAME" ] && [ -f "/usr/share/zoneinfo/$TZ_NAME" ]; then
+  [ "$(readlink /var/luna/preferences/localtime)" = "/usr/share/zoneinfo/$TZ_NAME" ] || ln -sf "/usr/share/zoneinfo/$TZ_NAME" /var/luna/preferences/localtime
+fi
 epoch=$(python3 - <<'PY' 2>/dev/null
 import urllib.request, email.utils, calendar
-for u in ('http://www.google.com', 'http://www.cloudflare.com', 'http://example.com'):
+for u in ('https://www.google.com', 'https://www.cloudflare.com', 'https://example.com'):
     try:
         r = urllib.request.urlopen(urllib.request.Request(u, method='HEAD'), timeout=8)
         print(calendar.timegm(email.utils.parsedate(r.headers['Date']))); break

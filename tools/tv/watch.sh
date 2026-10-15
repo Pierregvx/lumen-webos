@@ -1,7 +1,10 @@
 #!/bin/sh
 # Home button -> custom launcher, and screensaver -> Frame (art mode). Once a second, checks which app is in front.
-#  - When LG's own Home has just come up, opens the launcher instead (polling, because luna-send buffers a subscription's output when it is piped).
-#    The launcher's own "LG Home" button touches /tmp/allow_lg_home first, so LG Home can still be opened on purpose (it then stays until you leave it).
+#  - Only with /var/lib/homehook/home-takeover present (off by default: LG Input Hook owns the Home button on this TV): when LG's own Home has just
+#    come up, opens the launcher instead (polling, because luna-send buffers a subscription's output when it is piped). The launcher's own
+#    "LG Home" button touches /tmp/allow_lg_home first, so LG Home can still be opened on purpose (it then stays until you leave it).
+#  - Keeps /var/lib/homehook/recent: the last eight apps that were in front (not Lumen, not LG Home), newest first, one id per line. Lumen reads
+#    it for its Recent row, so apps opened from anywhere show there.
 #  - When the TV's power state becomes "Screen Saver" (LG's screensaver is not a foreground app, so the power state is what shows it) and
 #    /var/lib/homehook/frame-screensaver exists: opens Frame in screensaver mode, then ends LG's screensaver (turnOnScreen) so Frame is what shows.
 # Never spins: reacts only when the app changes, and at most once every 3 s. Does nothing if the app is not installed.
@@ -15,19 +18,10 @@ SAVER_FLAG=/var/lib/homehook/frame-screensaver
 VIDEO_FLAG=/var/lib/homehook/video-wallpaper
 APPS=/media/developer/apps/usr/palm/applications
 EXTRA=/var/lib/homehook/hosts-extra
+TAKEOVER_FLAG=/var/lib/homehook/home-takeover
+RECENT=/var/lib/homehook/recent
 prev=""
-lastme=""
-# prints the Lumen build in front, if any
-me_in_front() {
-  for id in $ME; do case "$1" in *'"appId":"'$id'"'*) echo "$id"; return 0 ;; esac; done
-  return 1
-}
-# prints the Lumen build Home should open: the last one in front if still installed, else the first installed one
-me_target() {
-  if [ -n "$lastme" ] && [ -d "$APPS/$lastme" ]; then echo "$lastme"; return 0; fi
-  for id in $ME; do [ -d "$APPS/$id" ] && { echo "$id"; return 0; }; done
-  return 1
-}
+prevapp=""
 last=0
 okhome=0
 ticks=0
@@ -46,9 +40,19 @@ me_target() {
   return 1
 }
 
+# remembers an app that came to the front in $RECENT (plain app ids only; Lumen, Frame and LG Home are left out)
+note_recent() {
+  case "$1" in ''|$LGHOME|$FRAME) return ;; esac
+  for id in $ME; do [ "$1" = "$id" ] && return; done
+  printf '%s' "$1" | grep -qE '^[A-Za-z0-9._-]+$' || return
+  { echo "$1"; [ -f "$RECENT" ] && grep -vxF "$1" "$RECENT"; } | head -n 8 > "$RECENT.tmp" && mv "$RECENT.tmp" "$RECENT"
+}
+
 while true; do
   out=$(luna-send -n 1 luna://com.webos.applicationManager/getForegroundAppInfo '{}' </dev/null 2>/dev/null)
   front=$(me_in_front "$out") && lastme=$front
+  app=$(printf '%s' "$out" | sed -n 's/.*"appId":"\([^"]*\)".*/\1/p')
+  if [ -n "$app" ] && [ "$app" != "$prevapp" ]; then prevapp=$app; note_recent "$app"; fi
   case "$out" in
     *'"appId":"'$LGHOME'"'*)
       # LG Home is in front. Unless the launcher's own LG Home button just asked for it, send it to the launcher, and keep trying (every 3 s) until it
@@ -61,7 +65,7 @@ while true; do
           [ "$age" -ge 0 ] && [ "$age" -lt 30 ] && okhome=1
         fi
       fi
-      if [ "$okhome" -eq 0 ] && target=$(me_target) && { [ $((now - last)) -ge 3 ] || [ $((now - last)) -lt 0 ]; }; then
+      if [ -f "$TAKEOVER_FLAG" ] && [ "$okhome" -eq 0 ] && target=$(me_target) && { [ $((now - last)) -ge 3 ] || [ $((now - last)) -lt 0 ]; }; then
         last=$now
         luna-send -n 1 luna://com.webos.applicationManager/launch "{\"id\":\"$target\"}" </dev/null >/dev/null 2>&1
       fi
@@ -103,8 +107,9 @@ while true; do
   # the clock: shortly after start, then every 10 minutes (see clockfix.sh)
   if [ "$ticks" -eq 5 ] || [ $((ticks % 600)) -eq 0 ]; then sh /var/lib/homehook/clockfix.sh </dev/null >/dev/null 2>&1 & fi
   if [ $((ticks % 30)) -eq 1 ] && [ -f "$EXTRA" ]; then
-    grep -v '^#' "$EXTRA" | while IFS= read -r l; do
-      [ -n "$l" ] && ! grep -qF "$l" /etc/hosts 2>/dev/null && echo "$l" >> /etc/hosts
+    # only "0.0.0.0 <name>" or ":: <name>" lines are ever copied, so a stray line in the file cannot point a name somewhere real
+    grep -E '^(0\.0\.0\.0|::)[[:space:]]+[A-Za-z0-9.-]+[[:space:]]*$' "$EXTRA" | while IFS= read -r l; do
+      ! grep -qF "$l" /etc/hosts 2>/dev/null && echo "$l" >> /etc/hosts
     done
   fi
   sleep 1
