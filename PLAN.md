@@ -21,9 +21,10 @@ Goal: the working install on the TV is never at risk while we change things.
       If it is not on disk anywhere, rollback is simply "never uninstall the stable copy", which the side-by-side install below gives us.
 - [ ] Note the current Lumen settings (dock order, folders, wallpaper, options) so they can be recreated. Settings are per app id, so the dev
       build starts empty.
-- [ ] `tools/tv/watch.sh` only knows `com.ammar027.lumen` (`ME=` at the top). Change it to a list of app ids so the Home takeover and the
+- [x] `tools/tv/watch.sh` only knows `com.ammar027.lumen` (`ME=` at the top). Change it to a list of app ids so the Home takeover and the
       video-wallpaper screensaver suppression work for whichever build is in front. The flag files under `/var/lib/homehook/` are shared by both
       builds; that is fine as long as only one is in front at a time.
+      Done in the repo (Home opens whichever build was last in front). Still to copy to `/var/lib/homehook/` on the TV.
 - [ ] Decide which thing owns the Home button: LG Input Hook (already set up on this TV) or the LG Home polling in `watch.sh`. Both fire today.
       Keep one, remove the other from the TV. **(spike)** if unsure which is faster.
 
@@ -37,28 +38,31 @@ Goal: `app/` becomes real source in this repo, one command builds it, one comman
 No behaviour changes in this phase. That is what makes it checkable: the build from committed source must match the build from the patch pipeline.
 
 ### Fork
-- [ ] Clone partridgeworks/webos-launcher into `app/`, record the upstream commit in `THIRD_PARTY_NOTICES.md`, run the REBUILD.md pipeline
+- [x] Clone partridgeworks/webos-launcher into `app/`, record the upstream commit in `THIRD_PARTY_NOTICES.md`, run the REBUILD.md pipeline
       once (on a machine where the hardcoded `~/Developer/webos-launcher-tvos` path can be satisfied, a symlink is enough), and commit the result.
-- [ ] Prove it: build `dist/` from the committed source and from the pipeline, diff them. They must be identical before anything else changes.
-- [ ] Delete every `tools/apply_*.py` (all 50-odd of them, including the three that were never in the pipeline: `apply_clearer_glass.py`,
+- [x] Prove it: build `dist/` from the committed source and from the pipeline, diff them. They must be identical before anything else changes.
+      Done against the published 1.0.9 release ipk instead, which is stronger: the pipeline itself did not reproduce 1.0.9 (version 1.0.7 and
+      one hand-edited icon colour were missing), so both were added to the committed source. Remaining difference: the post-1.0.9 fix 497e918.
+- [x] Delete every `tools/apply_*.py` (all 50-odd of them, including the three that were never in the pipeline: `apply_clearer_glass.py`,
       `apply_motion.py`, `apply_launchfx.py`). Their job is done once the source is committed.
-- [ ] Fix the hardcoded `~/Developer/webos-launcher-tvos` path in the scripts that stay: `build_release.py`, `harvest.py`, `harvest_mixkit.py`,
+- [x] Fix the hardcoded `~/Developer/webos-launcher-tvos` path in the scripts that stay: `build_release.py`, `harvest.py`, `harvest_mixkit.py`,
       `blur_defaults.py`, `extract.py`, `gen_iconpack.py`, `gen_cities.py`, `make_sf_font.py`, `build_catalog.py`, `build_iconpack.py`,
-      `gen_appicon.py`. Paths relative to the repo root.
+      `gen_appicon.py`. Paths relative to the repo root. (`build_iconpack.py` was deleted instead: the build makes the icon list now.)
 
 ### Build
-- [ ] `.env` (gitignored) with `.env.example` committed. Holds at least `LUMEN_APP_ID` (default `com.ammar027.lumen.dev`), `LUMEN_APP_TITLE`
+- [x] `.env` (gitignored) with `.env.example` committed. Holds at least `LUMEN_APP_ID` (default `com.ammar027.lumen.dev`), `LUMEN_APP_TITLE`
       (default `Lumen Dev`), `LUMEN_TV_HOST`. The build reads it and stamps `appinfo.json` and the app id constant in the source; nothing in the
       source hardcodes the id any more. Stable is `.env` with `LUMEN_APP_ID=com.ammar027.lumen`.
-- [ ] Single build command, `npm run build:ipk`, that produces the `.ipk` into `build/`.
-- [ ] Personal assets (third-party app logos, the private SF font, personal wallpapers) live in one gitignored directory, for example
+- [x] Single build command, `npm run build:ipk`, that produces the `.ipk` into `build/`.
+- [x] Personal assets (third-party app logos, the private SF font, personal wallpapers) live in one gitignored directory, for example
       `app/private/`, and the build copies them in if present. `build_release.py` currently finds them with `git ls-files --others` inside `app/`,
       which stops working once `app/` is committed here. Replace that with "build without `app/private/`".
-- [ ] Keep `tools/screenshots.mjs` working as a visual check (it defaults to the macOS Chrome path; take it from `.env` or `CHROME`).
+- [x] Keep `tools/screenshots.mjs` working as a visual check (it defaults to the macOS Chrome path; take it from `.env` or `CHROME`).
 
 ### Deploy
-- [ ] `npm run deploy`: scp the `.ipk` to `LUMEN_TV_HOST` and install it with the Homebrew Channel install service, or `ares-install` if that is
-      simpler. One command from a clean clone to the app running on the TV.
+- [x] `npm run deploy`: scp the `.ipk` to `LUMEN_TV_HOST` and install it with the Homebrew Channel install service, or `ares-install` if that is
+      simpler. One command from a clean clone to the app running on the TV. **(verify)** Written and dry-run with a fake ssh; the
+      `appInstallService/dev/install` call has not been run on webOS 25 yet.
 - [ ] Install the dev build beside stable and use it for a day.
 
 Done when: a fresh clone with a `.env` builds and deploys with two commands, both builds are on the TV, and the dev build is indistinguishable from
