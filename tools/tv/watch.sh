@@ -5,7 +5,9 @@
 #  - When the TV's power state becomes "Screen Saver" (LG's screensaver is not a foreground app, so the power state is what shows it) and
 #    /var/lib/homehook/frame-screensaver exists: opens Frame in screensaver mode, then ends LG's screensaver (turnOnScreen) so Frame is what shows.
 # Never spins: reacts only when the app changes, and at most once every 3 s. Does nothing if the app is not installed.
-ME=com.ammar027.lumen
+# ME lists every Lumen build (stable, dev). Home opens the one that was last in front, or the first installed one in this list. The flag files in
+# /var/lib/homehook/ are shared by all of them, which is fine while only one is in front at a time.
+ME="com.ammar027.lumen com.ammar027.lumen.dev"
 FRAME=com.ammar027.lumen.gallery
 LGHOME=com.webos.app.home
 FLAG=/tmp/allow_lg_home
@@ -14,14 +16,39 @@ VIDEO_FLAG=/var/lib/homehook/video-wallpaper
 APPS=/media/developer/apps/usr/palm/applications
 EXTRA=/var/lib/homehook/hosts-extra
 prev=""
+lastme=""
+# prints the Lumen build in front, if any
+me_in_front() {
+  for id in $ME; do case "$1" in *'"appId":"'$id'"'*) echo "$id"; return 0 ;; esac; done
+  return 1
+}
+# prints the Lumen build Home should open: the last one in front if still installed, else the first installed one
+me_target() {
+  if [ -n "$lastme" ] && [ -d "$APPS/$lastme" ]; then echo "$lastme"; return 0; fi
+  for id in $ME; do [ -d "$APPS/$id" ] && { echo "$id"; return 0; }; done
+  return 1
+}
 last=0
 okhome=0
 ticks=0
 saverlast=0
 pwprev=""
+lastme=""
+# prints the Lumen build in front, if any
+me_in_front() {
+  for id in $ME; do case "$1" in *'"appId":"'$id'"'*) echo "$id"; return 0 ;; esac; done
+  return 1
+}
+# prints the Lumen build Home should open: the last one in front if still installed, else the first installed one
+me_target() {
+  if [ -n "$lastme" ] && [ -d "$APPS/$lastme" ]; then echo "$lastme"; return 0; fi
+  for id in $ME; do [ -d "$APPS/$id" ] && { echo "$id"; return 0; }; done
+  return 1
+}
 
 while true; do
   out=$(luna-send -n 1 luna://com.webos.applicationManager/getForegroundAppInfo '{}' </dev/null 2>/dev/null)
+  front=$(me_in_front "$out") && lastme=$front
   case "$out" in
     *'"appId":"'$LGHOME'"'*)
       # LG Home is in front. Unless the launcher's own LG Home button just asked for it, send it to the launcher, and keep trying (every 3 s) until it
@@ -34,9 +61,9 @@ while true; do
           [ "$age" -ge 0 ] && [ "$age" -lt 30 ] && okhome=1
         fi
       fi
-      if [ "$okhome" -eq 0 ] && [ -d "$APPS/$ME" ] && { [ $((now - last)) -ge 3 ] || [ $((now - last)) -lt 0 ]; }; then
+      if [ "$okhome" -eq 0 ] && target=$(me_target) && { [ $((now - last)) -ge 3 ] || [ $((now - last)) -lt 0 ]; }; then
         last=$now
-        luna-send -n 1 luna://com.webos.applicationManager/launch "{\"id\":\"$ME\"}" </dev/null >/dev/null 2>&1
+        luna-send -n 1 luna://com.webos.applicationManager/launch "{\"id\":\"$target\"}" </dev/null >/dev/null 2>&1
       fi
       prev=$LGHOME
       ;;
@@ -44,7 +71,7 @@ while true; do
   esac
   # video wallpaper on and the launcher in front: no screensaver, LG's is ended as soon as it starts
   vid=0
-  if [ -f "$VIDEO_FLAG" ]; then case "$out" in *'"appId":"'$ME'"'*) vid=1 ;; esac; fi
+  if [ -f "$VIDEO_FLAG" ] && [ -n "$front" ]; then vid=1; fi
   if [ "$vid" -eq 1 ]; then
     pw=$(luna-send -n 1 luna://com.webos.service.tvpower/power/getPowerState '{}' </dev/null 2>/dev/null)
     case "$pw" in
