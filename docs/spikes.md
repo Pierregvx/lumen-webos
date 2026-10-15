@@ -15,3 +15,11 @@ and `add` (`{"sleepTimeMinute":10}`, then `0`) return `returnValue:true`. Moved 
 
 ## ps on webOS 25 (2026-10-15)
 Plain `ps` lists only processes on the current terminal, so a watcher started with `setsid` is invisible to it. Use `ps -ef`, or `/proc`.
+
+## Settings keys (2026-10-15)
+Read as root with `settingsservice/getSystemSettings`:
+- `picture` / `backlight`: `"100"`. Per picture mode and input (`dimension: {pictureMode: "normal", input: "default"}`).
+- `picture` / `eyeComfortMode`: `"off"`.
+- `sound` / `soundOutput`: `"tv_external_speaker"` (`dimension: {audioOutput: "default"}`). The other values (soundbar over ARC or optical,
+  Bluetooth) are still unknown: switch output in LG's settings and read it again.
+Setting them is not tried yet.
