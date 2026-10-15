@@ -22,4 +22,4 @@ Read as root with `settingsservice/getSystemSettings`:
 - `picture` / `eyeComfortMode`: `"off"`.
 - `sound` / `soundOutput`: `"tv_external_speaker"` (`dimension: {audioOutput: "default"}`). The other values (soundbar over ARC or optical,
   Bluetooth) are still unknown: switch output in LG's settings and read it again.
-Setting them is not tried yet.
+Setting `backlight` as root works (80 then back to 100, visibly dimmed, `returnValue:true`). Eye Comfort and sound output setting not tried yet.
