@@ -43,7 +43,8 @@ function blurFor (shown: string): string | undefined {
 	return undefined;
 }
 
-/** Settings > Live blur: the glass blurs the wallpaper itself (backdrop-filter), so no blurred copy is loaded at all. */
+/** Settings > Live blur: the glass shapes blur what is behind them (backdrop-filter), so the light copy (--wp-blur) is not loaded. The strong
+ *  copy (--wp-bg) still is: a full-screen live blur behind the lower rows made moving between apps lag on the TV. */
 let liveBlur = false;
 export function setLiveBlur (on: boolean): void {
 	if (on === liveBlur) return;
@@ -53,14 +54,15 @@ export function setLiveBlur (on: boolean): void {
 
 function setBlur (shown: string | null): void {
 	const style = document.documentElement.style;
-	const url = shown && !liveBlur ? blurFor(shown) : undefined;
+	const url = shown ? blurFor(shown) : undefined;
 	if (!url) { style.removeProperty('--wp-blur'); style.removeProperty('--wp-bg'); return; }
 	const load = (name: string, src: string) => {
 		const probe = new Image();
 		probe.onload = () => style.setProperty(name, `url("${src}")`);
 		probe.src = src;
 	};
-	load('--wp-blur', url);
+	if (liveBlur) style.removeProperty('--wp-blur');
+	else load('--wp-blur', url);
 	// the stronger, smaller copy shown behind the lower rows
 	load('--wp-bg', url.replace(/-blur\.jpg$/, '-bg.jpg').replace('w=960&h=540', 'w=480&h=270').replace(/blur=\d+/, 'blur=18'));
 }

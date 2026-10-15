@@ -141,9 +141,11 @@ Still wrong, seen on the TV:
       glass a fixed-offset `scroll` background (as `.panel` already does) so it never needs `background-attachment: fixed` and can move
       with the rows; or drop the picture from the dock glass entirely and use a tint everywhere.
 
-Next try (2026-10-15): Settings > Options > Live blur (test). Every glass shape and the lower backdrop use `backdrop-filter`; no picture is
-swapped in or out, so nothing can change late on the way back up. **(verify)** whether it looks right and stays smooth, with the still picture
-and with the video wallpaper. If it is still bad: go back to the transition from before 167253b and try a different approach.
+Settings > Options > Live blur (test), 2026-10-15. First version (every glass shape and the full-screen lower backdrop as `backdrop-filter`)
+on the TV: the glass bar looked much better, but moving between apps on the lower rows lagged. Now a hybrid: the glass bar and top buttons
+are live blurs (no light copy loaded), the full-screen backdrops (lower rows, Settings) are the pre-blurred `-bg` copy again. **(verify)**
+smoothness on the lower rows, and with the video wallpaper. If it is still bad: go back to the transition from before 167253b and try a
+different approach.
 
 Done when: the three numbers are recorded before and after, none got worse, and Recents opens Lumen on the Recent row.
 
