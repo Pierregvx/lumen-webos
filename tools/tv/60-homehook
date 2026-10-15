@@ -3,6 +3,9 @@
 # Uninstall: rm /var/lib/webosbrew/init.d/60-homehook; kill the watcher (killall watch.sh).
 [ -x /var/lib/homehook/watch.sh ] || exit 0
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin:$PATH"
-ps | grep -v grep | grep -q "homehook/watch.sh" && exit 0
+# already running? Checked in /proc: plain ps on webOS 25 only lists processes on the current terminal, so it never saw the watcher.
+for p in /proc/[0-9]*; do
+  case "$(tr "\0" " " < $p/cmdline 2>/dev/null)" in "/bin/sh /var/lib/homehook/watch.sh"*|"sh /var/lib/homehook/watch.sh"*) exit 0 ;; esac
+done
 setsid nohup /var/lib/homehook/watch.sh </dev/null >/dev/null 2>&1 &
 exit 0

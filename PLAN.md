@@ -44,7 +44,7 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 `watch.sh` is probably not running (it did not seem to work). Without it there is no video-wallpaper screensaver suppression, no Frame art
 mode, no hosts blocking, no clock fix and no system-wide Recent row; Lumen itself works without it.
 - [ ] Copy `tools/tv/watch.sh`, `clockfix.sh`, `hosts-extra`, `stop_watch.sh` to `/var/lib/homehook/` and `60-homehook` to
-      `/var/lib/webosbrew/init.d/`, `chmod +x` them, start it, and check `ps | grep watch.sh` and `/tmp/homehook.log`.
+      `/var/lib/webosbrew/init.d/`, `chmod +x` them, start it, and check `ps -ef | grep watch.sh` (plain `ps` on webOS 25 does not show it).
 - [x] Home button: LG Input Hook owns it. `watch.sh` only takes over LG Home when `/var/lib/homehook/home-takeover` exists (off by default;
       it would still be useful for the cold-boot case where LG Home is the first thing on screen).
 - [ ] Recent row from `watch.sh`: open two apps from LG's own launcher, then Lumen: both should be on the Recent row
