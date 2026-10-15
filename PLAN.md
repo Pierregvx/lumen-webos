@@ -47,6 +47,9 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [ ] Control Center backlight and Eye Comfort (Phase 5): Left/Right on the Backlight bar steps by 5 and the screen should follow about
       0.3 s after the last press; OK on it turns Eye Comfort on and off (warmer picture). Change picture mode: the bar should show that
       mode's own backlight.
+- [ ] Big clock: the time at 150px top left, the date and weather (icon, temperature, condition) on one line under it. Check it reads over a
+      bright wallpaper and over the video; check the icon matches the sky (moon at night). With Hide the dock set to After idle or Both,
+      after 8 s the dock and top buttons fade and the clock block drops to the bottom left.
 - [ ] New options: Apps in the glass bar (5, 6, 7; 7 uses smaller tiles), Focus highlight (Subtle, Normal, Strong), Video wallpaper hours
       (the still wallpaper outside them), Restore settings from the TV, Frame-rate counter (dev builds only).
 

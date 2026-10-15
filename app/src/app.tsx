@@ -23,8 +23,8 @@ import {setVideoFlag, startScreensaver} from './lib/system';
 import {setFpsCounter} from './lib/fps';
 import {ControlCenter, type CenterAction} from './components/ControlCenter';
 import {CITIES, COUNTRIES} from './config/cities';
-import {AUTO_PLACE, readWeather} from './lib/weather';
-import {isDark, LANGS, nextDark, setClockMode, setLang, t as tr} from './lib/i18n';
+import {AUTO_PLACE, readWeather, type Weather} from './lib/weather';
+import {isDark, LANGS, nextDark, setClockMode, setLang} from './lib/i18n';
 
 type Screen = 'home' | 'settings';
 
@@ -151,20 +151,18 @@ export function App () {
 	useEffect(() => { setFavorites(config.favoriteWallpapers); setWallpaper(config.wallpaper); }, [config.wallpaper]);
 	useEffect(() => setFavorites(config.favoriteWallpapers), [config.favoriteWallpapers]);
 
-	// the weather line in the time-pill menu
-	const [weatherText, setWeatherText] = useState('');
+	// the weather under the clock at the top left
+	const [weather, setWeather] = useState<Weather | null>(null);
 	useEffect(() => {
 		// no place chosen, no weather (and no request to anyone): Auto, which asks ipwho.is, has to be picked on purpose
-		if (!config.showWeather || !config.weatherCity) { setWeatherText(''); return; }
+		if (!config.showWeather || !config.weatherCity) { setWeather(null); return; }
 		const city = config.weatherCity === AUTO_PLACE ? null : CITIES.filter((c) => c.name === config.weatherCity)[0] || null;
-		if (!city && config.weatherCity !== AUTO_PLACE) { setWeatherText(''); return; }
-		const load = () => readWeather(city)
-			.then((w) => setWeatherText(`${w.place ? w.place + ' \u00b7 ' : ''}${w.temp}\u00b0 ${tr(w.label)}`.trim()))
-			.catch(() => setWeatherText(''));
+		if (!city && config.weatherCity !== AUTO_PLACE) { setWeather(null); return; }
+		const load = () => readWeather(city).then(setWeather).catch(() => setWeather(null));
 		load();
 		const id = window.setInterval(load, 30 * 60000);
 		return () => window.clearInterval(id);
-	}, [config.showWeather, config.weatherCity, config.language]);
+	}, [config.showWeather, config.weatherCity]);
 
 	// a new wallpaper every N minutes (only when a shuffle is chosen)
 	useEffect(() => {
@@ -571,7 +569,7 @@ export function App () {
 	return (
 		<>
 			{/* Home stays mounted under Settings so it keeps its focus position. */}
-			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} menuItems={MENU_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weatherText={weatherText} dockHide={config.dockHide} focusRow={focusRow} />
+			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} menuItems={MENU_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} dockHide={config.dockHide} focusRow={focusRow} />
 			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onChoose={onChoose} onClose={() => setScreen('home')} />}
 			{controls && <ControlCenter
 				darkMode={config.darkMode}

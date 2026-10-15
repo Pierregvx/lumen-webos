@@ -988,7 +988,8 @@ html.light.wp-video .screen--settings::before { background-image: linear-gradien
 
 /* aerial view while the dock is away: date, time and weather drop to the bottom left; the place and a description show at the bottom right */
 .status { transition: transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1); }
-.screen--dockhidden .status { transform: translateY(830px); }
+/* its bottom edge 64px above the screen's, whatever its height (top is 64px; 1080 - 64 - 64 = 952) */
+.screen--dockhidden .status { transform: translateY(calc(952px - 100%)); }
 .videocap { position: absolute; right: var(--layout-edge-padding); top: calc(var(--layout-header-top) + 806px); max-width: 800px; text-align: right; opacity: 0; transition: opacity 420ms ease; pointer-events: none; }
 .screen--dockhidden .videocap { opacity: 1; }
 html:not(.wp-video) .videocap { display: none; }
@@ -1112,3 +1113,15 @@ html.focus-strong .rows .tile--focused .tile__box { box-shadow: 0 0 0 4px rgba(2
 
 /* ---------- Settings > Frame-rate counter (dev builds, lib/fps.ts) ---------- */
 .fps { position: fixed; left: 24px; top: 20px; z-index: 100; padding: 4px 12px; border-radius: 14px; background: rgba(0, 0, 0, 0.62); color: #7CFC9A; font: 600 20px/1.3 monospace; pointer-events: none; }
+
+/* ---------- big clock: the time large and light, the date and weather on one line under it ---------- */
+.screen > .pill.status { flex-direction: column; align-items: flex-start; padding: 0; }
+.screen > .pill.status .clock { margin: 0 0 0 -6px; }
+.screen > .pill.status .clock__time { font-size: 150px; font-weight: 300; line-height: 0.95; letter-spacing: -0.02em; }
+.screen > .pill.status .clock__colon { opacity: 0.7; top: -0.06em; }
+.screen > .pill.status .clock__period { font-size: 40px; font-weight: 400; margin-left: 12px; align-self: flex-end; margin-bottom: 18px; }
+.status__row { display: flex; flex-direction: row; align-items: center; margin-top: 10px; }
+.status__row .status__date { font-size: 30px; font-weight: 500; margin-right: 0; }
+.status__weather { display: flex; flex-direction: row; align-items: center; margin: 0 0 0 26px; font-size: 30px; font-weight: 500; opacity: 0.9; animation: status-in 600ms ease-out; }
+.screen > .pill.status .status__icon { width: 36px; height: 36px; margin: 0 10px 0 0; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.status__cond { margin-left: 12px; font-weight: 400; opacity: 0.85; }

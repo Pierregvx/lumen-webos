@@ -1,4 +1,5 @@
 import {t as tr} from '../lib/i18n';
+import type {Weather} from '../lib/weather';
 import {VideoCaption} from '../components/VideoCaption';
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import {Clock} from '../components/Clock';
@@ -35,8 +36,8 @@ interface Props {
 	onEdit?: (action: 'move' | 'remove' | 'folder-add' | 'folder-out', rowId: string, key: string, arg?: number | string) => void;
 	/** the apps inside each folder, by folder name */
 	folders?: Record<string, TileModel[]>;
-	/** the weather line shown under the date at the top of the time-pill menu */
-	weatherText?: string;
+	/** shown beside the date under the clock, top left */
+	weather?: Weather | null;
 	/** off | down | idle | both: when the dock slides away */
 	dockHide?: string;
 	/** put the focus on this row (a launch with {"view":"recent"}); a new seq asks again */
@@ -93,7 +94,7 @@ const MENU_KEY = 'menu';
  *  - Up from the first row reaches the top bar (Inputs button, time pill); Down goes back to the same app.
  *  - OK on Inputs opens the inputs panel, OK on the time pill opens the menu; Back closes either.
  *  - The second row stays hidden until the remote goes down to it. */
-export function Home ({rows, topItems, menuItems, inputs, active, onActivate, showPeriod, onEdit, folders, weatherText, dockHide, focusRow, tiles, perRow = 6}: Props) {
+export function Home ({rows, topItems, menuItems, inputs, active, onActivate, showPeriod, onEdit, folders, weather, dockHide, focusRow, tiles, perRow = 6}: Props) {
 	const nav = useRef<Nav>({engaged: false, zone: 'rows', rowIndex: 0, columns: {}, topIndex: 0, panelIndex: 0, menuIndex: 0, ctxIndex: 0, moving: null, swallowOk: false, suppressClick: false, folder: '', folderIndex: 0, ctxFrom: 'rows', mode: 'key', dockHidden: false});
 	const latest = useRef({rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide});
 	latest.current = {rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide};
@@ -398,7 +399,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 	return (
 		<div class={`screen${active ? '' : ' screen--inactive'}${lower ? ' screen--lower' : ''}${lower || settling ? ' screen--plainglass' : ''}${n.moving ? ' screen--moving' : ''}${n.dockHidden ? ' screen--dockhidden' : ''}`}>
 			<div class="lowerveil" />
-			<Status weatherText={weatherText} showPeriod={showPeriod} />
+			<Status weather={weather} showPeriod={showPeriod} />
 			<VideoCaption />
 			<div class="dockhint" onClick={() => { n.dockHidden = false; render(); }}><svg viewBox="0 0 48 28" aria-hidden="true"><path d="M6 22 24 6l18 16" /></svg></div>
 			<div class="topbar">
