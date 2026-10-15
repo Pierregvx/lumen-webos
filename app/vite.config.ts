@@ -32,6 +32,7 @@ function classicScriptTag (): Plugin {
 	 * Build settings from the repo-root `.env` (see `.env.example`); variables already set in the environment win.
 	 *  - LUMEN_APP_ID, LUMEN_APP_TITLE: stamped into dist/appinfo.json and the APP_ID constant. Default: the dev build.
 	 *  - LUMEN_PRIVATE=0: build without app/private/ (what the public release is).
+	 *  - LUMEN_DEV=1 / 0: a dev build or not (default: dev when the id ends in .dev). Dev builds offer Settings > Frame-rate counter.
 	 */
 	function lumenSettings (mode: string) {
 		const env = loadEnv(mode, REPO_ROOT, 'LUMEN_');
@@ -39,6 +40,8 @@ function classicScriptTag (): Plugin {
 		return {
 			appId: env.LUMEN_APP_ID || 'com.samrenfrew.lumen.dev',
 			title: env.LUMEN_APP_TITLE || 'Lumen Dev',
+			// a dev build (the .dev id, or LUMEN_DEV=1 from the release workflow for branch pushes) offers tools that stable does not
+			dev: env.LUMEN_DEV === '1' || (env.LUMEN_DEV !== '0' && /\.dev$/.test(env.LUMEN_APP_ID || 'com.samrenfrew.lumen.dev')),
 			privateDir: env.LUMEN_PRIVATE !== '0' && existsSync(privateDir) ? privateDir : ''
 		};
 	}
@@ -96,7 +99,7 @@ function classicScriptTag (): Plugin {
 		return {
 		base: './',            // the app is loaded from a local file path on the TV
 		plugins: [preact(), classicScriptTag(), lumenPrivate(lumen.privateDir, lumen.appId, lumen.title)],
-		define: {__LUMEN_APP_ID__: JSON.stringify(lumen.appId)},
+		define: {__LUMEN_APP_ID__: JSON.stringify(lumen.appId), __LUMEN_DEV__: JSON.stringify(mode === 'development' || lumen.dev)},
 		build: {
 			target: BROWSER_TARGET,
 			outDir: 'dist',

@@ -39,6 +39,12 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [ ] Launch parameter: `luna-send -n 1 luna://com.webos.applicationManager/launch '{"id":"com.samrenfrew.lumen","params":{"view":"recent"}}'`,
       once with Lumen closed and once with it in front. Both should land on the Recent row. This is the launch-parameter spike as well.
 - [ ] Hide app names and Reduce motion in Settings > Options; the top-right button's label no longer shows above Control Center.
+- [ ] Home rows: the Recent row has a title, and the second row sits closer under the glass bar. Going down lines the focused row's tiles up
+      where the first row's were.
+- [ ] Settings > Options: OK on a list option (country, city, language, appearance, clock, dock, wallpaper timer, the three below) opens a
+      pop-up list; Up/Down, OK sets, Back cancels. The city list with no country is long: check it scrolls smoothly.
+- [ ] New options: Apps in the glass bar (5, 6, 7; 7 uses smaller tiles), Focus highlight (Subtle, Normal, Strong), Video wallpaper hours
+      (the still wallpaper outside them), Restore settings from the TV, Frame-rate counter (dev builds only).
 
 ### Put the TV scripts in place
 - [x] `tools/tv/watch.sh`, `hosts-extra`, `stop_watch.sh` in `/var/lib/homehook/`, `60-homehook` in `/var/lib/webosbrew/init.d/`. Check with
@@ -94,14 +100,22 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
       ES module chunks do not load; splitting would need a second classic script, and the two are a small share of the 186 KB bundle anyway.
       Revisit only if the Phase 4 trace shows script parse time matters.
 
+- [x] Pop-up list picker for the list options in Settings > Options (`components/ChoicePicker.tsx`; only the rows near the window are drawn).
+      Picture and sound mode live in Control Center and still step through with OK.
+- [x] Settings: Focus highlight (Subtle, Normal, Strong); Apps in the glass bar (5, 6, 7); Video wallpaper hours (Always, Daytime 7-19,
+      Evenings 17-23, Night 19-7). **(verify)**
+- [x] Settings: Restore settings from the TV (the backup, on demand).
+- [x] Wallpaper: `img.decode()` before the swap; the decoded image is held while it is on screen.
+- [x] Video wallpaper: the eight Mixkit clips that were 1080p now use their 720p files (checked that each exists). Apple's aerials are
+      1080p only.
+- [x] Frame-rate counter: Settings > Options, dev builds only (`__LUMEN_DEV__`: the .dev id, or `LUMEN_DEV=1`, which the release workflow
+      sets for branch pushes and hyphenated tags).
+- [x] Settings descriptions checked: Date and weather (needs a city) and Live blur (now the hybrid) were out of date.
+- [ ] `content-visibility: auto` on off-screen rows: not done. The lower rows are kept painted at opacity 0 on purpose (showing them is a
+      fade, not a first paint, see Phase 4); `content-visibility` would skip painting them and bring that first paint back. Panels are
+      only rendered while open. Revisit with a trace.
+
 ### Next
-- [ ] Pop-up list picker for long options (weather city, country, language, picture mode, sound mode) instead of stepping through with OK.
-- [ ] Settings: focus highlight strength; tiles per dock row (5, 6, 7); video wallpaper only between set hours.
-- [ ] Settings: import from the backup on demand (today only automatic on a fresh install).
-- [ ] Wallpaper: `img.decode()` before the swap (it already waits for `onload`).
-- [ ] `content-visibility: auto` on off-screen rows and panels; video wallpaper at 720p (the Mixkit catalogue has both).
-- [ ] Frame-rate counter in dev builds only.
-- [ ] Settings descriptions: check the rest against what the app does now.
 - [ ] Tag `v1.1.0` and switch the TV to the stable repository once the dev build has been lived with.
 
 ---

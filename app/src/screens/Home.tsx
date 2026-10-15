@@ -41,6 +41,9 @@ interface Props {
 	dockHide?: string;
 	/** put the focus on this row (a launch with {"view":"recent"}); a new seq asks again */
 	focusRow?: {id: string; seq: number};
+	/** tile size on the rows (Settings > Apps in the glass bar: 7 apps need smaller tiles); the first row is `perRow` tiles wide */
+	tiles?: {size: number; height: number; gap: number};
+	perRow?: number;
 }
 
 
@@ -90,7 +93,7 @@ const MENU_KEY = 'menu';
  *  - Up from the first row reaches the top bar (Inputs button, time pill); Down goes back to the same app.
  *  - OK on Inputs opens the inputs panel, OK on the time pill opens the menu; Back closes either.
  *  - The second row stays hidden until the remote goes down to it. */
-export function Home ({rows, topItems, menuItems, inputs, active, onActivate, showPeriod, onEdit, folders, weatherText, dockHide, focusRow}: Props) {
+export function Home ({rows, topItems, menuItems, inputs, active, onActivate, showPeriod, onEdit, folders, weatherText, dockHide, focusRow, tiles, perRow = 6}: Props) {
 	const nav = useRef<Nav>({engaged: false, zone: 'rows', rowIndex: 0, columns: {}, topIndex: 0, panelIndex: 0, menuIndex: 0, ctxIndex: 0, moving: null, swallowOk: false, suppressClick: false, folder: '', folderIndex: 0, ctxFrom: 'rows', mode: 'key', dockHidden: false});
 	const latest = useRef({rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide});
 	latest.current = {rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide};
@@ -423,12 +426,14 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 					</div>
 				))}
 			</div>
-			<div ref={rowsRef} class={`rows${lower ? ' rows--lower' : ''}${n.dockHidden ? ' rows--hidden' : ''}`} onMouseDown={() => { n.mode = 'pointer'; holdStart(); }} onMouseUp={holdCancel}>
+			<div ref={rowsRef} class={`rows${lower ? ' rows--lower' : ''}${n.dockHidden ? ' rows--hidden' : ''}`} style={tiles ? `--layout-tile-size:${tiles.size}px;--layout-tile-height:${tiles.height}px;--layout-tile-gap:${tiles.gap}px;--first-w:${perRow * (tiles.size + tiles.gap) - tiles.gap}px` : undefined} onMouseDown={() => { n.mode = 'pointer'; holdStart(); }} onMouseUp={holdCancel}>
 				{rows.map((row, i) => (
 					<Row
 						key={row.id}
 						label={tr(row.label)}
 						titled={row.titled}
+						tileSize={tiles && tiles.size}
+						tileGap={tiles && tiles.gap}
 						items={i > 0 && !late ? [] : row.items}
 						emptyText={row.emptyText && tr(row.emptyText)}
 						focused={n.engaged && n.zone === 'rows' && i === rowIndex}

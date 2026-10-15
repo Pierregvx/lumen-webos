@@ -20,6 +20,7 @@ import {LOCAL_WALLPAPERS, WALLPAPERS, WALLPAPER_CATEGORIES, cloudUrl} from './co
 import {resized, setFavorites, setLiveBlur, setWallpaper} from './lib/wallpaper';
 import {setVideoChoice, setVideoPaused, setVideoWallpaper, VIDEO_PLACES} from './lib/wallpaperVideo';
 import {setVideoFlag, startScreensaver} from './lib/system';
+import {setFpsCounter} from './lib/fps';
 import {ControlCenter, type CenterAction} from './components/ControlCenter';
 import {CITIES, COUNTRIES} from './config/cities';
 import {AUTO_PLACE, readWeather} from './lib/weather';
@@ -29,8 +30,18 @@ type Screen = 'home' | 'settings';
 
 const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock', recent: 'recent'} as const;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
+const OPTION = {fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 15, 30, 60];
+/** when the video wallpaper plays (Settings > Options > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
+const VIDEO_HOURS: Record<string, [number, number]> = {day: [7, 19], evening: [17, 23], night: [19, 7]};
+function inVideoHours (mode: string, now = new Date()): boolean {
+	const span = VIDEO_HOURS[mode];
+	if (!span) return true;
+	const h = now.getHours();
+	return span[0] < span[1] ? h >= span[0] && h < span[1] : h >= span[0] || h < span[1];
+}
+/** first-row sizes: 7 apps only fit the glass bar with smaller tiles (still 5:3) */
+const TILES_FOR: Record<number, {size: number; height: number; gap: number}> = {5: {size: 236, height: 142, gap: 28}, 6: {size: 236, height: 142, gap: 28}, 7: {size: 208, height: 125, gap: 24}};
 const IDLE_CHOICES = [0, 5, 10, 20, 30];
 const RECENT_MAX = 8;
 
@@ -48,8 +59,6 @@ const MENU_ITEMS: TileModel[] = [
 	{key: 'screensaver', label: 'Start Screensaver', glyph: 'screensaver'}
 ];
 
-/** The first row (in the glass shelf) holds this many apps; the rest go in a plain row below, like the tvOS home screen. */
-const FIRST_ROW = 6;
 
 export function App () {
 	const [screen, setScreen] = useState<Screen>(import.meta.env.DEV && /[?&]settings/.test(location.search) ? 'settings' : 'home');
@@ -179,9 +188,24 @@ export function App () {
 	}, [config.darkMode]);
 	useEffect(() => { document.documentElement.classList.toggle('reduce-motion', config.reduceMotion); }, [config.reduceMotion]);
 	useEffect(() => { document.documentElement.classList.toggle('hide-names', config.hideNames); }, [config.hideNames]);
+	useEffect(() => setFpsCounter(__LUMEN_DEV__ && config.fpsCounter), [config.fpsCounter]);
 	useEffect(() => { document.documentElement.classList.toggle('liveblur', config.liveBlur); setLiveBlur(config.liveBlur); }, [config.liveBlur]);
 	useEffect(() => setVideoChoice(config.videoPlaces), [config.videoPlaces]);
-	useEffect(() => setVideoWallpaper(config.videoWallpaper), [config.videoWallpaper]);
+	// the video wallpaper plays only within its hours (checked each minute); the still wallpaper shows the rest of the time
+	const [videoTime, setVideoTime] = useState(() => inVideoHours(config.videoHours));
+	useEffect(() => {
+		const check = () => setVideoTime(inVideoHours(config.videoHours));
+		check();
+		const id = window.setInterval(check, 60000);
+		return () => window.clearInterval(id);
+	}, [config.videoHours]);
+	const videoOn = config.videoWallpaper && videoTime;
+	useEffect(() => setVideoWallpaper(videoOn), [videoOn]);
+	useEffect(() => {
+		const root = document.documentElement.classList;
+		root.toggle('focus-subtle', config.focusStrength === 'subtle');
+		root.toggle('focus-strong', config.focusStrength === 'strong');
+	}, [config.focusStrength]);
 	useEffect(() => { setVideoPaused(screen === 'settings'); document.documentElement.classList.toggle('in-settings', screen === 'settings'); }, [screen]);
 
 	const updateConfig = (next: UserConfig) => { configRef.current = next; setConfig(next); saveConfig(next); scheduleBackup(next); };
@@ -195,7 +219,7 @@ export function App () {
 
 	// idle screensaver: after the chosen minutes without a key press or pointer move, while the launcher is in front
 	useEffect(() => {
-		if (!config.idleMinutes || config.videoWallpaper) return;   // no screensaver of our own while the video plays
+		if (!config.idleMinutes || videoOn) return;   // no screensaver of our own while the video plays
 		let timer = 0;
 		const arm = () => {
 			window.clearTimeout(timer);
@@ -205,8 +229,8 @@ export function App () {
 		const events = ['keydown', 'mousemove', 'click'];
 		events.forEach((e) => window.addEventListener(e, arm));
 		return () => { window.clearTimeout(timer); events.forEach((e) => window.removeEventListener(e, arm)); };
-	}, [config.idleMinutes, config.videoWallpaper]);
-	useEffect(() => { setVideoFlag(config.videoWallpaper); }, [config.videoWallpaper]);
+	}, [config.idleMinutes, videoOn]);
+	useEffect(() => { setVideoFlag(videoOn); }, [videoOn]);
 
 	// ----- derived rows -----
 	const shownApps = useMemo(() => pickInOrder(apps, config.appIds, (a) => a.id), [apps, config.appIds]);
@@ -233,16 +257,43 @@ export function App () {
 			.concat(folderTiles.map((f): TileModel => ({key: 'folder:' + f.name, label: f.name, color: '#3b4256', children: f.items.map((t) => t.imageUrl)})));
 	}, [shownApps, folderTiles, config.folders]);
 
+	// the first row (in the glass bar) holds config.firstRow apps; the rest go in a plain row below, like the tvOS home screen
+	const firstRow = config.firstRow;
 	const rows: HomeRow[] = useMemo(() => [
-		{id: ROW.apps, label: 'Apps', items: homeTiles.slice(0, FIRST_ROW), emptyText: 'No apps selected — add some in Settings'},
-		...(homeTiles.length > FIRST_ROW ? [{id: ROW.dock, label: 'More apps', items: homeTiles.slice(FIRST_ROW)}] : []),
+		{id: ROW.apps, label: 'Apps', items: homeTiles.slice(0, firstRow), emptyText: 'No apps selected — add some in Settings'},
+		...(homeTiles.length > firstRow ? [{id: ROW.dock, label: 'More apps', items: homeTiles.slice(firstRow)}] : []),
 		...(recentApps.length > 0 ? [{id: ROW.recent, label: 'Recent', titled: true, items: recentApps.map(appTile)}] : [])
-	], [homeTiles, shownInputs, recentApps, config.language]);
+	], [homeTiles, shownInputs, recentApps, config.language, firstRow]);
 
 	const tabs: SettingsTab[] = useMemo(() => [
 		{id: ROW.apps, label: 'Apps', noun: 'apps', items: apps.map(appTile), shown: shownApps.map(appTile)},
 		{id: ROW.sources, label: 'Sources', noun: 'sources', items: inputs.map(inputTile), shown: shownInputs.map(inputTile)}
 	], [apps, inputs, shownApps, shownInputs, config.language]);
+
+	/** options that pick from a list: the labels shown in the pop-up list, the stored values, and which one is set now */
+	type Choice = {labels: string[]; values: (string | number)[]; now: string | number};
+	const choices: Record<string, Choice> = useMemo(() => {
+		const country = COUNTRIES.filter((c) => c.code === config.weatherCountry)[0];
+		const cities = (country ? country.cities : CITIES).map((c) => c.name);
+		return {
+			[OPTION.country]: {labels: ['Any'].concat(COUNTRIES.map((c) => c.name)), values: [''].concat(COUNTRIES.map((c) => c.code)), now: config.weatherCountry},
+			[OPTION.city]: {labels: ['Not set', 'Auto'].concat(cities), values: ['', AUTO_PLACE].concat(cities), now: config.weatherCity},
+			[OPTION.wpAuto]: {labels: ['Off', '15 min', '30 min', '60 min'], values: WP_AUTO_CHOICES, now: config.wpAutoMinutes},
+			[OPTION.dockHide]: {labels: ['Off', 'Down arrow', 'After idle', 'Both'], values: ['off', 'down', 'idle', 'both'], now: config.dockHide},
+			[OPTION.darkMode]: {labels: ['Light', 'Dark', 'Auto'], values: ['off', 'on', 'auto'], now: config.darkMode},
+			[OPTION.language]: {labels: ['Auto'].concat(LANGS.map((l) => l.name)), values: ['auto'].concat(LANGS.map((l) => l.code)), now: config.language},
+			[OPTION.clock]: {labels: ['Auto', '12-hour', '24-hour'], values: ['auto', '12h', '24h'], now: config.clockFormat},
+			[OPTION.focus]: {labels: ['Subtle', 'Normal', 'Strong'], values: ['subtle', 'normal', 'strong'], now: config.focusStrength},
+			[OPTION.firstRow]: {labels: ['5', '6', '7'], values: [5, 6, 7], now: config.firstRow},
+			[OPTION.videoHours]: {labels: ['Always', 'Daytime (7 am to 7 pm)', 'Evenings (5 pm to 11 pm)', 'Night (7 pm to 7 am)'], values: ['always', 'day', 'evening', 'night'], now: config.videoHours}
+		};
+	}, [config]);
+	/** the list fields of an option: its choices, which is set, and the text shown on the right */
+	const listed = (id: string, fallback = '') => {
+		const c = choices[id];
+		const at = c.values.indexOf(c.now);
+		return {choices: c.labels, choice: Math.max(0, at), valueText: at >= 0 ? c.labels[at] : fallback || c.labels[0]};
+	};
 
 	const options: OptionItem[] = useMemo(() => [
 		{
@@ -260,7 +311,7 @@ export function App () {
 		{
 			id: OPTION.weather,
 			label: 'Date and weather',
-			description: 'Show today\'s date and the temperature at the top left of the home screen. The weather comes from open-meteo.com.',
+			description: 'Show today\'s date and the temperature at the top left of the home screen. The temperature needs a Weather city below; it comes from open-meteo.com.',
 			value: config.showWeather
 		},
 		{
@@ -268,21 +319,28 @@ export function App () {
 			label: 'Weather country',
 			description: 'Pick your country, then the city below. Until a city is chosen no weather is shown and nothing is fetched.',
 			value: config.weatherCountry !== '',
-			valueText: (COUNTRIES.filter((c) => c.code === config.weatherCountry)[0] || {name: 'Any'}).name
+			...listed(OPTION.country)
 		},
 		{
 			id: OPTION.city,
 			label: 'Weather city',
 			description: 'Not set: no weather. Auto finds your area from your internet connection, which sends your IP address to ipwho.is and can be a few towns off. Or pick a city.',
 			value: config.weatherCity !== '',
-			valueText: config.weatherCity === AUTO_PLACE ? 'Auto' : config.weatherCity || 'Not set'
+			...listed(OPTION.city, config.weatherCity)
 		},
 		{
 			id: OPTION.wpAuto,
 			label: 'Change wallpaper automatically',
 			description: 'With a Shuffle wallpaper chosen, pick a new picture every 15, 30 or 60 minutes.',
 			value: config.wpAutoMinutes > 0,
-			valueText: config.wpAutoMinutes ? `${config.wpAutoMinutes} min` : 'Off'
+			...listed(OPTION.wpAuto)
+		},
+		{
+			id: OPTION.videoHours,
+			label: 'Video wallpaper hours',
+			description: 'When the video wallpaper plays. Outside these hours the still wallpaper shows instead, and nothing streams.',
+			value: config.videoHours !== 'always',
+			...listed(OPTION.videoHours)
 		},
 		{
 			id: OPTION.nightDim,
@@ -295,28 +353,42 @@ export function App () {
 			label: 'Hide the dock',
 			description: 'Down arrow: Down on the last row slides the dock away. After idle: it hides itself after 8 seconds without a key press. Any key brings it back.',
 			value: config.dockHide !== 'off',
-			valueText: config.dockHide === 'down' ? 'Down arrow' : config.dockHide === 'idle' ? 'After idle' : config.dockHide === 'both' ? 'Both' : 'Off'
+			...listed(OPTION.dockHide)
+		},
+		{
+			id: OPTION.firstRow,
+			label: 'Apps in the glass bar',
+			description: 'How many apps the first row holds; the rest go in the row below. With 7 the tiles are a little smaller so they still fit.',
+			value: true,
+			...listed(OPTION.firstRow)
+		},
+		{
+			id: OPTION.focus,
+			label: 'Focus highlight',
+			description: 'How much the app in focus stands out: how far it grows and how strong its shadow and shine are.',
+			value: config.focusStrength !== 'normal',
+			...listed(OPTION.focus)
 		},
 		{
 			id: OPTION.darkMode,
 			label: 'Appearance',
 			description: 'Light: bright glass with dark text. Dark: dark glass and a dimmer wallpaper or video. Auto is dark from 7 pm to 6 am.',
 			value: config.darkMode !== 'off',
-			valueText: config.darkMode === 'on' ? 'Dark' : config.darkMode === 'auto' ? 'Auto' : 'Light'
+			...listed(OPTION.darkMode)
 		},
 		{
 			id: OPTION.language,
 			label: 'Language',
 			description: "Language of the menus, dates and weather. Auto follows the TV. The long descriptions on this screen stay in English.",
 			value: config.language !== 'auto',
-			valueText: config.language === 'auto' ? 'Auto' : (LANGS.filter((l) => l.code === config.language)[0] || LANGS[0]).name
+			...listed(OPTION.language)
 		},
 		{
 			id: OPTION.clock,
 			label: 'Clock',
 			description: "Auto follows the TV's own 12/24-hour setting. Choose 12-hour or 24-hour to override it.",
 			value: config.clockFormat !== 'auto',
-			valueText: config.clockFormat === '12h' ? '12-hour' : config.clockFormat === '24h' ? '24-hour' : 'Auto'
+			...listed(OPTION.clock)
 		},
 		{
 			id: OPTION.hideNames,
@@ -333,7 +405,7 @@ export function App () {
 		{
 			id: OPTION.liveBlur,
 			label: 'Live blur (test)',
-			description: 'The glass blurs whatever is behind it, live, instead of showing a blurred copy of the wallpaper. Smoother to look at, harder work for the TV.',
+			description: 'The glass bar, the top buttons and the panels blur whatever is behind them, live, instead of showing a blurred copy of the wallpaper. The full-screen backdrops (lower rows, Settings) stay a blurred copy. Smoother to look at, harder work for the TV.',
 			value: config.liveBlur
 		},
 		{
@@ -341,8 +413,21 @@ export function App () {
 			label: 'AM/PM on the clock',
 			description: 'Show AM or PM beside the time when the TV is set to a 12-hour clock.',
 			value: config.showAmPm
-		}
-	], [config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur]);
+		},
+		{
+			id: OPTION.restore,
+			label: 'Restore settings from the TV',
+			description: 'Lumen keeps a copy of its settings on the TV (/var/lib/homehook/lumen-config.json) after every change. This puts that copy back, replacing the settings here. Needs the Homebrew Channel.',
+			value: false,
+			valueText: 'Restore'
+		},
+		...(__LUMEN_DEV__ ? [{
+			id: OPTION.fps,
+			label: 'Frame-rate counter (dev builds)',
+			description: 'Frames drawn in the last second and the longest frame, in the top-left corner. Only in dev builds.',
+			value: config.fpsCounter
+		}] : [])
+	], [config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur]);
 
 	const wallpaper: WallpaperTab = useMemo(() => {
 		const entries: WallpaperEntry[] = [
@@ -429,43 +514,53 @@ export function App () {
 	}, [config, inputs]);
 
 	const onOption = useCallback((optionId: string) => {
+		if (optionId === OPTION.restore) {
+			readBackup().then((saved) => {
+				if (!saved) { showToast('No settings backup found on the TV', 'error'); return; }
+				updateConfig({...saved, seeded: true});
+				showToast('Settings restored from the TV');
+			});
+			return;
+		}
 		if (optionId === OPTION.useHomebrew) updateConfig({...config, useHomebrew: !config.useHomebrew});
 		else if (optionId === OPTION.videoWallpaper) updateConfig({...config, videoWallpaper: !config.videoWallpaper});
 		else if (optionId === OPTION.videoClip) {
 			const names = [''].concat(VIDEO_PLACES);
 			updateConfig({...config, videoClip: names[(names.indexOf(config.videoClip) + 1) % names.length]});
-		} else if (optionId === OPTION.country) {
-			const codes = [''].concat(COUNTRIES.map((c) => c.code));
-			const next = codes[(codes.indexOf(config.weatherCountry) + 1) % codes.length];
-			const first = COUNTRIES.filter((c) => c.code === next)[0];
-			updateConfig({...config, weatherCountry: next, weatherCity: first ? first.cities[0].name : ''});
-		} else if (optionId === OPTION.dockHide) {
-			const modes = ['off', 'down', 'idle', 'both'];
-			updateConfig({...config, dockHide: modes[(modes.indexOf(config.dockHide) + 1) % modes.length]});
-		} else if (optionId === OPTION.darkMode) updateConfig({...config, darkMode: nextDark(config.darkMode)});
-		else if (optionId === OPTION.language) {
-			const codes = ['auto'].concat(LANGS.map((l) => l.code));
-			updateConfig({...config, language: codes[(codes.indexOf(config.language) + 1) % codes.length]});
-		} else if (optionId === OPTION.clock) {
-			const modes = ['auto', '12h', '24h'];
-			updateConfig({...config, clockFormat: modes[(modes.indexOf(config.clockFormat) + 1) % modes.length]});
 		} else if (optionId === OPTION.showAmPm) updateConfig({...config, showAmPm: !config.showAmPm});
 		else if (optionId === OPTION.showAll) updateConfig({...config, showAllApps: !config.showAllApps});
 		else if (optionId === OPTION.weather) updateConfig({...config, showWeather: !config.showWeather});
-		else if (optionId === OPTION.city) {
-			const country = COUNTRIES.filter((c) => c.code === config.weatherCountry)[0];
-			const names = ['', AUTO_PLACE].concat((country ? country.cities : CITIES).map((c) => c.name));
-			const next = names[(names.indexOf(config.weatherCity) + 1) % names.length];
-			const owner = COUNTRIES.filter((c) => c.cities.some((x) => x.name === next))[0];
-			updateConfig({...config, weatherCity: next, weatherCountry: country ? country.code : owner ? owner.code : ''});
-		}
+		else if (optionId === OPTION.fps) updateConfig({...config, fpsCounter: !config.fpsCounter});
 		else if (optionId === OPTION.hideNames) updateConfig({...config, hideNames: !config.hideNames});
 		else if (optionId === OPTION.reduceMotion) updateConfig({...config, reduceMotion: !config.reduceMotion});
 		else if (optionId === OPTION.liveBlur) updateConfig({...config, liveBlur: !config.liveBlur});
 		else if (optionId === OPTION.nightDim) updateConfig({...config, nightDim: !config.nightDim});
-		else if (optionId === OPTION.wpAuto) updateConfig({...config, wpAutoMinutes: WP_AUTO_CHOICES[(WP_AUTO_CHOICES.indexOf(config.wpAutoMinutes) + 1) % WP_AUTO_CHOICES.length]});
 		else if (optionId === OPTION.idle) updateConfig({...config, idleMinutes: IDLE_CHOICES[(IDLE_CHOICES.indexOf(config.idleMinutes) + 1) % IDLE_CHOICES.length]});
 	}, [config]);
+
+	/** a value picked from an option's pop-up list */
+	const onChoose = useCallback((optionId: string, index: number) => {
+		const c = configRef.current;
+		const value = choices[optionId] && choices[optionId].values[index];
+		if (value === undefined) return;
+		const v = String(value);
+		if (optionId === OPTION.country) {
+			const first = COUNTRIES.filter((x) => x.code === v)[0];
+			// a new country starts with no city (no weather until one is picked); the same country keeps its city
+			updateConfig({...c, weatherCountry: v, weatherCity: v === c.weatherCountry ? c.weatherCity : first ? '' : c.weatherCity});
+		} else if (optionId === OPTION.city) {
+			const owner = COUNTRIES.filter((x) => x.cities.some((y) => y.name === v))[0];
+			updateConfig({...c, weatherCity: v, weatherCountry: c.weatherCountry || (owner ? owner.code : '')});
+		}
+		else if (optionId === OPTION.wpAuto) updateConfig({...c, wpAutoMinutes: Number(value)});
+		else if (optionId === OPTION.dockHide) updateConfig({...c, dockHide: v});
+		else if (optionId === OPTION.darkMode) updateConfig({...c, darkMode: v});
+		else if (optionId === OPTION.language) updateConfig({...c, language: v});
+		else if (optionId === OPTION.clock) updateConfig({...c, clockFormat: v});
+		else if (optionId === OPTION.focus) updateConfig({...c, focusStrength: v});
+		else if (optionId === OPTION.firstRow) updateConfig({...c, firstRow: Number(value)});
+		else if (optionId === OPTION.videoHours) updateConfig({...c, videoHours: v});
+	}, [choices]);
 
 	/** Replace a row's order with `keys` (the full list of what's shown). */
 	const onReorder = useCallback((tabId: string, keys: string[]) => {
@@ -476,8 +571,8 @@ export function App () {
 	return (
 		<>
 			{/* Home stays mounted under Settings so it keeps its focus position. */}
-			<Home rows={rows} topItems={TOP_ITEMS} menuItems={MENU_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weatherText={weatherText} dockHide={config.dockHide} focusRow={focusRow} />
-			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onClose={() => setScreen('home')} />}
+			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} menuItems={MENU_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weatherText={weatherText} dockHide={config.dockHide} focusRow={focusRow} />
+			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onChoose={onChoose} onClose={() => setScreen('home')} />}
 			{controls && <ControlCenter
 				darkMode={config.darkMode}
 				clockFormat={config.clockFormat}

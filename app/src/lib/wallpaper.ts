@@ -72,6 +72,7 @@ let shown: string | null = null;      // the picture on screen, kept so it can b
 let releaseTimer = 0;
 let released = false;
 let token = 0;
+const decoded: {img: HTMLImageElement | null} = {img: null};   // held so the decoded picture stays in the cache while it is on screen
 
 function ensureElement (): HTMLElement {
 	if (element) return element;
@@ -84,6 +85,7 @@ function ensureElement (): HTMLElement {
 			releaseTimer = window.setTimeout(() => {
 				if (!element || !shown) return;
 				released = true;
+				decoded.img = null;
 				element.style.backgroundImage = 'none';
 				document.documentElement.style.removeProperty('--wp-blur');
 				document.documentElement.style.removeProperty('--wp-bg');
@@ -108,12 +110,17 @@ export function setWallpaper (sel: string): void {
 		if (i >= list.length) { root.remove(HTML_CLASS); return; }
 		const img = new Image();
 		img.onload = () => {
-			if (mine !== token) return;
-			shown = list[i];
-			released = false;
-			el.style.backgroundImage = `url("${list[i]}")`;
-			root.add(HTML_CLASS);
-			setBlur(list[i]);
+			// decode off the main thread before the swap, so the first frame with the new picture does not stall on decoding it
+			const ready = typeof img.decode === 'function' ? img.decode().catch(() => undefined) : Promise.resolve();
+			ready.then(() => {
+				if (mine !== token) return;
+				shown = list[i];
+				decoded.img = img;
+				released = false;
+				el.style.backgroundImage = `url("${list[i]}")`;
+				root.add(HTML_CLASS);
+				setBlur(list[i]);
+			});
 		};
 		img.onerror = () => tryAt(i + 1);
 		img.src = list[i];

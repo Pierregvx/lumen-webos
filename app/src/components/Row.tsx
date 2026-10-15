@@ -11,6 +11,9 @@ interface Props {
 	compact?: boolean;
 	/** show the label above the row */
 	titled?: boolean;
+	/** tile width and gap, when not the default (they must match --layout-tile-size and --layout-tile-gap) */
+	tileSize?: number;
+	tileGap?: number;
 	/** a row revealed only when the remote navigates down to it (tvOS-style) */
 	hidden?: boolean;
 	/** resting: no tile is focused (nothing lifted or named) until the remote is used */
@@ -25,9 +28,9 @@ const VIEWPORT_WIDTH = LAYOUT.screenWidth - 2 * LAYOUT.edgePadding;
 
 /** Horizontal strip of tiles. Centred when it fits; otherwise a carousel that keeps
  *  the selected tile in the middle (clamped at the ends). */
-export function Row ({label, items, focused, selected, emptyText, compact, titled, hidden, rest, onLeave, onSelect, onActivate}: Props) {
-	const size = compact ? LAYOUT.dockTileSize : LAYOUT.tileSize;
-	const gap = compact ? LAYOUT.dockTileGap : LAYOUT.tileGap;
+export function Row ({label, items, focused, selected, emptyText, compact, titled, tileSize, tileGap, hidden, rest, onLeave, onSelect, onActivate}: Props) {
+	const size = compact ? LAYOUT.dockTileSize : tileSize || LAYOUT.tileSize;
+	const gap = compact ? LAYOUT.dockTileGap : tileGap || LAYOUT.tileGap;
 	const STEP = size + gap;
 	const total = items.length * STEP - gap;
 	const fits = total <= VIEWPORT_WIDTH;

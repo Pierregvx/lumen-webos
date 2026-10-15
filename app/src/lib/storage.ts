@@ -55,6 +55,14 @@ export interface UserConfig {
 	hideNames: boolean;
 	/** test: glass blurs what is behind it live (backdrop-filter) instead of showing a pre-blurred copy of the wallpaper */
 	liveBlur: boolean;
+	/** how strongly the focused tile stands out: subtle | normal | strong */
+	focusStrength: string;
+	/** apps in the first row (the glass bar): 5, 6 or 7 */
+	firstRow: number;
+	/** when the video wallpaper plays: always | day (7:00-19:00) | evening (17:00-23:00) | night (19:00-7:00); the still wallpaper otherwise */
+	videoHours: string;
+	/** dev builds: show the frame-rate counter (lib/fps.ts) */
+	fpsCounter: boolean;
 	/** false on a fresh install until the installed apps have been put on the home screen once */
 	seeded: boolean;
 }
@@ -85,6 +93,10 @@ export const DEFAULT_CONFIG: UserConfig = {
 	reduceMotion: false,
 	hideNames: false,
 	liveBlur: false,
+	focusStrength: 'normal',
+	firstRow: 6,
+	videoHours: 'always',
+	fpsCounter: false,
 	seeded: false
 };
 
@@ -131,6 +143,10 @@ export function parseConfig (raw: string): UserConfig {
 		reduceMotion: parsed.reduceMotion === true,
 		hideNames: parsed.hideNames === true,
 		liveBlur: parsed.liveBlur === true,
+		focusStrength: parsed.focusStrength === 'subtle' || parsed.focusStrength === 'strong' ? parsed.focusStrength : 'normal',
+		firstRow: parsed.firstRow === 5 || parsed.firstRow === 7 ? parsed.firstRow : 6,
+		videoHours: parsed.videoHours === 'day' || parsed.videoHours === 'evening' || parsed.videoHours === 'night' ? parsed.videoHours : 'always',
+		fpsCounter: parsed.fpsCounter === true,
 		seeded: parsed.seeded !== false
 	};
 }

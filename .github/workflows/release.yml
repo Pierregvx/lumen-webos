@@ -36,6 +36,9 @@ jobs:
           json.dump(d, open(p, 'w'), indent=2); print(d['version'])
           PY
       - name: Build the .ipk
+        # branch pushes are dev builds (Settings > Frame-rate counter); a tag without a hyphen is stable
+        env:
+          LUMEN_DEV: ${{ (github.ref_type == 'tag' && !contains(github.ref_name, '-')) && '0' || '1' }}
         run: python3 tools/build_release.py
       - name: Publish
         env:

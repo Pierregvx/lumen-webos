@@ -8,6 +8,10 @@ export interface OptionItem {
 	value: boolean;
 	/** shown instead of the switch (options that pick from a list) */
 	valueText?: string;
+	/** the values to pick from: OK opens them in a pop-up list (ChoicePicker) */
+	choices?: string[];
+	/** the index in choices that is set now */
+	choice?: number;
 }
 
 interface Props {
