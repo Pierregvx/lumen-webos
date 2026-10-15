@@ -1023,7 +1023,7 @@ html.wp-video .lowerveil { background-color: transparent; background-image: line
 .screen--dockhidden .lowerveil { display: none; }
 
 .rows, html.wp-video .rows { transition: transform 240ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 220ms ease; }
-.rows--lower, html.wp-video .rows--lower { top: var(--layout-rows-top); transform: translateY(calc(-300px - var(--lower-extra, 0px))); }
+.rows--lower, html.wp-video .rows--lower { top: var(--layout-rows-top); transform: translateY(calc(-1 * var(--lower-shift, 300px))); }
 
 html:not(.wp-video) .screen--plainglass { --wp-blur: linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)); }
 html.light:not(.wp-video) .screen--plainglass { --wp-blur: linear-gradient(rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.42)); }
@@ -1060,3 +1060,16 @@ html.liveblur.light .row:not(.row--dock)::before, html.liveblur.light .topcap, h
 }
 html.liveblur:not(.wp-video):not(.light) .screen--settings::before { background-image: linear-gradient(rgba(10, 12, 22, 0.46), rgba(10, 12, 22, 0.58)), var(--wp-bg, none); }
 html.liveblur.light:not(.wp-video) .screen--settings::before { background-image: linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10)), var(--wp-bg, none); }
+
+/* the second row sits 60px closer under the glass bar. The margin collapses with the first row's (40px) and its viewport's (-90px), so the
+   gap only changes once this goes below -90px: 40 - 150 = -110, against -50 before. */
+.rows > .row:nth-child(2) { margin-top: -150px; }
+/* the Recent row has a title, left-aligned with its first tile */
+.rows .row--titled .row__label {
+	display: block; position: relative; z-index: 1; margin: 0 0 34px; padding-left: calc((1640px - 1556px) / 2);
+	font-size: 28px; font-weight: 600; letter-spacing: -0.01em; text-transform: none; color: rgba(255, 255, 255, 0.72);
+	text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+}
+.rows .row--titled.row--focused .row__label { color: var(--color-text-primary); }
+html.light .rows .row--titled .row__label { color: rgba(20, 22, 32, 0.72); text-shadow: none; }
+html.light .rows .row--titled.row--focused .row__label { color: #14151b; }

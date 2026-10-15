@@ -15,6 +15,8 @@ export interface HomeRow {
 	items: TileModel[];
 	emptyText?: string;
 	compact?: boolean;
+	/** show the row's name above it (the Recent row); the app rows have none, as on tvOS */
+	titled?: boolean;
 }
 
 interface Props {
@@ -377,14 +379,15 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 		const t = setTimeout(() => setSettling(false), 300);
 		return () => clearTimeout(t);
 	}, [lower]);
-	// going down slides the rows up 300px, enough for the second row; rows below it slide further, by their distance from the second row
+	// going down slides the rows up until the focused row's tiles are where the first row's were (a row title stays above them)
 	const rowsRef = useRef<HTMLDivElement>(null);
 	useLayoutEffect(() => {
 		const el = rowsRef.current;
 		if (!el) return;
 		const kids = el.children as HTMLCollectionOf<HTMLElement>;
-		const extra = lower && kids[rowIndex] && kids[1] ? kids[rowIndex].offsetTop - kids[1].offsetTop : 0;
-		el.style.setProperty('--lower-extra', extra + 'px');
+		const tilesTop = (row: HTMLElement) => row.offsetTop + ((row.querySelector('.row__viewport') as HTMLElement | null)?.offsetTop || 0);
+		const shift = lower && kids[rowIndex] && kids[0] ? tilesTop(kids[rowIndex]) - tilesTop(kids[0]) : 0;
+		el.style.setProperty('--lower-shift', shift + 'px');
 	});
 	const overlay = n.zone === 'panel' || n.zone === 'menu' || n.zone === 'ctx' || n.zone === 'folder';
 	const topPointer = (i: number) => () => { if (!overlay) { n.mode = 'pointer'; n.engaged = true; n.zone = 'top'; n.topIndex = i; render(); } };
@@ -425,6 +428,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 					<Row
 						key={row.id}
 						label={tr(row.label)}
+						titled={row.titled}
 						items={i > 0 && !late ? [] : row.items}
 						emptyText={row.emptyText && tr(row.emptyText)}
 						focused={n.engaged && n.zone === 'rows' && i === rowIndex}

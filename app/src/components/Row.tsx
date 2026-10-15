@@ -9,6 +9,8 @@ interface Props {
 	selected: number;
 	emptyText?: string;
 	compact?: boolean;
+	/** show the label above the row */
+	titled?: boolean;
 	/** a row revealed only when the remote navigates down to it (tvOS-style) */
 	hidden?: boolean;
 	/** resting: no tile is focused (nothing lifted or named) until the remote is used */
@@ -23,7 +25,7 @@ const VIEWPORT_WIDTH = LAYOUT.screenWidth - 2 * LAYOUT.edgePadding;
 
 /** Horizontal strip of tiles. Centred when it fits; otherwise a carousel that keeps
  *  the selected tile in the middle (clamped at the ends). */
-export function Row ({label, items, focused, selected, emptyText, compact, hidden, rest, onLeave, onSelect, onActivate}: Props) {
+export function Row ({label, items, focused, selected, emptyText, compact, titled, hidden, rest, onLeave, onSelect, onActivate}: Props) {
 	const size = compact ? LAYOUT.dockTileSize : LAYOUT.tileSize;
 	const gap = compact ? LAYOUT.dockTileGap : LAYOUT.tileGap;
 	const STEP = size + gap;
@@ -32,7 +34,7 @@ export function Row ({label, items, focused, selected, emptyText, compact, hidde
 	const offset = fits ? 0 : clamp(selected * STEP + size / 2 - VIEWPORT_WIDTH / 2, 0, total - VIEWPORT_WIDTH);
 
 	return (
-		<section class={`row${focused || rest ? ' row--focused' : ''}${compact ? ' row--dock' : ''}${hidden ? ' row--hidden' : ''}`} style={`--row-w:${total}px`} onMouseLeave={onLeave}>
+		<section class={`row${focused || rest ? ' row--focused' : ''}${compact ? ' row--dock' : ''}${titled ? ' row--titled' : ''}${hidden ? ' row--hidden' : ''}`} style={`--row-w:${total}px`} onMouseLeave={onLeave}>
 			<h2 class="row__label">{label}</h2>
 			<div class="row__viewport">
 				{items.length === 0

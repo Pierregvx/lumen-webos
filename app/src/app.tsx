@@ -236,7 +236,7 @@ export function App () {
 	const rows: HomeRow[] = useMemo(() => [
 		{id: ROW.apps, label: 'Apps', items: homeTiles.slice(0, FIRST_ROW), emptyText: 'No apps selected — add some in Settings'},
 		...(homeTiles.length > FIRST_ROW ? [{id: ROW.dock, label: 'More apps', items: homeTiles.slice(FIRST_ROW)}] : []),
-		...(recentApps.length > 0 ? [{id: ROW.recent, label: 'Recent', items: recentApps.map(appTile)}] : [])
+		...(recentApps.length > 0 ? [{id: ROW.recent, label: 'Recent', titled: true, items: recentApps.map(appTile)}] : [])
 	], [homeTiles, shownInputs, recentApps, config.language]);
 
 	const tabs: SettingsTab[] = useMemo(() => [
