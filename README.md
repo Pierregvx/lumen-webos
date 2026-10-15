@@ -40,10 +40,10 @@ Made from the dev preview at 1920 x 1080 (`node tools/screenshots.mjs`); the wal
 
 ## Easy install: download the .ipk
 
-Don't want to build anything? Download `com.ammar027.lumen_1.0.9_all.ipk` from the [latest release](https://github.com/ammar027/lumen-webos/releases/latest) and install it on your TV:
+Don't want to build anything? Download the `com.samrenfrew.lumen_<version>_all.ipk` from the [releases](https://github.com/samrenfrew/lumen-webos/releases) and install it on your TV:
 
 - **With a mouse and no command line:** open [Dev Manager Desktop](https://github.com/webosbrew/dev-manager-desktop/releases), add your TV, go to *Apps* and drop the `.ipk` onto the window.
-- **Or** with the webOS CLI: `npx -p @webos-tools/cli ares-install --device lgtv com.ammar027.lumen_1.0.9_all.ipk`.
+- **Or** with the webOS CLI: `npx -p @webos-tools/cli ares-install --device lgtv com.samrenfrew.lumen_<version>_all.ipk`.
 
 The release build leaves out third-party app logos and the default wallpapers are public-domain paintings; apps without an icon get a plain tile.
 Optional: to make the remote's **Home** button open Lumen, see the TV scripts under [tools/tv/](tools/tv/).
@@ -58,8 +58,8 @@ npm run build:ipk           # -> build/<app-id>_<version>_all.ipk
 npm run deploy              # builds, copies the .ipk to the TV over ssh, installs and launches it
 ```
 
-The default app id is `com.ammar027.lumen.dev` ("Lumen Dev"), so a dev build installs beside the stable one. For stable, set
-`LUMEN_APP_ID=com.ammar027.lumen` and `LUMEN_APP_TITLE=Lumen`. `npm run dev` starts the preview in a browser on port 5199.
+The default app id is `com.samrenfrew.lumen.dev` ("Lumen Dev"), so a dev build installs beside the stable one. For stable, set
+`LUMEN_APP_ID=com.samrenfrew.lumen` and `LUMEN_APP_TITLE=Lumen`. `npm run dev` starts the preview in a browser on port 5199.
 
 Brand icons and logos of third-party apps, your own photographs and the private SF font are **not** included here. Put them in `app/private/`
 (gitignored); the build lays that folder over the app if it is there. The layout is described at the top of `app/vite.config.ts`.

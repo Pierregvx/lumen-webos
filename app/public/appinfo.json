@@ -1,7 +1,7 @@
 {
-  "id": "com.ammar027.lumen",
+  "id": "com.samrenfrew.lumen",
   "version": "1.0.9",
-  "vendor": "ammar027",
+  "vendor": "samrenfrew",
   "type": "web",
   "main": "index.html",
   "title": "Lumen",

@@ -37,7 +37,7 @@ function classicScriptTag (): Plugin {
 		const env = loadEnv(mode, REPO_ROOT, 'LUMEN_');
 		const privateDir = join(APP_DIR, 'private');
 		return {
-			appId: env.LUMEN_APP_ID || 'com.ammar027.lumen.dev',
+			appId: env.LUMEN_APP_ID || 'com.samrenfrew.lumen.dev',
 			title: env.LUMEN_APP_TITLE || 'Lumen Dev',
 			privateDir: env.LUMEN_PRIVATE !== '0' && existsSync(privateDir) ? privateDir : ''
 		};

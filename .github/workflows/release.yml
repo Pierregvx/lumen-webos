@@ -1,0 +1,31 @@
+# Builds the public .ipk (no app/private/) and publishes it as a GitHub release when a tag v* is pushed.
+# A tag with a hyphen (v1.0.9-dev.1) is published as a prerelease.
+name: release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Build the .ipk
+        run: python3 tools/build_release.py
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          IPK=$(ls release/*.ipk)
+          SUM=$(sha256sum "$IPK" | cut -d' ' -f1)
+          PRE=; case "$TAG" in *-*) PRE=--prerelease ;; esac
+          printf 'Built from %s.\n\nInstall: drop the .ipk onto Dev Manager, or `ares-install --device lgtv %s`.\n\nSHA-256: `%s`\n' \
+            "$GITHUB_SHA" "$(basename "$IPK")" "$SUM" > notes.md
+          gh release create "$TAG" "$IPK" --title "Lumen $TAG" --notes-file notes.md $PRE
