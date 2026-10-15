@@ -3,6 +3,7 @@
 // A cloud picture that can't load falls back to the bundled default, so the screen is never blank.
 
 import {LOCAL_WALLPAPERS, WALLPAPERS, cloudUrl} from '../config/wallpapers';
+import {BOOT_WALLPAPER_KEY, writeCache, type BootWallpaper} from './boot';
 
 const HTML_CLASS = 'wp-image';
 const PROXY = 'https://images.weserv.nl/';       // free image resizer: a 1920-wide copy instead of the multi-MB original
@@ -58,7 +59,7 @@ function setBlur (shown: string | null): void {
 	if (!url) { style.removeProperty('--wp-blur'); style.removeProperty('--wp-bg'); return; }
 	const load = (name: string, src: string) => {
 		const probe = new Image();
-		probe.onload = () => style.setProperty(name, `url("${src}")`);
+		probe.onload = () => { style.setProperty(name, `url("${src}")`); saveBoot(); };
 		probe.src = src;
 	};
 	if (liveBlur) style.removeProperty('--wp-blur');
@@ -74,11 +75,25 @@ let released = false;
 let token = 0;
 const decoded: {img: HTMLImageElement | null} = {img: null};   // held so the decoded picture stays in the cache while it is on screen
 
+/** A fixed choice (a bundled or cloud picture) is painted by index.html before the script loads, so the next cold start opens on it.
+ *  A shuffle is not: it picks a new picture each launch, and painting the last one first would flash it. */
+let bootable = false;
+function saveBoot (): void {
+	if (!bootable || !shown || released) { if (!bootable) writeCache(BOOT_WALLPAPER_KEY, null); return; }
+	const style = document.documentElement.style;
+	const boot: BootWallpaper = {url: shown, blur: style.getPropertyValue('--wp-blur') || undefined, bg: style.getPropertyValue('--wp-bg') || undefined};
+	writeCache(BOOT_WALLPAPER_KEY, boot);
+}
+
 function ensureElement (): HTMLElement {
 	if (element) return element;
-	element = document.createElement('div');
-	element.id = 'wpimage';
-	document.body.insertBefore(element, document.body.firstChild);
+	// index.html has the element already (with the last picture in it); dev builds and older pages may not
+	element = document.getElementById('wpimage');
+	if (!element) {
+		element = document.createElement('div');
+		element.id = 'wpimage';
+		document.body.insertBefore(element, document.body.firstChild);
+	}
 	document.addEventListener('visibilitychange', () => {
 		window.clearTimeout(releaseTimer);
 		if (document.hidden) {
@@ -104,7 +119,8 @@ export function setWallpaper (sel: string): void {
 	const mine = ++token;
 	const list = candidates(sel);
 	const root = document.documentElement.classList;
-	if (list.length === 0) { root.remove(HTML_CLASS); el.style.backgroundImage = 'none'; setBlur(null); return; }
+	bootable = sel.indexOf('local:') === 0 || sel.indexOf('cloud:') === 0;
+	if (list.length === 0) { root.remove(HTML_CLASS); el.style.backgroundImage = 'none'; setBlur(null); saveBoot(); return; }
 	const tryAt = (i: number) => {
 		if (mine !== token) return;                      // a newer choice replaced this one
 		if (i >= list.length) { root.remove(HTML_CLASS); return; }
@@ -120,6 +136,7 @@ export function setWallpaper (sel: string): void {
 				el.style.backgroundImage = `url("${list[i]}")`;
 				root.add(HTML_CLASS);
 				setBlur(list[i]);
+				saveBoot();
 			});
 		};
 		img.onerror = () => tryAt(i + 1);

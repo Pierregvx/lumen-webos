@@ -5,7 +5,8 @@ import type {WallpaperEntry} from './components/WallpaperPicker';
 import type {OptionItem} from './components/OptionList';
 import {Toast, type ToastMessage} from './components/Toast';
 import type {TileModel} from './components/Tile';
-import {listApps, seedAppIds, type AppEntry} from './lib/apps';
+import {cachedApps, listApps, sameApps, saveAppsCache, seedAppIds, type AppEntry} from './lib/apps';
+import {afterFirstFrame, readCache, writeCache} from './lib/boot';
 import {listInputs, MOCK_INPUTS, type InputSource} from './lib/inputs';
 import {launchApp, launchLgHome} from './lib/launch';
 import {isWebOS} from './lib/luna';
@@ -23,7 +24,7 @@ import {setVideoFlag, startScreensaver} from './lib/system';
 import {setFpsCounter} from './lib/fps';
 import {ControlCenter, type CenterAction} from './components/ControlCenter';
 import {CITIES, COUNTRIES} from './config/cities';
-import {AUTO_PLACE, readWeather, type Weather} from './lib/weather';
+import {AUTO_PLACE, peekWeather, readWeather, type Weather} from './lib/weather';
 import {isDark, LANGS, nextDark, setClockMode, setLang} from './lib/i18n';
 
 type Screen = 'home' | 'settings';
@@ -44,6 +45,9 @@ function inVideoHours (mode: string, now = new Date()): boolean {
 const TILES_FOR: Record<number, {size: number; height: number; gap: number}> = {5: {size: 236, height: 142, gap: 28}, 6: {size: 236, height: 142, gap: 28}, 7: {size: 208, height: 125, gap: 24}};
 const IDLE_CHOICES = [0, 5, 10, 20, 30];
 const RECENT_MAX = 8;
+/** what the last launch showed, drawn at once on a cold start (lib/boot.ts) */
+const INPUTS_CACHE_KEY = 'lumen-boot-inputs-v1';
+const RECENT_CACHE_KEY = 'lumen-boot-recent-v1';
 
 /** The top bar: Inputs, Control Center and Settings. */
 const TOP_ITEMS: TileModel[] = [
@@ -66,8 +70,9 @@ export function App () {
 	// set before anything renders, so every label below reads the chosen language and clock
 	setLang(config.language);
 	setClockMode(config.clockFormat);
-	const [apps, setApps] = useState<AppEntry[]>([]);
-	const [inputs, setInputs] = useState<InputSource[]>([]);
+	// a cold start draws what the last launch showed (lib/boot.ts); the TV is asked again once the first frame is up
+	const [apps, setApps] = useState<AppEntry[]>(() => cachedApps(config.useHomebrew, config.showAllApps) || []);
+	const [inputs, setInputs] = useState<InputSource[]>(() => (isWebOS() && readCache<InputSource[]>(INPUTS_CACHE_KEY)) || []);
 	const [toast, setToast] = useState<ToastMessage | null>(null);
 	const [controls, setControls] = useState(false);
 	const configRef = useRef(config);
@@ -119,49 +124,71 @@ export function App () {
 
 	// Load apps at start and whenever the Homebrew option changes; refresh inputs whenever
 	// the app comes back to the foreground (labels or connections may have changed).
+	// With a list from the last launch on screen, the first read waits for the first frame; a changed option reads at once.
+	const appsShown = useRef(apps);
+	appsShown.current = apps;
+	const firstAppsRead = useRef(true);
 	useEffect(() => {
-		listApps(config.useHomebrew, config.showAllApps)
+		const useHomebrew = config.useHomebrew;
+		const showAll = config.showAllApps;
+		const read = () => listApps(useHomebrew, showAll)
 			.then(({apps: list, source}) => {
-				setApps(list);
-				if (config.useHomebrew && source !== 'homebrew') showToast('Homebrew Channel not available, using the built-in app list', 'error');
+				if (!sameApps(list, appsShown.current)) setApps(list);
+				saveAppsCache(useHomebrew, showAll, list);
+				if (useHomebrew && source !== 'homebrew') showToast('Homebrew Channel not available, using the built-in app list', 'error');
 			})
 			.catch(() => showToast('Could not read the app list', 'error'));
+		const wait = firstAppsRead.current && apps.length > 0;
+		firstAppsRead.current = false;
+		if (!wait) { read(); return undefined; }
+		return afterFirstFrame(read);
 	}, [config.useHomebrew, config.showAllApps, showToast]);
 
 	// the apps watch.sh saw in front, read at start and each time Lumen comes back
-	const [tvRecent, setTvRecent] = useState<string[]>([]);
+	const [tvRecent, setTvRecent] = useState<string[]>(() => readCache<string[]>(RECENT_CACHE_KEY) || []);
 	useEffect(() => {
-		const read = () => { if (!document.hidden) readTvRecent().then(setTvRecent); };
-		read();
+		const read = () => {
+			if (document.hidden) return;
+			readTvRecent().then((ids) => {
+				writeCache(RECENT_CACHE_KEY, ids);
+				setTvRecent((now) => (now.join() === ids.join() ? now : ids));
+			});
+		};
+		const cancel = afterFirstFrame(read);
 		document.addEventListener('visibilitychange', read);
-		return () => document.removeEventListener('visibilitychange', read);
+		return () => { cancel(); document.removeEventListener('visibilitychange', read); };
 	}, []);
 
 	useEffect(() => {
 		const refresh = () => {
 			if (!isWebOS()) { setInputs(MOCK_INPUTS); return; }
-			listInputs().then(setInputs).catch(() => showToast('Could not read the inputs', 'error'));
+			listInputs().then((list) => {
+				writeCache(INPUTS_CACHE_KEY, list);
+				setInputs((now) => (JSON.stringify(now) === JSON.stringify(list) ? now : list));
+			}).catch(() => showToast('Could not read the inputs', 'error'));
 		};
-		refresh();
+		const cancel = isWebOS() ? afterFirstFrame(refresh) : (refresh(), () => undefined);
 		const onVisibility = () => { if (!document.hidden) refresh(); };
 		document.addEventListener('visibilitychange', onVisibility);
-		return () => document.removeEventListener('visibilitychange', onVisibility);
+		return () => { cancel(); document.removeEventListener('visibilitychange', onVisibility); };
 	}, [showToast]);
 
 	useEffect(() => { setFavorites(config.favoriteWallpapers); setWallpaper(config.wallpaper); }, [config.wallpaper]);
 	useEffect(() => setFavorites(config.favoriteWallpapers), [config.favoriteWallpapers]);
 
 	// the weather under the clock at the top left
-	const [weather, setWeather] = useState<Weather | null>(null);
+	const weatherCity = (c: UserConfig) => (c.weatherCity === AUTO_PLACE ? null : CITIES.filter((x) => x.name === c.weatherCity)[0] || null);
+	// the last reading is shown at once on a cold start, however old, so the pill does not change size when the new one comes in
+	const [weather, setWeather] = useState<Weather | null>(() => (config.showWeather && config.weatherCity && (config.weatherCity === AUTO_PLACE || weatherCity(config)) ? peekWeather(weatherCity(config)) : null));
 	useEffect(() => {
 		// no place chosen, no weather (and no request to anyone): Auto, which asks ipwho.is, has to be picked on purpose
 		if (!config.showWeather || !config.weatherCity) { setWeather(null); return; }
-		const city = config.weatherCity === AUTO_PLACE ? null : CITIES.filter((c) => c.name === config.weatherCity)[0] || null;
+		const city = weatherCity(config);
 		if (!city && config.weatherCity !== AUTO_PLACE) { setWeather(null); return; }
 		const load = () => readWeather(city).then(setWeather).catch(() => setWeather(null));
-		load();
+		const cancel = afterFirstFrame(load);
 		const id = window.setInterval(load, 30 * 60000);
-		return () => window.clearInterval(id);
+		return () => { cancel(); window.clearInterval(id); };
 	}, [config.showWeather, config.weatherCity]);
 
 	// a new wallpaper every N minutes (only when a shuffle is chosen)

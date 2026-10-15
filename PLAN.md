@@ -150,6 +150,10 @@ Goal: know how fast Lumen is on this TV, make cold start faster, and check every
 - [ ] Record three numbers as the baseline, with DevTools traces: Home press to home screen visible; key press to focus moving; cold start to
       interactive.
 - [ ] Then the cold-start items: draw the first row first (done), defer the rest until the first frame is up, images at screen size or smaller.
+  Built, not yet tried on the TV (lib/boot.ts): the app list, inputs, Recent row, weather and clock format from the last launch are drawn at
+  once and the TV is asked again 400 ms after the first frame; index.html paints the last fixed wallpaper (not a shuffle) and its blurred
+  copies before app.js loads. Re-encoding the bundled wallpapers smaller was tried and dropped: about 30% smaller at quality 86, but the
+  painting's canvas texture visibly smoothed, and the decode cost is set by the 1920x1080 size, which stays. Compare against the baseline.
 - [ ] Graphics setting Low/High, only if the blur spike passed.
 
 ### Lower rows transition (Down from the dock to the blurred backdrop)

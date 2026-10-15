@@ -14,6 +14,7 @@ import {listLaunchPoints, readIcons} from './root';
 import {appExists} from './launch';
 import {ICON_PACK} from '../config/iconpack';
 import {SYSTEM_APPS} from '../config/systemApps';
+import {readCache, writeCache} from './boot';
 
 export interface AppEntry {
 	id: string;
@@ -45,6 +46,42 @@ export function packIcon (id: string, title: string): string | undefined {
 
 export function listApps (useHomebrew: boolean, showSystem = false): Promise<AppList> {
 	return listAppsBase(useHomebrew).then((list) => (showSystem ? addSystemApps(list) : list));
+}
+
+// ---------- the list the last launch showed (lib/boot.ts) ----------
+
+const LIST_CACHE_KEY = 'lumen-boot-apps-v1';
+/** marks an icon kept in the icon cache, so the data: URI is not stored twice */
+const ICON_REF = '@icon:';
+/** where each icon read through the Homebrew Channel came from, by app id */
+const iconPaths: Record<string, string> = {};
+
+/** The list the last launch showed with these options, or null. Icons read from the TV come back from the icon cache. */
+export function cachedApps (useHomebrew: boolean, showSystem: boolean): AppEntry[] | null {
+	const saved = readCache<{key: string; apps: AppEntry[]}>(LIST_CACHE_KEY);
+	if (!saved || saved.key !== listKey(useHomebrew, showSystem) || !Array.isArray(saved.apps)) return null;
+	const icons = saved.apps.some((a) => !!a.iconUrl && a.iconUrl.indexOf(ICON_REF) === 0) ? readIconCache() : {};
+	return saved.apps.map((a) => {
+		if (!a.iconUrl || a.iconUrl.indexOf(ICON_REF) !== 0) return a;
+		const path = a.iconUrl.slice(ICON_REF.length);
+		iconPaths[a.id] = path;
+		return {...a, iconUrl: icons[path]};
+	});
+}
+
+export function saveAppsCache (useHomebrew: boolean, showSystem: boolean, apps: AppEntry[]): void {
+	const slim = apps.map((a) => (a.iconUrl && a.iconUrl.indexOf('data:') === 0 && iconPaths[a.id] ? {...a, iconUrl: ICON_REF + iconPaths[a.id]} : a));
+	writeCache(LIST_CACHE_KEY, {key: listKey(useHomebrew, showSystem), apps: slim});
+}
+
+/** True when two lists would draw the same tiles (the icons compared by length and start, not in full). */
+export function sameApps (a: AppEntry[], b: AppEntry[]): boolean {
+	const sig = (list: AppEntry[]) => JSON.stringify(list.map((x) => [x.id, x.title, x.color, !!x.plain, x.iconUrl ? x.iconUrl.length + x.iconUrl.slice(0, 80) : '']));
+	return sig(a) === sig(b);
+}
+
+function listKey (useHomebrew: boolean, showSystem: boolean): string {
+	return `${useHomebrew ? 'hb' : 'cat'}:${showSystem ? 'sys' : ''}`;
 }
 
 function addSystemApps (list: AppList): Promise<AppList> {
@@ -99,6 +136,8 @@ function listViaHomebrew (): Promise<AppEntry[]> {
 			const points = (parsed.launchPoints || []).filter((p) => p.id && p.title && HIDDEN_IDS.indexOf(p.id) === -1);
 			if (!points.length) throw new Error('no launch points');
 			return loadIcons(points).then((icons) => Promise.all(points.map((p) => {
+				const path = p.largeIcon || p.icon;
+				if (path && icons[p.id]) iconPaths[p.id] = path;
 				const known = APP_CATALOG.find((c) => c.id === p.id);
 				return {
 					id: p.id,

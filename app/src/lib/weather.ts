@@ -43,8 +43,18 @@ function describe (code: number): string {
 	return '';
 }
 
+const keyFor = (city: City | null) => 'launcher-weather-v3-' + (city ? city.name : 'auto');
+
+/** The last weather read for this place, however old: drawn on a cold start while readWeather asks again. */
+export function peekWeather (city: City | null): Weather | null {
+	try {
+		const cached = JSON.parse(localStorage.getItem(keyFor(city)) || 'null') as {t: number; w: Weather} | null;
+		return cached ? cached.w : null;
+	} catch { return null; }
+}
+
 export function readWeather (city: City | null): Promise<Weather> {
-	const key = 'launcher-weather-v3-' + (city ? city.name : 'auto');
+	const key = keyFor(city);
 	try {
 		const cached = JSON.parse(localStorage.getItem(key) || 'null') as {t: number; w: Weather} | null;
 		if (cached && Date.now() - cached.t < MAX_AGE_MS) return Promise.resolve(cached.w);
