@@ -78,7 +78,8 @@ Each spike is a yes/no with a note in `docs/spikes.md`. Nothing from a spike is 
 - [ ] Launch parameters: when Lumen is launched with `{"params":{...}}` while not running, does it see them at start (`webOSLaunch` /
       `PalmSystem.launchParams`)? When it is already in front, does `webOSRelaunch` fire? Both are needed later (Recents button, colour
       buttons, ambient mode).
-- [ ] Recents button: can LG Input Hook rebind it? What does it send? Can it launch Lumen with a parameter such as `{"view":"recent"}`?
+- [ ] Recents button: Input Hook can rebind Home, so it can rebind this. Confirm a launch with `{"view":"recent"}` reaches Lumen as a
+      parameter (this is the launch-parameter spike above, with a real use).
 - [ ] Colour buttons: which does this remote have, and which key codes reach the app? Some Magic Remotes only show them on the on-screen 123 pad.
 - [ ] Attaching Chrome DevTools to the dev build on the TV: which method works on webOS 25 (Dev Manager Desktop inspect, `ares-inspect`).
 
@@ -157,9 +158,12 @@ every later change against the numbers.
 - [ ] Handle `webOSRelaunch` and launch parameters at start, per the Phase 2 spike, so a launch with `{"view":"recent"}` lands on the Recent row.
 
 ### Recents button
-- [ ] Rebind the Recents button with LG Input Hook to launch Lumen on the Recent row, instead of cold-loading the last app. Lumen's Recent row
-      is the app switcher; the TV's own "go back to the last app" is a cold load either way, so going through Lumen costs nothing extra and
-      gives a choice.
+- [ ] Rebind the Recents button with LG Input Hook to launch Lumen with `{"view":"recent"}`, the same way Home is already rebound. Lumen's
+      Recent row is the app switcher; LG's own recents window is not needed. The TV's "go back to the last app" is a cold load either way, so
+      going through Lumen costs nothing extra and gives a choice.
+- [ ] Make the Recent row truthful. Today it only records apps opened from Lumen (`recentIds` in storage), so anything opened through LG Home,
+      the Input Hook or a cold boot never appears. `watch.sh` already sees every foreground app change; have it keep the last eight distinct
+      app ids in `/var/lib/homehook/recent`, and have Lumen read that file through root at start and merge it with its own list.
 
 ### Blur
 - [ ] If the Phase 2 blur spike passed: a Graphics setting, Low (current pre-blurred glass) / High (live blur on the dock only). If it failed,
