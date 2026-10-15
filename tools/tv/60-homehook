@@ -5,7 +5,7 @@
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin:$PATH"
 # already running? Checked in /proc: plain ps on webOS 25 only lists processes on the current terminal, so it never saw the watcher.
 for p in /proc/[0-9]*; do
-  case "$(tr "\0" " " < $p/cmdline 2>/dev/null)" in "/bin/sh /var/lib/homehook/watch.sh"*|"sh /var/lib/homehook/watch.sh"*) exit 0 ;; esac
+  case "$(tr "\0" " " 2>/dev/null < $p/cmdline)" in "/bin/sh /var/lib/homehook/watch.sh"*|"sh /var/lib/homehook/watch.sh"*) exit 0 ;; esac
 done
 setsid nohup /var/lib/homehook/watch.sh </dev/null >/dev/null 2>&1 &
 exit 0
