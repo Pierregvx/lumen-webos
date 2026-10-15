@@ -7,6 +7,8 @@
 // user switching back to pointer mode.
 
 interface WebOSSystemCursor {
+	/** the JSON string a launch was started with (lib/launchParams.ts) */
+	launchParams?: string;
 	setCursorHidden? (hidden: boolean): void;
 }
 

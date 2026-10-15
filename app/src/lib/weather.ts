@@ -1,5 +1,7 @@
-// Temperature for the time-pill menu. The place is the chosen city, or (Auto) found from the internet connection with ipwho.is
-// (no key); the weather comes from open-meteo.com (no key). Cached 30 minutes per place; any failure just shows nothing.
+// Temperature for the time-pill menu. The place is the chosen city, or (Auto, only when picked in Settings) found from the internet
+// connection with ipwho.is (no key); the weather comes from open-meteo.com (no key). Cached 30 minutes per place; any failure just shows nothing.
+
+import {loggedFetch} from './log';
 
 import type {City} from '../config/cities';
 
@@ -8,6 +10,9 @@ export interface Weather {
 	label: string;
 	place: string;
 }
+
+/** weatherCity for "find the place from the internet connection" ('' = no place chosen, no weather) */
+export const AUTO_PLACE = '@auto';
 
 const MAX_AGE_MS = 30 * 60 * 1000;
 
@@ -31,14 +36,14 @@ export function readWeather (city: City | null): Promise<Weather> {
 	} catch { /* fetch fresh */ }
 	const where: Promise<{lat: number; lon: number; place: string}> = city
 		? Promise.resolve({lat: city.lat, lon: city.lon, place: city.name})
-		: fetch('https://ipwho.is/')
+		: loggedFetch('https://ipwho.is/')
 			.then((r) => r.json() as Promise<{success?: boolean; latitude?: number; longitude?: number; city?: string}>)
 			.then((p) => {
 				if (!p.success || typeof p.latitude !== 'number' || typeof p.longitude !== 'number') throw new Error('no location');
 				return {lat: p.latitude, lon: p.longitude, place: p.city || ''};
 			});
 	return where
-		.then((p) => fetch(`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}&current=temperature_2m,weather_code&timezone=auto`)
+		.then((p) => loggedFetch(`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}&current=temperature_2m,weather_code&timezone=auto`)
 			.then((r) => r.json() as Promise<{current?: {temperature_2m?: number; weather_code?: number}}>)
 			.then((d) => {
 				const c = d.current;

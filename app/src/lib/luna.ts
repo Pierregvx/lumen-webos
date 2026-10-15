@@ -26,10 +26,17 @@ export function isWebOS (): boolean {
 	return typeof window.PalmServiceBridge === 'function';
 }
 
+let onError: ((uri: string, error: Error) => void) | null = null;
+
+/** Called for every failed call (lib/log.ts records them), except calls made with quiet set. */
+export function setLunaErrorHook (hook: (uri: string, error: Error) => void): void {
+	onError = hook;
+}
+
 /** One-shot call. Resolves with the parsed payload; rejects on returnValue:false,
  *  a bridge error, malformed JSON or timeout. */
-export function lunaCall<T extends LunaResponse = LunaResponse> (uri: string, params: object = {}, timeoutMs: number = TIMING.lunaTimeoutMs): Promise<T> {
-	return new Promise<T>((resolve, reject) => {
+export function lunaCall<T extends LunaResponse = LunaResponse> (uri: string, params: object = {}, timeoutMs: number = TIMING.lunaTimeoutMs, quiet = false): Promise<T> {
+	const call = new Promise<T>((resolve, reject) => {
 		const Bridge = window.PalmServiceBridge;
 		if (!Bridge) { reject(new Error('Not running on webOS')); return; }
 
@@ -58,4 +65,6 @@ export function lunaCall<T extends LunaResponse = LunaResponse> (uri: string, pa
 		try { bridge.call(uri, JSON.stringify(params)); }
 		catch (e) { finish(() => reject(e as Error)); }
 	});
+	if (!quiet && onError && isWebOS()) call.catch((e: Error) => { if (onError) onError(uri, e); });
+	return call;
 }

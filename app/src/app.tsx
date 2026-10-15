@@ -10,7 +10,10 @@ import {listInputs, MOCK_INPUTS, type InputSource} from './lib/inputs';
 import {launchApp, launchLgHome} from './lib/launch';
 import {isWebOS} from './lib/luna';
 import {hidePointerOnForeground} from './lib/pointer';
-import {DEFAULT_CONFIG, loadConfig, saveConfig, toggleId, type UserConfig} from './lib/storage';
+import {DEFAULT_CONFIG, hasSavedConfig, loadConfig, saveConfig, toggleId, type UserConfig} from './lib/storage';
+import {readBackup, scheduleBackup} from './lib/backup';
+import {mergeRecent, readTvRecent} from './lib/recent';
+import {onRelaunch, startParams, type LaunchParams} from './lib/launchParams';
 import {appTile, inputTile, pickInOrder} from './lib/tiles';
 import {TIMING} from './config/constants';
 import {LOCAL_WALLPAPERS, WALLPAPERS, WALLPAPER_CATEGORIES, cloudUrl} from './config/wallpapers';
@@ -19,7 +22,7 @@ import {setVideoChoice, setVideoPaused, setVideoWallpaper, VIDEO_PLACES} from '.
 import {setVideoFlag, startScreensaver} from './lib/system';
 import {ControlCenter, type CenterAction} from './components/ControlCenter';
 import {CITIES, COUNTRIES} from './config/cities';
-import {readWeather} from './lib/weather';
+import {AUTO_PLACE, readWeather} from './lib/weather';
 import {isDark, LANGS, nextDark, setClockMode, setLang, t as tr} from './lib/i18n';
 
 type Screen = 'home' | 'settings';
@@ -60,6 +63,9 @@ export function App () {
 	const configRef = useRef(config);
 	configRef.current = config;
 	const toastTimer = useRef(0);
+	// a fresh install first looks for the settings backup on the TV (lib/backup.ts); nothing is seeded until that has answered
+	const [restoring, setRestoring] = useState(() => !hasSavedConfig());
+	const [focusRow, setFocusRow] = useState<{id: string; seq: number} | undefined>(undefined);
 
 	const showToast = useCallback((text: string, kind: ToastMessage['kind'] = 'info') => {
 		window.clearTimeout(toastTimer.current);
@@ -81,6 +87,22 @@ export function App () {
 		return () => window.removeEventListener('wheel', onWheel);
 	}, []);
 
+	useEffect(() => {
+		if (!restoring) return;
+		readBackup().then((saved) => {
+			if (saved && !hasSavedConfig()) { updateConfig(saved); showToast('Settings restored from the TV'); }
+			setRestoring(false);
+		});
+	}, []);
+
+	// launch parameters: {"view":"recent"} opens on the Recent row
+	useEffect(() => {
+		let seq = 0;
+		const apply = (p: LaunchParams) => { if (p.view === 'recent') setFocusRow({id: ROW.recent, seq: ++seq}); };
+		apply(startParams());
+		return onRelaunch(apply);
+	}, []);
+
 	// Start in remote (5-way) mode: hide the Magic Remote pointer whenever we come to the
 	// front. Shaking the remote still brings it back.
 	useEffect(() => hidePointerOnForeground(), []);
@@ -95,6 +117,15 @@ export function App () {
 			})
 			.catch(() => showToast('Could not read the app list', 'error'));
 	}, [config.useHomebrew, config.showAllApps, showToast]);
+
+	// the apps watch.sh saw in front, read at start and each time Lumen comes back
+	const [tvRecent, setTvRecent] = useState<string[]>([]);
+	useEffect(() => {
+		const read = () => { if (!document.hidden) readTvRecent().then(setTvRecent); };
+		read();
+		document.addEventListener('visibilitychange', read);
+		return () => document.removeEventListener('visibilitychange', read);
+	}, []);
 
 	useEffect(() => {
 		const refresh = () => {
@@ -113,8 +144,10 @@ export function App () {
 	// the weather line in the time-pill menu
 	const [weatherText, setWeatherText] = useState('');
 	useEffect(() => {
-		if (!config.showWeather) { setWeatherText(''); return; }
-		const city = CITIES.filter((c) => c.name === config.weatherCity)[0] || null;
+		// no place chosen, no weather (and no request to anyone): Auto, which asks ipwho.is, has to be picked on purpose
+		if (!config.showWeather || !config.weatherCity) { setWeatherText(''); return; }
+		const city = config.weatherCity === AUTO_PLACE ? null : CITIES.filter((c) => c.name === config.weatherCity)[0] || null;
+		if (!city && config.weatherCity !== AUTO_PLACE) { setWeatherText(''); return; }
 		const load = () => readWeather(city)
 			.then((w) => setWeatherText(`${w.place ? w.place + ' \u00b7 ' : ''}${w.temp}\u00b0 ${tr(w.label)}`.trim()))
 			.catch(() => setWeatherText(''));
@@ -147,14 +180,14 @@ export function App () {
 	useEffect(() => setVideoWallpaper(config.videoWallpaper), [config.videoWallpaper]);
 	useEffect(() => { setVideoPaused(screen === 'settings'); document.documentElement.classList.toggle('in-settings', screen === 'settings'); }, [screen]);
 
-	const updateConfig = (next: UserConfig) => { configRef.current = next; setConfig(next); saveConfig(next); };
+	const updateConfig = (next: UserConfig) => { configRef.current = next; setConfig(next); saveConfig(next); scheduleBackup(next); };
 
 	// first run: put the installed apps on the home screen (the catalogue's favourites first)
 	useEffect(() => {
 		const c = configRef.current;
-		if (c.seeded || apps.length === 0) return;
+		if (restoring || c.seeded || apps.length === 0) return;
 		updateConfig({...c, seeded: true, appIds: seedAppIds(apps, DEFAULT_CONFIG.appIds)});
-	}, [apps]);
+	}, [apps, restoring]);
 
 	// idle screensaver: after the chosen minutes without a key press or pointer move, while the launcher is in front
 	useEffect(() => {
@@ -178,7 +211,7 @@ export function App () {
 		[inputs, config.sourceIds]
 	);
 
-	const recentApps = useMemo(() => pickInOrder(apps, config.recentIds, (a) => a.id), [apps, config.recentIds]);
+	const recentApps = useMemo(() => pickInOrder(apps, mergeRecent(tvRecent, config.recentIds, RECENT_MAX), (a) => a.id), [apps, config.recentIds, tvRecent]);
 
 	const folderTiles = useMemo(
 		() => config.folders.map((f) => ({name: f.name, items: pickInOrder(apps, f.appIds, (a) => a.id).map(appTile)})).filter((f) => f.items.length > 0),
@@ -229,16 +262,16 @@ export function App () {
 		{
 			id: OPTION.country,
 			label: 'Weather country',
-			description: 'Pick your country, then the city below. Auto finds your area from your internet connection (ipwho.is), which can be a few towns off.',
+			description: 'Pick your country, then the city below. Until a city is chosen no weather is shown and nothing is fetched.',
 			value: config.weatherCountry !== '',
-			valueText: (COUNTRIES.filter((c) => c.code === config.weatherCountry)[0] || {name: 'Auto'}).name
+			valueText: (COUNTRIES.filter((c) => c.code === config.weatherCountry)[0] || {name: 'Any'}).name
 		},
 		{
 			id: OPTION.city,
 			label: 'Weather city',
-			description: 'Auto finds your area from your internet connection (ipwho.is). OK steps through a list of cities if Auto guesses wrong.',
+			description: 'Not set: no weather. Auto finds your area from your internet connection, which sends your IP address to ipwho.is and can be a few towns off. Or pick a city.',
 			value: config.weatherCity !== '',
-			valueText: config.weatherCity || 'Auto'
+			valueText: config.weatherCity === AUTO_PLACE ? 'Auto' : config.weatherCity || 'Not set'
 		},
 		{
 			id: OPTION.wpAuto,
@@ -399,7 +432,7 @@ export function App () {
 		else if (optionId === OPTION.weather) updateConfig({...config, showWeather: !config.showWeather});
 		else if (optionId === OPTION.city) {
 			const country = COUNTRIES.filter((c) => c.code === config.weatherCountry)[0];
-			const names = [''].concat((country ? country.cities : CITIES).map((c) => c.name));
+			const names = ['', AUTO_PLACE].concat((country ? country.cities : CITIES).map((c) => c.name));
 			const next = names[(names.indexOf(config.weatherCity) + 1) % names.length];
 			const owner = COUNTRIES.filter((c) => c.cities.some((x) => x.name === next))[0];
 			updateConfig({...config, weatherCity: next, weatherCountry: country ? country.code : owner ? owner.code : ''});
@@ -418,7 +451,7 @@ export function App () {
 	return (
 		<>
 			{/* Home stays mounted under Settings so it keeps its focus position. */}
-			<Home rows={rows} topItems={TOP_ITEMS} menuItems={MENU_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weatherText={weatherText} dockHide={config.dockHide} />
+			<Home rows={rows} topItems={TOP_ITEMS} menuItems={MENU_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weatherText={weatherText} dockHide={config.dockHide} focusRow={focusRow} />
 			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onClose={() => setScreen('home')} />}
 			{controls && <ControlCenter
 				darkMode={config.darkMode}

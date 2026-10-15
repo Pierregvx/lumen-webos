@@ -1,5 +1,6 @@
 import {LUNA, SYSTEM_APP} from '../config/constants';
 import {lunaCall} from './luna';
+import {allowLgHome} from './root';
 
 /** Launch an app or switch to an input (HDMI inputs are apps too: com.webos.app.hdmiN). */
 export function launchApp (id: string, params: object = {}): Promise<void> {
@@ -9,7 +10,7 @@ export function launchApp (id: string, params: object = {}): Promise<void> {
 /** Bring up LG's own home screen. */
 export function launchLgHome (): Promise<void> {
 	// with the Home-button watcher installed, LG Home would bounce straight back here: the flag file lets it open (see tools/tv/watch.sh)
-	return lunaCall(LUNA.homebrewExec, {command: 'touch /tmp/allow_lg_home'}, 4000)
+	return allowLgHome()
 		.catch(() => undefined)
 		.then(() => launchApp(SYSTEM_APP.lgHome));
 }

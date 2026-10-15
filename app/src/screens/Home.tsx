@@ -37,6 +37,8 @@ interface Props {
 	weatherText?: string;
 	/** off | down | idle | both: when the dock slides away */
 	dockHide?: string;
+	/** put the focus on this row (a launch with {"view":"recent"}); a new seq asks again */
+	focusRow?: {id: string; seq: number};
 }
 
 
@@ -86,7 +88,7 @@ const MENU_KEY = 'menu';
  *  - Up from the first row reaches the top bar (Inputs button, time pill); Down goes back to the same app.
  *  - OK on Inputs opens the inputs panel, OK on the time pill opens the menu; Back closes either.
  *  - The second row stays hidden until the remote goes down to it. */
-export function Home ({rows, topItems, menuItems, inputs, active, onActivate, showPeriod, onEdit, folders, weatherText, dockHide}: Props) {
+export function Home ({rows, topItems, menuItems, inputs, active, onActivate, showPeriod, onEdit, folders, weatherText, dockHide, focusRow}: Props) {
 	const nav = useRef<Nav>({engaged: false, zone: 'rows', rowIndex: 0, columns: {}, topIndex: 0, panelIndex: 0, menuIndex: 0, ctxIndex: 0, moving: null, swallowOk: false, suppressClick: false, folder: '', folderIndex: 0, ctxFrom: 'rows', mode: 'key', dockHidden: false});
 	const latest = useRef({rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide});
 	latest.current = {rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide};
@@ -95,10 +97,31 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 	const [, redraw] = useState(0);
 	const render = () => redraw((n) => n + 1);
 
-	// coming back to the launcher from another app: rest again
+	// a launch asked for a row: focus it as soon as it exists (the Recent row only appears once the app list has loaded)
+	const wanted = useRef<{id: string; until: number} | null>(null);
+	const focusWanted = (): boolean => {
+		const w = wanted.current;
+		if (!w || Date.now() > w.until) { wanted.current = null; return false; }
+		const r = latest.current.rows.findIndex((row) => row.id === w.id);
+		if (r < 0) return false;
+		const n = nav.current;
+		n.engaged = true; n.mode = 'key'; n.zone = 'rows'; n.rowIndex = r; n.columns[w.id] = 0; n.dockHidden = false;
+		setLate(true);
+		render();
+		return true;
+	};
+	useEffect(() => {
+		if (!focusRow) return;
+		wanted.current = {id: focusRow.id, until: Date.now() + 8000};
+		focusWanted();
+	}, [focusRow && focusRow.seq]);
+	useEffect(() => { if (wanted.current) focusWanted(); }, [rows]);
+
+	// coming back to the launcher from another app: rest again, unless the launch asked for a row
 	useEffect(() => {
 		const rest = () => {
 			if (document.hidden) return;
+			if (focusWanted()) return;
 			const n = nav.current;
 			n.engaged = false; n.zone = 'rows'; n.rowIndex = 0; n.dockHidden = false;
 			render();

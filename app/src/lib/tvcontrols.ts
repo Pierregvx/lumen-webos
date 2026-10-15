@@ -1,8 +1,8 @@
 // Control Center: what the TV lets a normal web app do (volume, mute, sleep timer) and what needs the Homebrew Channel's root service
-// (picture mode, screen off, restart). Fixed commands only. Off the TV (the dev preview) the values are kept in memory.
+// (picture mode, screen off, restart), through lib/root.ts. Off the TV (the dev preview) the values are kept in memory.
 
-import {LUNA} from '../config/constants';
 import {isWebOS, lunaCall} from './luna';
+import * as root from './root';
 
 const AUDIO = 'luna://com.webos.audio/';
 const SLEEP = 'luna://com.webos.service.tvReservationAgent/timer/sleep/';
@@ -29,8 +29,6 @@ export interface Controls {
 
 const mock: Controls = {volume: 18, muted: false, picture: 'normal', sound: 'standard', sleepMinutes: 0, screensaver: 10};
 
-const root = (command: string) => lunaCall<{stdoutString?: string}>(LUNA.homebrewExec, {command}, 6000).then((r) => r.stdoutString || '');
-
 export function readControls (): Promise<Controls> {
 	if (!isWebOS()) return Promise.resolve({...mock});
 	const out: Controls = {volume: 0, muted: false, picture: 'normal', sound: 'standard', sleepMinutes: 0, screensaver: 10};
@@ -38,23 +36,16 @@ export function readControls (): Promise<Controls> {
 		out.volume = Number(r.volume) || 0;
 		out.muted = r.muteStatus === true;
 	}).catch(() => undefined);
-	const picture = root("luna-send -n 1 luna://com.webos.settingsservice/getSystemSettings '{\"category\":\"picture\",\"keys\":[\"pictureMode\"]}'").then((text) => {
-		const m = JSON.parse(text) as {settings?: {pictureMode?: string}};
-		if (m.settings && m.settings.pictureMode) out.picture = m.settings.pictureMode;
-	}).catch(() => undefined);
+	const picture = root.getSetting('pictureMode').then((v) => { if (v) out.picture = v; }).catch(() => undefined);
 	const sleep = lunaCall<{sleepTimeSecond?: number}>(SLEEP + 'getRemainTime', {}).then((r) => {
 		const minutes = Math.ceil((Number(r.sleepTimeSecond) || 0) / 60);
 		out.sleepMinutes = minutes <= 0 ? 0 : SLEEP_MINUTES.filter((m) => m >= minutes)[0] || SLEEP_MINUTES[SLEEP_MINUTES.length - 1];
 	}).catch(() => undefined);
-	const saver = root("luna-send -n 1 luna://com.webos.settingsservice/getSystemSettings '{\"category\":\"option\",\"keys\":[\"screenSaverTimer\"]}'").then((text) => {
-		const m = JSON.parse(text) as {settings?: {screenSaverTimer?: string}};
-		const minutes = Number(m.settings && m.settings.screenSaverTimer);
+	const saver = root.getSetting('screenSaverTimer').then((v) => {
+		const minutes = Number(v);
 		if (SCREENSAVER_MINUTES.indexOf(minutes) !== -1) out.screensaver = minutes;
 	}).catch(() => undefined);
-	const sound = root("luna-send -n 1 luna://com.webos.settingsservice/getSystemSettings '{\"category\":\"sound\",\"keys\":[\"soundMode\"]}'").then((text) => {
-		const m = JSON.parse(text) as {settings?: {soundMode?: string}};
-		if (m.settings && m.settings.soundMode) out.sound = m.settings.soundMode;
-	}).catch(() => undefined);
+	const sound = root.getSetting('soundMode').then((v) => { if (v) out.sound = v; }).catch(() => undefined);
 	return Promise.all([audio, picture, sleep, saver, sound]).then(() => out);
 }
 
@@ -75,7 +66,7 @@ export function setPictureMode (mode: string): Promise<void> {
 	mock.picture = mode;
 	if (!isWebOS()) return Promise.resolve();
 	if (PICTURE_MODES.indexOf(mode) === -1) return Promise.reject(new Error('unknown picture mode'));
-	return root(`luna-send -n 1 luna://com.webos.settingsservice/setSystemSettings '{\"category\":\"picture\",\"settings\":{\"pictureMode\":\"${mode}\"}}'`).then(() => undefined);
+	return root.setSetting('pictureMode', mode);
 }
 
 /** Only the TV's known sound mode names are ever put into the root command. */
@@ -83,7 +74,7 @@ export function setSoundMode (mode: string): Promise<void> {
 	mock.sound = mode;
 	if (!isWebOS()) return Promise.resolve();
 	if (SOUND_MODES.indexOf(mode) === -1) return Promise.reject(new Error('unknown sound mode'));
-	return root(`luna-send -n 1 luna://com.webos.settingsservice/setSystemSettings '{"category":"sound","settings":{"soundMode":"${mode}"}}'`).then((text) => { if (text.indexOf('"returnValue":false') !== -1) throw new Error('refused'); });
+	return root.setSetting('soundMode', mode);
 }
 
 /** The TV's own screensaver start time. Only the TV's known choices are ever put into the root command. */
@@ -91,7 +82,7 @@ export function setScreensaverTime (minutes: number): Promise<void> {
 	mock.screensaver = minutes;
 	if (!isWebOS()) return Promise.resolve();
 	if (SCREENSAVER_MINUTES.indexOf(minutes) === -1) return Promise.reject(new Error('unknown screensaver time'));
-	return root(`luna-send -n 1 luna://com.webos.settingsservice/setSystemSettings '{"category":"option","settings":{"screenSaverTimer":"${minutes}"}}'`).then(() => undefined);
+	return root.setSetting('screenSaverTimer', String(minutes));
 }
 
 /** 0 cancels the timer. */
@@ -104,10 +95,10 @@ export function setSleepTimer (minutes: number): Promise<void> {
 /** Screen off, the TV keeps running (a press on the remote wakes it). */
 export function screenOff (): Promise<void> {
 	if (!isWebOS()) return Promise.reject(new Error('not on a TV'));
-	return root("luna-send -n 1 luna://com.webos.service.tvpower/power/turnOffScreen '{}'").then(() => undefined);
+	return root.screenOff();
 }
 
 export function restartTv (): Promise<void> {
 	if (!isWebOS()) return Promise.reject(new Error('not on a TV'));
-	return root("luna-send -n 1 luna://com.webos.service.tvpower/power/reboot '{\"reason\":\"restart\"}'").then(() => undefined);
+	return root.reboot();
 }

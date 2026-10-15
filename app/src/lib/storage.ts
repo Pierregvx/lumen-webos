@@ -82,36 +82,45 @@ export const DEFAULT_CONFIG: UserConfig = {
 export function loadConfig (): UserConfig {
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
-		if (!raw) return {...DEFAULT_CONFIG};
-		const parsed = JSON.parse(raw) as Partial<UserConfig>;
-		return {
-			appIds: Array.isArray(parsed.appIds) ? parsed.appIds : DEFAULT_CONFIG.appIds,
-			sourceIds: Array.isArray(parsed.sourceIds) ? parsed.sourceIds : null,
-			useHomebrew: parsed.useHomebrew !== false,
-			videoWallpaper: parsed.videoWallpaper === true,
-			wallpaper: typeof parsed.wallpaper === 'string' ? parsed.wallpaper : DEFAULT_CONFIG.wallpaper,
-			showAmPm: parsed.showAmPm !== false,
-			dockHide: parsed.dockHide === 'off' || parsed.dockHide === 'idle' || parsed.dockHide === 'both' ? parsed.dockHide : 'down',
-			darkMode: parsed.darkMode === 'auto' ? 'auto' : parsed.darkMode === 'off' ? 'off' : 'on',
-			videoClip: typeof parsed.videoClip === 'string' ? parsed.videoClip : '',
-			videoPlaces: Array.isArray(parsed.videoPlaces) ? parsed.videoPlaces : typeof parsed.videoClip === 'string' && parsed.videoClip ? [parsed.videoClip] : [],
-			language: typeof parsed.language === 'string' ? parsed.language : 'auto',
-			clockFormat: parsed.clockFormat === '12h' || parsed.clockFormat === '24h' ? parsed.clockFormat : 'auto',
-			recentIds: Array.isArray(parsed.recentIds) ? parsed.recentIds : [],
-			idleMinutes: typeof parsed.idleMinutes === 'number' ? parsed.idleMinutes : 0,
-			favoriteWallpapers: Array.isArray(parsed.favoriteWallpapers) ? parsed.favoriteWallpapers : [],
-			wpAutoMinutes: typeof parsed.wpAutoMinutes === 'number' ? parsed.wpAutoMinutes : 0,
-			nightDim: parsed.nightDim === true,
-			showAllApps: parsed.showAllApps === true,
-			showWeather: parsed.showWeather !== false,
-			weatherCountry: typeof parsed.weatherCountry === 'string' ? parsed.weatherCountry : '',
-			weatherCity: typeof parsed.weatherCity === 'string' ? parsed.weatherCity : '',
-			folders: Array.isArray(parsed.folders) ? parsed.folders : [],
-			seeded: parsed.seeded !== false
-		};
+		return raw ? parseConfig(raw) : {...DEFAULT_CONFIG};
 	} catch {
 		return {...DEFAULT_CONFIG};
 	}
+}
+
+/** Whether this install has settings of its own yet (false on a fresh install, before anything has been saved). */
+export function hasSavedConfig (): boolean {
+	try { return localStorage.getItem(STORAGE_KEY) !== null; } catch { return false; }
+}
+
+/** A config from JSON, with every field checked and anything missing or wrong replaced by its default. Throws on malformed JSON. */
+export function parseConfig (raw: string): UserConfig {
+	const parsed = JSON.parse(raw) as Partial<UserConfig>;
+	return {
+		appIds: Array.isArray(parsed.appIds) ? parsed.appIds : DEFAULT_CONFIG.appIds,
+		sourceIds: Array.isArray(parsed.sourceIds) ? parsed.sourceIds : null,
+		useHomebrew: parsed.useHomebrew !== false,
+		videoWallpaper: parsed.videoWallpaper === true,
+		wallpaper: typeof parsed.wallpaper === 'string' ? parsed.wallpaper : DEFAULT_CONFIG.wallpaper,
+		showAmPm: parsed.showAmPm !== false,
+		dockHide: parsed.dockHide === 'off' || parsed.dockHide === 'idle' || parsed.dockHide === 'both' ? parsed.dockHide : 'down',
+		darkMode: parsed.darkMode === 'auto' ? 'auto' : parsed.darkMode === 'off' ? 'off' : 'on',
+		videoClip: typeof parsed.videoClip === 'string' ? parsed.videoClip : '',
+		videoPlaces: Array.isArray(parsed.videoPlaces) ? parsed.videoPlaces : typeof parsed.videoClip === 'string' && parsed.videoClip ? [parsed.videoClip] : [],
+		language: typeof parsed.language === 'string' ? parsed.language : 'auto',
+		clockFormat: parsed.clockFormat === '12h' || parsed.clockFormat === '24h' ? parsed.clockFormat : 'auto',
+		recentIds: Array.isArray(parsed.recentIds) ? parsed.recentIds : [],
+		idleMinutes: typeof parsed.idleMinutes === 'number' ? parsed.idleMinutes : 0,
+		favoriteWallpapers: Array.isArray(parsed.favoriteWallpapers) ? parsed.favoriteWallpapers : [],
+		wpAutoMinutes: typeof parsed.wpAutoMinutes === 'number' ? parsed.wpAutoMinutes : 0,
+		nightDim: parsed.nightDim === true,
+		showAllApps: parsed.showAllApps === true,
+		showWeather: parsed.showWeather !== false,
+		weatherCountry: typeof parsed.weatherCountry === 'string' ? parsed.weatherCountry : '',
+		weatherCity: typeof parsed.weatherCity === 'string' ? parsed.weatherCity : '',
+		folders: Array.isArray(parsed.folders) ? parsed.folders : [],
+		seeded: parsed.seeded !== false
+	};
 }
 
 export function saveConfig (config: UserConfig): void {

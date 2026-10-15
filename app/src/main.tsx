@@ -1,9 +1,11 @@
 import {render} from 'preact';
 import {App} from './app';
 import {applyTokens} from './theme/tokens';
+import {startLog} from './lib/log';
 import './theme/global.css';
 
 applyTokens();
+startLog();
 // SF Pro, only when the private font file was added to this build (see tools/make_sf_font.py); otherwise nothing happens and Geist is used
 if ('FontFace' in window) {
 	new FontFace('SF Private', `url(${new URL('fonts/sf.woff2', location.href).href})`, {weight: '1 1000'}).load().then((face) => { document.fonts.add(face); }).catch(() => undefined);
