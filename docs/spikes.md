@@ -7,7 +7,10 @@ Opened Lumen, then Plex; with Plex in front, `luna-send -n 1 luna://com.webos.ap
 YouTube (opened before Lumen), Live TV, HDMI 1 and PlxNative. Lumen was not running. Lumen has no code that closes itself, so the TV ended it,
 while an app opened earlier (YouTube) stayed. So it is not "the TV kills every background app"; it kills Lumen. Unknown why (memory, a policy
 for some app types, or a keep-alive allow list). Every Home press is a cold start either way.
-Possible follow-up: `"keepAlive": true` in appinfo.json is a guess at an LG flag; untested, and may only be honoured for system apps.
+Possible follow-up: `"keepAlive": true` in appinfo.json. In webOS OSE it makes the app manager suspend an app instead of ending it when
+another app opens; LG's webOS TV docs don't list it, and LG's forum answer is that background apps can be ended for memory with no way to
+stop it. `grep -l keepAlive /usr/palm/applications/*/appinfo.json /media/developer/apps/usr/palm/applications/*/appinfo.json` found
+nothing: no LG app and not youtube-webos uses it, so whatever keeps YouTube alive is not this key. Not yet tried on Lumen.
 
 ## Sleep timer (2026-10-15)
 `timer/sleep/getRemainTime` from the app: `Denied method call "getRemainTime" for category "/timer/sleep"`. As root, both `getRemainTime`

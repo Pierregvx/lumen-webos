@@ -794,6 +794,11 @@ html.night:not(.light):not(.wp-video):not(.liveblur) .screen--plainglass .topbar
 .cc__slidertext svg { margin-right: 14px; stroke: #111; }
 .cc__num { margin-left: auto; font-weight: 500; }
 .cc__slider--focused { box-shadow: 0 0 0 4px #fff; transform: scale(1.02); }
+.cc__slider + .cc__slider { margin-top: 16px; }
+.cc__eye { margin-left: auto; display: flex; flex-direction: row; align-items: center; padding: 6px 16px 6px 12px; border-radius: 26px; font-size: 21px; font-weight: 500; opacity: 0.55; }
+.cc__eye svg { width: 26px; height: 26px; margin-right: 8px; }
+.cc__eye--on { opacity: 1; background: rgba(255, 255, 255, 0.85); }
+.cc__eye + .cc__num { margin-left: 18px; }
 
 /* ---------- Control Center polish ---------- */
 .screen > .pill.status { flex-direction: row; }
@@ -950,6 +955,7 @@ html.light .cc__slidertext, html.light .cc__slidertext svg { color: #14151b; str
 html.light .cc__tile--focused .cc__badge { background: rgba(255, 255, 255, 0.18); }
 html.light .cc__tile--focused .cc__badge svg, html.light .cc__circle--focused svg, html.light .menu__row--focused svg, html.light .pill--focused svg, html.light .topcap--focused svg { stroke: #fff; }
 html.light .cc__slider--focused { box-shadow: 0 0 0 4px #14151b; }
+html.light .cc__eye--on { background: rgba(255, 255, 255, 0.9); }
 
 .wp__note { margin: -8px 6px 16px; font-size: 22px; line-height: 1.35; color: var(--color-text-secondary); max-width: 1500px; }
 

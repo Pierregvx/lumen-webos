@@ -343,6 +343,8 @@ const TABLE: Record<string, string[]> = {
 		"Tekrar OK'a basın",
 		"फिर OK दबाएं"
 	],
+	"Backlight": ["Hintergrundbeleuchtung", "Luz de fondo", "Rétroéclairage", "Retroilluminazione", "Retroiluminação", "Achtergrondverlichting", "Arka ışık", "बैकलाइट"],
+	"Eye Comfort": ["Augenkomfort", "Confort visual", "Confort visuel", "Comfort visivo", "Conforto visual", "Oogcomfort", "Göz konforu", "आई कम्फर्ट"],
 	"Volume": [
 		"Lautstärke",
 		"Volumen",

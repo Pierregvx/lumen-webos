@@ -43,6 +43,9 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
       where the first row's were.
 - [ ] Settings > Options: OK on a list option (country, city, language, appearance, clock, dock, wallpaper timer, the three below) opens a
       pop-up list; Up/Down, OK sets, Back cancels. The city list with no country is long: check it scrolls smoothly.
+- [ ] Control Center backlight and Eye Comfort (Phase 5): Left/Right on the Backlight bar steps by 5 and the screen should follow about
+      0.3 s after the last press; OK on it turns Eye Comfort on and off (warmer picture). Change picture mode: the bar should show that
+      mode's own backlight.
 - [ ] New options: Apps in the glass bar (5, 6, 7; 7 uses smaller tiles), Focus highlight (Subtle, Normal, Strong), Video wallpaper hours
       (the still wallpaper outside them), Restore settings from the TV, Frame-rate counter (dev builds only).
 
@@ -60,6 +63,8 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [x] Does the clock go wrong after a reboot here? No: right time and BST with the clock fix moved aside. `clockfix.sh` deleted (it is in git
       history if the clock ever goes wrong after a power cut).
 - [x] Does the TV kill background apps? Lumen yes, YouTube no (see `docs/spikes.md`). Cold start stays the thing to make fast.
+- [ ] `"keepAlive": true` in appinfo.json: does Lumen survive opening Plex with it? No installed app's appinfo.json uses the key, so likely
+      ignored on webOS 25, but it is harmless to try.
 - [ ] Recents button: rebind it with Input Hook to launch Lumen with `{"view":"recent"}` (needs the launch-parameter check above).
 - [ ] Colour buttons: which does this remote have, and which key codes reach the app?
 - [ ] Chrome DevTools on the TV: which method works on webOS 25 (Dev Manager Desktop inspect, `ares-inspect`). Needed for Phase 4 traces.
@@ -167,8 +172,9 @@ Done when: the three numbers are recorded before and after, none got worse, and 
 
 ## Phase 5: Control Center additions (needs the settings keys spike)
 
-- [ ] Backlight slider
-- [ ] Eye Comfort toggle
+- [x] Backlight slider: a bar under the round buttons, Left/Right by 5, sent 300 ms after the last press (one root command per run of
+      presses, and at once if the panel closes first). Re-read after a picture mode change, since each mode keeps its own. **(verify)**
+- [x] Eye Comfort toggle: OK on the backlight bar, as OK on the volume bar mutes; the Eye Comfort chip on the bar shows the state. **(verify)**
 
 ---
 

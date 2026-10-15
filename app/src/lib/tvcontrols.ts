@@ -1,5 +1,5 @@
 // Control Center: what the TV lets a normal web app do (volume, mute) and what needs the Homebrew Channel's root service
-// (picture mode, sleep timer, screen off, restart), through lib/root.ts. Off the TV (the dev preview) the values are kept in memory.
+// (picture mode, backlight, Eye Comfort, sleep timer, screen off, restart), through lib/root.ts. Off the TV (the dev preview) the values are kept in memory.
 
 import {isWebOS, lunaCall} from './luna';
 import * as root from './root';
@@ -24,13 +24,16 @@ export interface Controls {
 	sleepMinutes: number;
 	/** minutes of inactivity before the TV starts its screensaver */
 	screensaver: number;
+	/** 0-100, for the picture mode in use */
+	backlight: number;
+	eyeComfort: boolean;
 }
 
-const mock: Controls = {volume: 18, muted: false, picture: 'normal', sound: 'standard', sleepMinutes: 0, screensaver: 10};
+const mock: Controls = {volume: 18, muted: false, picture: 'normal', sound: 'standard', sleepMinutes: 0, screensaver: 10, backlight: 100, eyeComfort: false};
 
 export function readControls (): Promise<Controls> {
 	if (!isWebOS()) return Promise.resolve({...mock});
-	const out: Controls = {volume: 0, muted: false, picture: 'normal', sound: 'standard', sleepMinutes: 0, screensaver: 10};
+	const out: Controls = {volume: 0, muted: false, picture: 'normal', sound: 'standard', sleepMinutes: 0, screensaver: 10, backlight: 100, eyeComfort: false};
 	const audio = lunaCall<{volume?: number; muteStatus?: boolean}>(AUDIO + 'getVolume', {}).then((r) => {
 		out.volume = Number(r.volume) || 0;
 		out.muted = r.muteStatus === true;
@@ -45,7 +48,18 @@ export function readControls (): Promise<Controls> {
 		if (SCREENSAVER_MINUTES.indexOf(minutes) !== -1) out.screensaver = minutes;
 	}).catch(() => undefined);
 	const sound = root.getSetting('soundMode').then((v) => { if (v) out.sound = v; }).catch(() => undefined);
-	return Promise.all([audio, picture, sleep, saver, sound]).then(() => out);
+	const backlight = readBacklight().then((v) => { if (v !== null) out.backlight = v; });
+	const eye = root.getSetting('eyeComfortMode').then((v) => { out.eyeComfort = v === 'on'; }).catch(() => undefined);
+	return Promise.all([audio, picture, sleep, saver, sound, backlight, eye]).then(() => out);
+}
+
+/** The backlight of the picture mode in use, or null when it can't be read. Read again after a picture mode change: each mode has its own. */
+export function readBacklight (): Promise<number | null> {
+	if (!isWebOS()) return Promise.resolve(mock.backlight);
+	return root.getSetting('backlight').then((v) => {
+		const n = Number(v);
+		return v !== '' && Number.isInteger(n) && n >= 0 && n <= 100 ? n : null;
+	}).catch(() => null);
 }
 
 export function setVolume (volume: number): Promise<void> {
@@ -74,6 +88,20 @@ export function setSoundMode (mode: string): Promise<void> {
 	if (!isWebOS()) return Promise.resolve();
 	if (SOUND_MODES.indexOf(mode) === -1) return Promise.reject(new Error('unknown sound mode'));
 	return root.setSetting('soundMode', mode);
+}
+
+/** 0-100, whole numbers only. */
+export function setBacklight (level: number): Promise<void> {
+	mock.backlight = level;
+	if (!isWebOS()) return Promise.resolve();
+	if (!Number.isInteger(level) || level < 0 || level > 100) return Promise.reject(new Error('bad backlight level'));
+	return root.setSetting('backlight', String(level));
+}
+
+export function setEyeComfort (on: boolean): Promise<void> {
+	mock.eyeComfort = on;
+	if (!isWebOS()) return Promise.resolve();
+	return root.setSetting('eyeComfortMode', on ? 'on' : 'off');
 }
 
 /** The TV's own screensaver start time. Only the TV's known choices are ever put into the root command. */

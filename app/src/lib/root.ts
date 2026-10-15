@@ -20,7 +20,10 @@ const BASE64 = /^[A-Za-z0-9+\/]*={0,2}$/;
 const SETTINGS: Record<string, {category: string; values?: string[]}> = {
 	pictureMode: {category: 'picture', values: ['vivid', 'normal', 'eco', 'cinema', 'sports', 'game', 'filmMaker']},
 	soundMode: {category: 'sound', values: ['standard', 'news', 'movie', 'music', 'sports', 'game', 'aiSound']},
-	screenSaverTimer: {category: 'option', values: ['3', '10', '20', '30']}
+	screenSaverTimer: {category: 'option', values: ['3', '10', '20', '30']},
+	/** for the picture mode in use (the TV keeps one per mode and input) */
+	backlight: {category: 'picture', values: Array.from({length: 101}, (_, i) => String(i))},
+	eyeComfortMode: {category: 'picture', values: ['on', 'off']}
 };
 
 /** Files under HOMEHOOK that Lumen may write or read. */
