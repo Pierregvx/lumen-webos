@@ -1,10 +1,10 @@
 # Third-party notices
 
-This repository holds patch scripts, notes and TV-side scripts. The material below belongs to others.
+This repository holds the launcher's source (`app/`), build tools, notes and TV-side scripts. The material below belongs to others.
 
 | Material | Licence | Used for |
 |---|---|---|
-| [partridgeworks/webos-launcher](https://github.com/partridgeworks/webos-launcher) | MIT, © webos-launcher contributors | the launcher these patches modify (cloned into `app/`, not included) |
+| [partridgeworks/webos-launcher](https://github.com/partridgeworks/webos-launcher) | MIT, © webos-launcher contributors | the base of `app/`: forked at upstream commit `1e2c39b9a988ceb1b258e40e3592bda84a2aa076` (2026-09-23), with this project's changes committed on top. Upstream's own licence and notices are kept in `app/LICENSE` and `app/THIRD_PARTY_NOTICES.md` |
 | [Geist](https://github.com/vercel/geist-font) typeface | SIL Open Font License 1.1, © The Geist Project Authors | `app-assets/geist-wght.woff2` (and `tools/branding/`) |
 | [Preact](https://preactjs.com) | MIT, © Jason Miller | the UI library (comes with the upstream clone) |
 | [Simple Icons](https://simpleicons.org) glyph paths | CC0 | `tools/glyphs.json`, used to draw some app tiles |

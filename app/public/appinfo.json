@@ -1,0 +1,19 @@
+{
+  "id": "com.ammar027.lumen",
+  "version": "1.0.9",
+  "vendor": "ammar027",
+  "type": "web",
+  "main": "index.html",
+  "title": "Lumen",
+  "appDescription": "Minimalist home screen: apps, inputs and a way back to LG's home.",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "bgImage": "splash.png",
+  "splashBackground": "splash.png",
+  "iconColor": "#050505",
+  "bgColor": "#000000",
+  "resolution": "1920x1080",
+  "disableBackHistoryAPI": true,
+  "supportGIP": true,
+  "transparent": false
+}
