@@ -18,6 +18,18 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: app/package-lock.json
+      - name: Version
+        # dev builds get a rising patch number (1.0.9 -> 1.0.9xxx, from the run number) so the Homebrew Channel offers each one as an update;
+        # a tagged release keeps the version in appinfo.json
+        if: github.ref_type != 'tag'
+        run: |
+          python3 - <<'PY'
+          import json, os
+          p = 'app/public/appinfo.json'; d = json.load(open(p))
+          a, b, c = (int(x) for x in d['version'].split('.'))
+          d['version'] = f"{a}.{b}.{c * 1000 + int(os.environ['GITHUB_RUN_NUMBER'])}"
+          json.dump(d, open(p, 'w'), indent=2); print(d['version'])
+          PY
       - name: Build the .ipk
         run: python3 tools/build_release.py
       - name: Publish
@@ -37,3 +49,19 @@ jobs:
           printf 'Built from %s.\n\nInstall: drop the .ipk onto Dev Manager, or `ares-install --device lgtv %s`.\n\nSHA-256: `%s`\n' \
             "$GITHUB_SHA" "$(basename "$IPK")" "$SUM" > notes.md
           gh release create "$TAG" "$IPK" --target "$GITHUB_SHA" --title "Lumen $TAG ($REF, ${GITHUB_SHA:0:7})" --notes-file notes.md $PRE
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+      - name: Homebrew Channel repository
+        # The Channel reads the index with XHR, so it is served from raw.githubusercontent.com (CORS allowed) on the hbc-repo branch:
+        #   dev builds:     https://raw.githubusercontent.com/<repo>/hbc-repo/dev/apps.json
+        #   tagged release: https://raw.githubusercontent.com/<repo>/hbc-repo/stable/apps.json
+        run: |
+          CHANNEL=stable; [ "$TAG" = dev ] && CHANNEL=dev
+          case "$TAG" in *-*) CHANNEL=dev ;; esac
+          IPK=$(ls release/*.ipk)
+          BASE="https://raw.githubusercontent.com/$GITHUB_REPOSITORY/hbc-repo/$CHANNEL"
+          URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$(basename "$IPK")"
+          git config user.name github-actions; git config user.email github-actions@users.noreply.github.com
+          git fetch origin hbc-repo && git worktree add hbc origin/hbc-repo || { git worktree add --detach hbc && git -C hbc checkout --orphan hbc-repo && git -C hbc rm -rfq .; }
+          rm -rf "hbc/$CHANNEL"
+          python3 tools/gen_hbc_repo.py "$IPK" "$URL" "$BASE" "hbc/$CHANNEL"
+          cd hbc && git add -A && git commit -qm "$CHANNEL: $TAG ${GITHUB_SHA:0:7}" && git push origin HEAD:hbc-repo
