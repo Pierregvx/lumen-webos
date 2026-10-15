@@ -47,8 +47,9 @@ mode, no hosts blocking, no clock fix and no system-wide Recent row; Lumen itsel
       `/var/lib/webosbrew/init.d/`, `chmod +x` them, start it, and check `ps -ef | grep watch.sh` (plain `ps` on webOS 25 does not show it).
 - [x] Home button: LG Input Hook owns it. `watch.sh` only takes over LG Home when `/var/lib/homehook/home-takeover` exists (off by default;
       it would still be useful for the cold-boot case where LG Home is the first thing on screen).
-- [ ] Recent row from `watch.sh`: open two apps from LG's own launcher, then Lumen: both should be on the Recent row
-      (`cat /var/lib/homehook/recent`).
+- [x] `watch.sh` running (one copy; the boot hook now checks `/proc`, plain `ps` missed it and started duplicates).
+- [ ] Recent row: `watch.sh` writes `/var/lib/homehook/recent` correctly (seen 2026-10-15: PlxNative, YouTube), but no Recent row was seen
+      on the home screen, only the 6-app glass row and 2 apps below it. Find out why (row not rendered, or the file not read).
 
 ### Spikes (yes/no answers, noted in `docs/spikes.md`)
 - [ ] Does the clock go wrong after a cold boot here? If no, delete `clockfix.sh` and its line in `watch.sh`. (It no longer forces
