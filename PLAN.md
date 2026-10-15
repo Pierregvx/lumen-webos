@@ -54,7 +54,7 @@ mode, no hosts blocking, no clock fix and no system-wide Recent row; Lumen itsel
 ### Spikes (yes/no answers, noted in `docs/spikes.md`)
 - [ ] Does the clock go wrong after a cold boot here? If no, delete `clockfix.sh` and its line in `watch.sh`. (It no longer forces
       Asia/Kolkata and gets the time over HTTPS; `TZ_NAME` at the top forces a zone if one is needed.)
-- [ ] Does the TV kill background apps? Open Lumen, open Plex, press Home: does Lumen cold start?
+- [x] Does the TV kill background apps? Lumen yes, YouTube no (see `docs/spikes.md`). Cold start stays the thing to make fast.
 - [ ] Recents button: rebind it with Input Hook to launch Lumen with `{"view":"recent"}` (needs the launch-parameter check above).
 - [ ] Colour buttons: which does this remote have, and which key codes reach the app?
 - [ ] Chrome DevTools on the TV: which method works on webOS 25 (Dev Manager Desktop inspect, `ares-inspect`). Needed for Phase 4 traces.
