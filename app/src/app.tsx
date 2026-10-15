@@ -34,10 +34,11 @@ const WP_AUTO_CHOICES = [0, 15, 30, 60];
 const IDLE_CHOICES = [0, 5, 10, 20, 30];
 const RECENT_MAX = 8;
 
-/** The top bar: the Inputs button, and the time pill that opens the menu below. */
+/** The top bar: Inputs, Control Center and Settings. */
 const TOP_ITEMS: TileModel[] = [
 	{key: 'inputs', label: 'Inputs', glyph: 'inputs'},
-	{key: 'controls', label: 'Control Center', glyph: 'sliders'}
+	{key: 'controls', label: 'Control Center', glyph: 'sliders'},
+	{key: MISC.settings, label: 'Settings', glyph: 'gear'}
 ];
 /** What the time pill's menu lists. */
 const MENU_ITEMS: TileModel[] = [
