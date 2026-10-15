@@ -381,7 +381,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 	const topPointer = (i: number) => () => { if (!overlay) { n.mode = 'pointer'; n.engaged = true; n.zone = 'top'; n.topIndex = i; render(); } };
 	const focusedTop = (i: number) => n.engaged && n.zone === 'top' && i === n.topIndex;
 	return (
-		<div class={`screen${lower ? ' screen--lower' : ''}${lower || settling ? ' screen--plainglass' : ''}${n.moving ? ' screen--moving' : ''}${n.dockHidden ? ' screen--dockhidden' : ''}`}>
+		<div class={`screen${active ? '' : ' screen--inactive'}${lower ? ' screen--lower' : ''}${lower || settling ? ' screen--plainglass' : ''}${n.moving ? ' screen--moving' : ''}${n.dockHidden ? ' screen--dockhidden' : ''}`}>
 			<div class="lowerveil" />
 			<Status weatherText={weatherText} showPeriod={showPeriod} />
 			<VideoCaption />

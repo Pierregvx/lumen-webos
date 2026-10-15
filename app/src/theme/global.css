@@ -1020,3 +1020,11 @@ html.light:not(.wp-video) .screen--plainglass { --wp-blur: linear-gradient(rgba(
 /* the lower rows stay painted (opacity 0 rather than visibility: hidden), so showing them is a fade, not a first paint of every tile */
 .rows > .row:not(:first-child) { will-change: opacity, transform; }
 .rows > .row.row--hidden { visibility: visible; transition: opacity 160ms ease-out, transform 160ms ease-out; }
+
+/* Control Center or Settings open over the home screen: the focused top button keeps its look but not its label, which would show through above the panel */
+.screen--inactive .pill__label { opacity: 0 !important; transition: none; }
+
+/* Settings > Reduce motion */
+html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after { transition: none !important; animation: none !important; }
+/* Settings > Hide app names (home screen only) */
+html.hide-names .rows .tile__label, html.hide-names .panel--folder .tile__label { display: none; }

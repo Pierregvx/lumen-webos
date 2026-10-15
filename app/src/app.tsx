@@ -29,7 +29,7 @@ type Screen = 'home' | 'settings';
 
 const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock', recent: 'recent'} as const;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
+const OPTION = {reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 15, 30, 60];
 const IDLE_CHOICES = [0, 5, 10, 20, 30];
 const RECENT_MAX = 8;
@@ -176,6 +176,8 @@ export function App () {
 		const id = window.setInterval(apply, 60000);
 		return () => window.clearInterval(id);
 	}, [config.darkMode]);
+	useEffect(() => { document.documentElement.classList.toggle('reduce-motion', config.reduceMotion); }, [config.reduceMotion]);
+	useEffect(() => { document.documentElement.classList.toggle('hide-names', config.hideNames); }, [config.hideNames]);
 	useEffect(() => setVideoChoice(config.videoPlaces), [config.videoPlaces]);
 	useEffect(() => setVideoWallpaper(config.videoWallpaper), [config.videoWallpaper]);
 	useEffect(() => { setVideoPaused(screen === 'settings'); document.documentElement.classList.toggle('in-settings', screen === 'settings'); }, [screen]);
@@ -315,12 +317,24 @@ export function App () {
 			valueText: config.clockFormat === '12h' ? '12-hour' : config.clockFormat === '24h' ? '24-hour' : 'Auto'
 		},
 		{
+			id: OPTION.hideNames,
+			label: 'Hide app names',
+			description: 'No names under the apps on the home screen, not even the one in focus. Settings still shows them.',
+			value: config.hideNames
+		},
+		{
+			id: OPTION.reduceMotion,
+			label: 'Reduce motion',
+			description: 'Focus, rows and panels change at once, without sliding, fading or zooming.',
+			value: config.reduceMotion
+		},
+		{
 			id: OPTION.showAmPm,
 			label: 'AM/PM on the clock',
 			description: 'Show AM or PM beside the time when the TV is set to a 12-hour clock.',
 			value: config.showAmPm
 		}
-	], [config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity]);
+	], [config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion]);
 
 	const wallpaper: WallpaperTab = useMemo(() => {
 		const entries: WallpaperEntry[] = [
@@ -437,6 +451,8 @@ export function App () {
 			const owner = COUNTRIES.filter((c) => c.cities.some((x) => x.name === next))[0];
 			updateConfig({...config, weatherCity: next, weatherCountry: country ? country.code : owner ? owner.code : ''});
 		}
+		else if (optionId === OPTION.hideNames) updateConfig({...config, hideNames: !config.hideNames});
+		else if (optionId === OPTION.reduceMotion) updateConfig({...config, reduceMotion: !config.reduceMotion});
 		else if (optionId === OPTION.nightDim) updateConfig({...config, nightDim: !config.nightDim});
 		else if (optionId === OPTION.wpAuto) updateConfig({...config, wpAutoMinutes: WP_AUTO_CHOICES[(WP_AUTO_CHOICES.indexOf(config.wpAutoMinutes) + 1) % WP_AUTO_CHOICES.length]});
 		else if (optionId === OPTION.idle) updateConfig({...config, idleMinutes: IDLE_CHOICES[(IDLE_CHOICES.indexOf(config.idleMinutes) + 1) % IDLE_CHOICES.length]});

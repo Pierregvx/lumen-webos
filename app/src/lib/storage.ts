@@ -11,7 +11,7 @@ export interface UserConfig {
 	sourceIds: string[] | null;
 	/** read the live app list through the Homebrew Channel (root). Off by default. */
 	useHomebrew: boolean;
-	/** play Apple's aerial videos behind the home screen (streams from the internet). Off by default. */
+	/** play a video behind the home screen (aerials and stock clips, streamed from the internet). Off by default. */
 	videoWallpaper: boolean;
 	/** which still wallpaper: local:N (bundled), cloud:<id> (from the library), shuffle, or none */
 	wallpaper: string;
@@ -49,6 +49,10 @@ export interface UserConfig {
 	weatherCity: string;
 	/** app folders: apps listed here are shown inside the folder, not on the rows */
 	folders: {name: string; appIds: string[]}[];
+	/** no transitions or animations */
+	reduceMotion: boolean;
+	/** no app names under the tiles on the home screen */
+	hideNames: boolean;
 	/** false on a fresh install until the installed apps have been put on the home screen once */
 	seeded: boolean;
 }
@@ -76,6 +80,8 @@ export const DEFAULT_CONFIG: UserConfig = {
 	weatherCountry: '',
 	weatherCity: '',
 	folders: [],
+	reduceMotion: false,
+	hideNames: false,
 	seeded: false
 };
 
@@ -119,6 +125,8 @@ export function parseConfig (raw: string): UserConfig {
 		weatherCountry: typeof parsed.weatherCountry === 'string' ? parsed.weatherCountry : '',
 		weatherCity: typeof parsed.weatherCity === 'string' ? parsed.weatherCity : '',
 		folders: Array.isArray(parsed.folders) ? parsed.folders : [],
+		reduceMotion: parsed.reduceMotion === true,
+		hideNames: parsed.hideNames === true,
 		seeded: parsed.seeded !== false
 	};
 }
