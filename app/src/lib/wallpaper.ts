@@ -43,9 +43,17 @@ function blurFor (shown: string): string | undefined {
 	return undefined;
 }
 
+/** Settings > Live blur: the glass blurs the wallpaper itself (backdrop-filter), so no blurred copy is loaded at all. */
+let liveBlur = false;
+export function setLiveBlur (on: boolean): void {
+	if (on === liveBlur) return;
+	liveBlur = on;
+	setBlur(shown);
+}
+
 function setBlur (shown: string | null): void {
 	const style = document.documentElement.style;
-	const url = shown ? blurFor(shown) : undefined;
+	const url = shown && !liveBlur ? blurFor(shown) : undefined;
 	if (!url) { style.removeProperty('--wp-blur'); style.removeProperty('--wp-bg'); return; }
 	const load = (name: string, src: string) => {
 		const probe = new Image();

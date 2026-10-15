@@ -711,14 +711,14 @@ html, body {
 html.night #wpimage { opacity: 0.55; }
 /* the glass and the lower backdrop show a blurred copy of the wallpaper, which has to dim with it: multiplying the copy by a grey of 55%
    matches the picture at opacity 0.55 over black. Not over the video (night dimming only dims the still picture), not in the light look. */
-html.night:not(.light):not(.wp-video) .row:not(.row--dock)::before, html.night:not(.light):not(.wp-video) .topcap,
-html.night:not(.light):not(.wp-video) .topbar > .pill, html.night:not(.light):not(.wp-video) .panel, html.night:not(.light):not(.wp-video) .lowerveil {
+html.night:not(.light):not(.wp-video):not(.liveblur) .row:not(.row--dock)::before, html.night:not(.light):not(.wp-video):not(.liveblur) .topcap,
+html.night:not(.light):not(.wp-video):not(.liveblur) .topbar > .pill, html.night:not(.light):not(.wp-video):not(.liveblur) .panel, html.night:not(.light):not(.wp-video):not(.liveblur) .lowerveil {
 	background-color: rgb(140, 140, 140);
 	background-blend-mode: normal, multiply;
 }
 /* while the glass shows the plain tint (lower rows, and settling back) there is no picture to dim: keep the usual see-through tint */
-html.night:not(.light):not(.wp-video) .screen--plainglass .row:not(.row--dock)::before, html.night:not(.light):not(.wp-video) .screen--plainglass .topcap,
-html.night:not(.light):not(.wp-video) .screen--plainglass .topbar > .pill {
+html.night:not(.light):not(.wp-video):not(.liveblur) .screen--plainglass .row:not(.row--dock)::before, html.night:not(.light):not(.wp-video):not(.liveblur) .screen--plainglass .topcap,
+html.night:not(.light):not(.wp-video):not(.liveblur) .screen--plainglass .topbar > .pill {
 	background-color: rgba(30, 36, 50, 0.30);
 	background-blend-mode: normal;
 }
@@ -1043,9 +1043,9 @@ html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after 
 html.hide-names .rows .tile__label, html.hide-names .panel--folder .tile__label { display: none; }
 
 /* ---------- Settings > Live blur (test): every glass shape blurs what is behind it (backdrop-filter), with no picture swapped in or out ----------
-   The pre-blurred wallpaper copy (--wp-blur, --wp-bg) is emptied on the home screen and Control Center, so nothing changes picture when the
-   rows go down or come back; the lower backdrop is a live blur that only fades. Settings keeps its own backdrop. */
-html.liveblur .screen:not(.screen--settings), html.liveblur .screen:not(.screen--settings) *, html.liveblur .panel--cc {
+   No blurred copy of the wallpaper is loaded (lib/wallpaper.ts), and --wp-blur / --wp-bg are emptied everywhere, so there is one picture and
+   nothing changes picture when the rows go down or come back. The lower backdrop and the Settings backdrop are live blurs too. */
+html.liveblur, html.liveblur * {
 	--wp-blur: linear-gradient(transparent, transparent) !important;
 	--wp-bg: linear-gradient(transparent, transparent) !important;
 }
@@ -1065,4 +1065,11 @@ html.liveblur .lowerveil {
 	background-image: none;
 	-webkit-backdrop-filter: blur(48px) saturate(1.3);
 	backdrop-filter: blur(48px) saturate(1.3);
+}
+html.liveblur .lowerveil { background-color: rgba(0, 0, 0, 0.26) !important; background-blend-mode: normal !important; }
+html.liveblur .screen--settings::before {
+	-webkit-backdrop-filter: blur(48px) saturate(1.3);
+	backdrop-filter: blur(48px) saturate(1.3);
+	background-color: transparent !important;
+	background-blend-mode: normal !important;
 }

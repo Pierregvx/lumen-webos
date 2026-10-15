@@ -17,7 +17,7 @@ import {onRelaunch, startParams, type LaunchParams} from './lib/launchParams';
 import {appTile, inputTile, pickInOrder} from './lib/tiles';
 import {TIMING} from './config/constants';
 import {LOCAL_WALLPAPERS, WALLPAPERS, WALLPAPER_CATEGORIES, cloudUrl} from './config/wallpapers';
-import {resized, setFavorites, setWallpaper} from './lib/wallpaper';
+import {resized, setFavorites, setLiveBlur, setWallpaper} from './lib/wallpaper';
 import {setVideoChoice, setVideoPaused, setVideoWallpaper, VIDEO_PLACES} from './lib/wallpaperVideo';
 import {setVideoFlag, startScreensaver} from './lib/system';
 import {ControlCenter, type CenterAction} from './components/ControlCenter';
@@ -179,7 +179,7 @@ export function App () {
 	}, [config.darkMode]);
 	useEffect(() => { document.documentElement.classList.toggle('reduce-motion', config.reduceMotion); }, [config.reduceMotion]);
 	useEffect(() => { document.documentElement.classList.toggle('hide-names', config.hideNames); }, [config.hideNames]);
-	useEffect(() => { document.documentElement.classList.toggle('liveblur', config.liveBlur); }, [config.liveBlur]);
+	useEffect(() => { document.documentElement.classList.toggle('liveblur', config.liveBlur); setLiveBlur(config.liveBlur); }, [config.liveBlur]);
 	useEffect(() => setVideoChoice(config.videoPlaces), [config.videoPlaces]);
 	useEffect(() => setVideoWallpaper(config.videoWallpaper), [config.videoWallpaper]);
 	useEffect(() => { setVideoPaused(screen === 'settings'); document.documentElement.classList.toggle('in-settings', screen === 'settings'); }, [screen]);
