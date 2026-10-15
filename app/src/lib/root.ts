@@ -20,7 +20,6 @@ const BASE64 = /^[A-Za-z0-9+\/]*={0,2}$/;
 const SETTINGS: Record<string, {category: string; values?: string[]}> = {
 	pictureMode: {category: 'picture', values: ['vivid', 'normal', 'eco', 'cinema', 'sports', 'game', 'filmMaker']},
 	soundMode: {category: 'sound', values: ['standard', 'news', 'movie', 'music', 'sports', 'game', 'aiSound']},
-	screenSaverTimer: {category: 'option', values: ['3', '10', '20', '30']},
 	/** for the picture mode in use (the TV keeps one per mode and input) */
 	backlight: {category: 'picture', values: Array.from({length: 101}, (_, i) => String(i))},
 	eyeComfortMode: {category: 'picture', values: ['on', 'off']}
@@ -88,14 +87,6 @@ export function sleepRemainSeconds (): Promise<number> {
 	return run(luna('luna://com.webos.service.tvReservationAgent/timer/sleep/getRemainTime', {})).then((text) => {
 		const m = JSON.parse(text) as {sleepTimeSecond?: number};
 		return Number(m.sleepTimeSecond) || 0;
-	});
-}
-
-/** 0 cancels the timer. Whole minutes up to 240 only. */
-export function setSleepTimer (minutes: number): Promise<void> {
-	if (!Number.isInteger(minutes) || minutes < 0 || minutes > 240) return Promise.reject(new Error(`refused: sleep ${minutes}`));
-	return run(luna('luna://com.webos.service.tvReservationAgent/timer/sleep/add', {sleepTimeMinute: minutes})).then((text) => {
-		if (text.indexOf('"returnValue":false') !== -1) throw new Error('the TV refused the sleep timer');
 	});
 }
 

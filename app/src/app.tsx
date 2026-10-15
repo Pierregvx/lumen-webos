@@ -580,7 +580,7 @@ export function App () {
 				onClockFormat={() => { const modes = ['auto', '12h', '24h']; const c = configRef.current; updateConfig({...c, clockFormat: modes[(modes.indexOf(c.clockFormat) + 1) % modes.length]}); }}
 				onClose={() => setControls(false)}
 				onError={(text) => showToast(text, 'error')}
-				onAction={(a: CenterAction) => { setControls(false); onActivate('menu', a === 'settings' ? {key: MISC.settings, label: 'Settings'} : a === 'lg-home' ? {key: MISC.lgHome, label: 'LG Home'} : a === 'art' ? {key: 'com.ammar027.lumen.gallery', label: 'Frame'} : {key: 'screensaver', label: 'Screensaver'}); }}
+				onAction={(a: CenterAction) => { setControls(false); onActivate('menu', a === 'lg-home' ? {key: MISC.lgHome, label: 'LG Home'} : a === 'art' ? {key: 'com.ammar027.lumen.gallery', label: 'Frame'} : {key: 'screensaver', label: 'Screensaver'}); }}
 			/>}
 			<Toast message={toast} />
 		</>

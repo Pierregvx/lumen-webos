@@ -32,8 +32,9 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [ ] Error log: `cat /var/lib/homehook/lumen.log`. It should exist after anything has failed (for example turning on Live app list with the
       Homebrew service stopped). Empty is fine if nothing failed.
 - [ ] Control Center: picture mode, sound mode and screensaver time still read and change (they now go through `lib/root.ts`).
-- [ ] Sleep timer: set one from Control Center, reopen it (shows the time) and check the status chip; then turn it off. webOS 25 denies
-      `tvReservationAgent` to apps, so reading and setting now go through root (the root calls were checked over ssh on 2026-10-15).
+- [ ] Sleep timer status chip: set a timer with LG's own menu and check the chip shows it. webOS 25 denies `tvReservationAgent` to
+      apps, so reading goes through root. (The sleep timer and screensaver time tiles, and the Settings circle, were taken out of
+      Control Center on 2026-10-15 to cut clutter.)
 - [ ] Weather: shows nothing until Settings > Options > Weather city is set. **Your current setup will lose the weather** until you pick
       Auto or a city, because "no city" used to mean Auto.
 - [ ] Launch parameter: `luna-send -n 1 luna://com.webos.applicationManager/launch '{"id":"com.samrenfrew.lumen","params":{"view":"recent"}}'`,

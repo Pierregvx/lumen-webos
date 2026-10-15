@@ -2,10 +2,10 @@ import {t as tr} from '../lib/i18n';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {Glyph, type GlyphName} from './Glyph';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
-import {PICTURE_LABEL, PICTURE_MODES, SCREENSAVER_MINUTES, SOUND_LABEL, SOUND_MODES, setSoundMode, SLEEP_MINUTES, readBacklight, readControls, setBacklight, setEyeComfort, restartTv, screenOff, setMuted, setScreensaverTime, setPictureMode, setSleepTimer, setVolume, type Controls} from '../lib/tvcontrols';
+import {PICTURE_LABEL, PICTURE_MODES, SOUND_LABEL, SOUND_MODES, setSoundMode, readBacklight, readControls, setBacklight, setEyeComfort, restartTv, screenOff, setMuted, setPictureMode, setVolume, type Controls} from '../lib/tvcontrols';
 import {readStatus, type TvStatus} from '../lib/status';
 
-export type CenterAction = 'lg-home' | 'settings' | 'screensaver' | 'art';
+export type CenterAction = 'lg-home' | 'screensaver' | 'art';
 
 interface Props {
 	onClose: () => void;
@@ -18,21 +18,21 @@ interface Props {
 	onClockFormat: () => void;
 }
 
-type CellId = 'sound' | 'picture' | 'sleep' | 'saver' | 'startsaver' | 'art' | 'home' | 'settings' | 'screenoff' | 'restart' | 'backlight' | 'volume' | 'dark' | 'clock';
+type CellId = 'sound' | 'picture' | 'startsaver' | 'art' | 'home' | 'screenoff' | 'restart' | 'backlight' | 'volume' | 'dark' | 'clock';
 
 /** The layout, like a control centre: wide tiles in pairs, a row of round buttons, then the backlight and volume sliders. */
-const GRID: CellId[][] = [['sound', 'picture'], ['sleep', 'saver'], ['dark', 'clock'], ['home', 'settings', 'art', 'startsaver', 'screenoff', 'restart'], ['backlight'], ['volume']];
+const GRID: CellId[][] = [['sound', 'picture'], ['dark', 'clock'], ['home', 'art', 'startsaver', 'screenoff', 'restart'], ['backlight'], ['volume']];
 
 /** Each backlight change is a root command (a luna-send process on the TV), so a run of presses sends only the last level, this long after. */
 const BACKLIGHT_DELAY_MS = 300;
 
-/** Control Center (opened from the round button top right): sound, picture mode, sleep timer, screensaver, LG Home, Settings, screen off, restart,
- *  backlight, volume. Arrows move between tiles, OK presses one, Left/Right on a slider change it, Back closes. OK on the backlight bar turns
+/** Control Center (opened from the round button top right): sound, picture mode, appearance, clock, LG Home, art mode, screensaver, screen off,
+ *  restart, backlight, volume. The sleep timer and screensaver time were taken out to keep it short; Settings has its own top-bar button. Arrows move between tiles, OK presses one, Left/Right on a slider change it, Back closes. OK on the backlight bar turns
  *  Eye Comfort on or off, as OK on the volume bar mutes. */
 export function ControlCenter ({onClose, onError, onAction, darkMode, clockFormat, onDarkMode, onClockFormat}: Props) {
 	const outer = useRef({darkMode, clockFormat, onDarkMode, onClockFormat});
 	outer.current = {darkMode, clockFormat, onDarkMode, onClockFormat};
-	const [values, setValues] = useState<Controls>({volume: 0, muted: false, picture: 'normal', sound: 'standard', sleepMinutes: 0, screensaver: 10, backlight: 100, eyeComfort: false});
+	const [values, setValues] = useState<Controls>({volume: 0, muted: false, picture: 'normal', sound: 'standard', backlight: 100, eyeComfort: false});
 	const [net, setNet] = useState<TvStatus['network']>('unknown');
 	const [pos, setPos] = useState({row: 0, col: 0});
 	const [confirm, setConfirm] = useState(false);
@@ -83,20 +83,12 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			const next = PICTURE_MODES[(PICTURE_MODES.indexOf(v.picture) + 1) % PICTURE_MODES.length];
 			// each picture mode has its own backlight, so show the new mode's
 			patch({picture: next}); setPictureMode(next).then(readBacklight).then((b) => { if (b !== null) patch({backlight: b}); }).catch(fail('the picture mode'));
-		} else if (cell === 'sleep') {
-			const next = SLEEP_MINUTES[(Math.max(0, SLEEP_MINUTES.indexOf(v.sleepMinutes)) + 1) % SLEEP_MINUTES.length];
-			patch({sleepMinutes: next}); setSleepTimer(next).catch(fail('the sleep timer'));
-		}
-		else if (cell === 'saver') {
-			const next = SCREENSAVER_MINUTES[(Math.max(0, SCREENSAVER_MINUTES.indexOf(v.screensaver)) + 1) % SCREENSAVER_MINUTES.length];
-			patch({screensaver: next}); setScreensaverTime(next).catch(fail('the screensaver time'));
 		}
 		else if (cell === 'dark') outer.current.onDarkMode();
 		else if (cell === 'clock') outer.current.onClockFormat();
 		else if (cell === 'art') onAction('art');
 		else if (cell === 'startsaver') onAction('screensaver');
 		else if (cell === 'home') onAction('lg-home');
-		else if (cell === 'settings') onAction('settings');
 		else if (cell === 'screenoff') { onClose(); screenOff().catch(() => onError("Couldn't turn the screen off (it needs the Homebrew Channel)")); }
 		else if (cell === 'restart') {
 			if (!state.current.confirm) { setConfirm(true); return; }
@@ -157,16 +149,11 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 					{wide('picture', 'picture', tr('Picture'), PICTURE_LABEL[values.picture] || values.picture)}
 				</div>
 				<div class="cc__row">
-					{wide('sleep', 'timer', tr('Sleep timer'), values.sleepMinutes ? tr('{n} min', {n: values.sleepMinutes}) : tr('Off'), values.sleepMinutes > 0)}
-					{wide('saver', 'screensaver', tr('Screensaver'), tr('After {n} min', {n: values.screensaver}))}
-				</div>
-				<div class="cc__row">
 					{wide('dark', 'screensaver', tr('Appearance'), darkMode === 'on' ? tr('Dark') : darkMode === 'auto' ? tr('Auto') : tr('Light'), darkMode === 'on')}
 					{wide('clock', 'timer', tr('Clock'), clockFormat === '12h' ? tr('12-hour') : clockFormat === '24h' ? tr('24-hour') : tr('Auto'), clockFormat !== 'auto')}
 				</div>
 				<div class="cc__row cc__row--round">
 					{round('home', 'house', tr('LG Home'))}
-					{round('settings', 'gear', tr('Settings'))}
 					{round('art', 'picture', tr('Art mode'))}
 					{round('startsaver', 'screensaver', tr('Start now'))}
 					{round('screenoff', 'power', tr('Screen off'))}
