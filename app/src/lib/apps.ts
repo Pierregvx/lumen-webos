@@ -104,7 +104,8 @@ function listViaHomebrew (): Promise<AppEntry[]> {
 					id: p.id,
 					// the catalogue's titles are shorter than LG's ("IPTV Player" vs "webOS IPTV Player")
 					title: known ? known.title : p.title,
-					iconUrl: packIcon(p.id, known ? known.title : p.title) || icons[p.id] || (known && known.icon ? ICON_DIR + known.icon : undefined),
+					// the catalogue's own icon before the TV's: they are full squares picked to fill a tile, the TV's often have a margin
+					iconUrl: packIcon(p.id, known ? known.title : p.title) || (known && known.icon ? ICON_DIR + known.icon : undefined) || icons[p.id],
 					color: known && known.color,
 					plain: !packIcon(p.id, known ? known.title : p.title) && !!(icons[p.id] || (known && known.icon))
 				} as AppEntry;
@@ -153,7 +154,7 @@ function writeIconCache (cache: Record<string, string>): void {
 
 /** The colour of an icon's own background (a pixel at its left edge, or its top), so a small icon can sit on a tile of the same colour. Icons read from the TV
  *  are data: URIs, so the canvas can be read; a file the app ships may not allow it, then the catalogue colour (or a dark default) is used. */
-const COLOR_CACHE_KEY = 'launcher-icon-colors-v1';
+const COLOR_CACHE_KEY = 'launcher-icon-colors-v2';
 
 function readColorCache (): Record<string, string> {
 	try { return JSON.parse(localStorage.getItem(COLOR_CACHE_KEY) || '{}') as Record<string, string>; } catch { return {}; }
@@ -170,12 +171,20 @@ function sampleColor (url: string): Promise<string | undefined> {
 				const g = c.getContext('2d');
 				if (!g) { resolve(undefined); return; }
 				g.drawImage(img, 0, 0, 16, 16);
-				const spots = [[1, 8], [8, 1], [14, 8]];
+				// the four corners and the middle of each edge; the colour most of the opaque ones share is the icon's background. One spot
+				// alone can land on the logo (YouTube's red play button sits at the left edge of a white icon).
+				const spots = [[1, 1], [14, 1], [1, 14], [14, 14], [8, 1], [1, 8], [14, 8], [8, 14]];
+				const votes: Record<string, {n: number; rgb: string}> = {};
+				let best: {n: number; rgb: string} | undefined;
 				for (const [x, y] of spots) {
 					const d = g.getImageData(x, y, 1, 1).data;
-					if (d[3] > 200) { resolve(`rgb(${d[0]}, ${d[1]}, ${d[2]})`); return; }
+					if (d[3] <= 200) continue;
+					const bucket = `${d[0] >> 4},${d[1] >> 4},${d[2] >> 4}`;
+					const v = votes[bucket] || (votes[bucket] = {n: 0, rgb: `rgb(${d[0]}, ${d[1]}, ${d[2]})`});
+					v.n++;
+					if (!best || v.n > best.n) best = v;
 				}
-				resolve(undefined);
+				resolve(best && best.rgb);
 			} catch { resolve(undefined); }
 		};
 		img.onerror = () => resolve(undefined);

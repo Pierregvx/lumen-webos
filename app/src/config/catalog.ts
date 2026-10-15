@@ -34,6 +34,8 @@ const BASE_CATALOG: CatalogApp[] = [
 	{id: 'netflix', title: 'Netflix', color: '#b1060f'},
 	{id: 'amazon', title: 'Prime Video', icon: 'amazon.png'},
 	{id: 'cdp-30', title: 'Plex', icon: 'cdp-30.png'},
+	// PlxNative, the native Plex client from the Homebrew Channel (repo.webosbrew.org/apps/com.beb.plxnative)
+	{id: 'com.beb.plxnative', title: 'Plex', icon: 'cdp-30.png'},
 	{id: 'com.webos.app.browser', title: 'Browser', icon: 'com.webos.app.browser.png'},
 	{id: 'com.webos.app.mediadiscovery', title: 'Media Player', icon: 'com.webos.app.mediadiscovery.png'},
 	{id: 'org.webosbrew.hbchannel', title: 'Homebrew', icon: 'org.webosbrew.hbchannel.png'}
