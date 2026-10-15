@@ -80,6 +80,22 @@ export function reboot (): Promise<void> {
 	return run(luna('luna://com.webos.service.tvpower/power/reboot', {reason: 'restart'})).then(() => undefined);
 }
 
+/** Seconds left on the sleep timer, 0 when none. webOS 25 denies tvReservationAgent to apps ("Denied method call"), hence root. */
+export function sleepRemainSeconds (): Promise<number> {
+	return run(luna('luna://com.webos.service.tvReservationAgent/timer/sleep/getRemainTime', {})).then((text) => {
+		const m = JSON.parse(text) as {sleepTimeSecond?: number};
+		return Number(m.sleepTimeSecond) || 0;
+	});
+}
+
+/** 0 cancels the timer. Whole minutes up to 240 only. */
+export function setSleepTimer (minutes: number): Promise<void> {
+	if (!Number.isInteger(minutes) || minutes < 0 || minutes > 240) return Promise.reject(new Error(`refused: sleep ${minutes}`));
+	return run(luna('luna://com.webos.service.tvReservationAgent/timer/sleep/add', {sleepTimeMinute: minutes})).then((text) => {
+		if (text.indexOf('"returnValue":false') !== -1) throw new Error('the TV refused the sleep timer');
+	});
+}
+
 /** tvpower/turnOnScreenSaver is a system-only call, hence root. */
 export function startScreensaver (): Promise<void> {
 	return run(luna('luna://com.webos.service.tvpower/power/turnOnScreenSaver', {})).then(() => undefined);

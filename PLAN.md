@@ -32,6 +32,8 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [ ] Error log: `cat /var/lib/homehook/lumen.log`. It should exist after anything has failed (for example turning on Live app list with the
       Homebrew service stopped). Empty is fine if nothing failed.
 - [ ] Control Center: picture mode, sound mode and screensaver time still read and change (they now go through `lib/root.ts`).
+- [ ] Sleep timer: set one from Control Center, reopen it (shows the time) and check the status chip; then turn it off. webOS 25 denies
+      `tvReservationAgent` to apps, so reading and setting now go through root (the root calls were checked over ssh on 2026-10-15).
 - [ ] Weather: shows nothing until Settings > Options > Weather city is set. **Your current setup will lose the weather** until you pick
       Auto or a city, because "no city" used to mean Auto.
 - [ ] Launch parameter: `luna-send -n 1 luna://com.webos.applicationManager/launch '{"id":"com.samrenfrew.lumen","params":{"view":"recent"}}'`,
@@ -86,6 +88,7 @@ mode, no hosts blocking, no clock fix and no system-wide Recent row; Lumen itsel
 - [x] `watch.sh`: Home takeover behind a flag, recent-apps file, `hosts-extra` only copies `0.0.0.0 <name>` / `:: <name>` lines, duplicate
       function definitions removed. `clockfix.sh`: TV's own zone unless `TZ_NAME` is set, HTTPS time. **(verify)**
 - [x] Settings: Hide app names, Reduce motion. Control Center no longer shows the top button's label through it.
+- [x] Error log (seen on the TV): it caught `timer/sleep/getRemainTime` being denied. Sleep timer read and set moved to `lib/root.ts`.
 - [x] Lazy-loading Settings and Control Center: tried and dropped. The build is one IIFE script because the app loads from `file://`, where
       ES module chunks do not load; splitting would need a second classic script, and the two are a small share of the 186 KB bundle anyway.
       Revisit only if the Phase 4 trace shows script parse time matters.

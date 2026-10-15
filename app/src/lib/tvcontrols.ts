@@ -1,11 +1,10 @@
-// Control Center: what the TV lets a normal web app do (volume, mute, sleep timer) and what needs the Homebrew Channel's root service
-// (picture mode, screen off, restart), through lib/root.ts. Off the TV (the dev preview) the values are kept in memory.
+// Control Center: what the TV lets a normal web app do (volume, mute) and what needs the Homebrew Channel's root service
+// (picture mode, sleep timer, screen off, restart), through lib/root.ts. Off the TV (the dev preview) the values are kept in memory.
 
 import {isWebOS, lunaCall} from './luna';
 import * as root from './root';
 
 const AUDIO = 'luna://com.webos.audio/';
-const SLEEP = 'luna://com.webos.service.tvReservationAgent/timer/sleep/';
 
 /** the TV's own names for the picture modes it offers on an SDR picture */
 export const PICTURE_MODES = ['vivid', 'normal', 'eco', 'cinema', 'sports', 'game', 'filmMaker'];
@@ -37,8 +36,8 @@ export function readControls (): Promise<Controls> {
 		out.muted = r.muteStatus === true;
 	}).catch(() => undefined);
 	const picture = root.getSetting('pictureMode').then((v) => { if (v) out.picture = v; }).catch(() => undefined);
-	const sleep = lunaCall<{sleepTimeSecond?: number}>(SLEEP + 'getRemainTime', {}).then((r) => {
-		const minutes = Math.ceil((Number(r.sleepTimeSecond) || 0) / 60);
+	const sleep = root.sleepRemainSeconds().then((seconds) => {
+		const minutes = Math.ceil(seconds / 60);
 		out.sleepMinutes = minutes <= 0 ? 0 : SLEEP_MINUTES.filter((m) => m >= minutes)[0] || SLEEP_MINUTES[SLEEP_MINUTES.length - 1];
 	}).catch(() => undefined);
 	const saver = root.getSetting('screenSaverTimer').then((v) => {
@@ -89,7 +88,7 @@ export function setScreensaverTime (minutes: number): Promise<void> {
 export function setSleepTimer (minutes: number): Promise<void> {
 	mock.sleepMinutes = minutes;
 	if (!isWebOS()) return Promise.resolve();
-	return lunaCall(SLEEP + 'add', {sleepTimeMinute: minutes}).then(() => undefined);
+	return root.setSleepTimer(minutes);
 }
 
 /** Screen off, the TV keeps running (a press on the remote wakes it). */

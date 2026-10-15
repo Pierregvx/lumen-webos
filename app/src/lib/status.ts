@@ -1,7 +1,8 @@
 // What the status chips show: how the TV is connected, whether it is muted, whether a sleep timer is running.
-// All three are read with calls a normal web app may make. Anything that fails simply shows no chip.
+// Network and mute are read with calls a normal web app may make; the sleep timer needs root on webOS 25. Anything that fails simply shows no chip.
 
 import {isWebOS, lunaCall} from './luna';
+import * as root from './root';
 
 export interface TvStatus {
 	network: 'wifi' | 'ethernet' | 'offline' | 'unknown';
@@ -19,8 +20,8 @@ export function readStatus (): Promise<TvStatus> {
 	const audio = lunaCall<{muteStatus?: boolean}>('luna://com.webos.audio/getVolume', {}).then((r) => {
 		out.muted = r.muteStatus === true;
 	}).catch(() => undefined);
-	const sleep = lunaCall<Record<string, unknown>>('luna://com.webos.service.tvReservationAgent/timer/sleep/getRemainTime', {}).then((r) => {
-		out.sleep = Number(r.sleepTimeSecond) > 0;
+	const sleep = root.sleepRemainSeconds().then((seconds) => {
+		out.sleep = seconds > 0;
 	}).catch(() => undefined);
 	return Promise.all([net, audio, sleep]).then(() => out);
 }
