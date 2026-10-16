@@ -15,5 +15,6 @@
   "resolution": "1920x1080",
   "disableBackHistoryAPI": true,
   "supportGIP": true,
-  "transparent": false
+  "transparent": false,
+  "keepAlive": true
 }

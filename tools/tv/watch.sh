@@ -3,6 +3,9 @@
 #  - Only with /var/lib/homehook/home-takeover present (off by default: LG Input Hook owns the Home button on this TV): when LG's own Home has just
 #    come up, opens the launcher instead (polling, because luna-send buffers a subscription's output when it is piped). The launcher's own
 #    "LG Home" button touches /tmp/allow_lg_home first, so LG Home can still be opened on purpose (it then stays until you leave it).
+#  - After the TV wakes (power state back to Active, or a gap in this loop's once-a-second ticks, which means it was suspended) and after a boot:
+#    for WAKE_SECS, LG Home coming up is replaced by Lumen even without home-takeover, because the power button opens LG Home. Switch off with
+#    /var/lib/homehook/no-wake-launch.
 #  - Keeps /var/lib/homehook/recent: the last eight apps that were in front (not Lumen, not LG Home), newest first, one id per line. Lumen reads
 #    it for its Recent row, so apps opened from anywhere show there.
 #  - When the TV's power state becomes "Screen Saver" (LG's screensaver is not a foreground app, so the power state is what shows it) and
@@ -19,6 +22,8 @@ VIDEO_FLAG=/var/lib/homehook/video-wallpaper
 APPS=/media/developer/apps/usr/palm/applications
 EXTRA=/var/lib/homehook/hosts-extra
 TAKEOVER_FLAG=/var/lib/homehook/home-takeover
+NOWAKE_FLAG=/var/lib/homehook/no-wake-launch
+WAKE_SECS=30
 RECENT=/var/lib/homehook/recent
 prev=""
 prevapp=""
@@ -28,6 +33,9 @@ ticks=0
 saverlast=0
 pwprev=""
 lastme=""
+pwlast=""
+tick=$(date +%s)
+wakeuntil=$((tick + 90))   # a boot counts as a wake; LG Home may take a while to come up
 # prints the Lumen build in front, if any
 me_in_front() {
   for id in $ME; do case "$1" in *'"appId":"'$id'"'*) echo "$id"; return 0 ;; esac; done
@@ -49,6 +57,19 @@ note_recent() {
 }
 
 while true; do
+  # wake: the power state goes back to Active from standby or off (not from the screensaver), or the loop missed its ticks (suspended)
+  now=$(date +%s)
+  gap=$((now - tick)); tick=$now
+  pw=$(luna-send -n 1 luna://com.webos.service.tvpower/power/getPowerState '{}' </dev/null 2>/dev/null)
+  pwstate=$(printf '%s' "$pw" | sed -n 's/.*"state":"\([^"]*\)".*/\1/p')
+  woke=0
+  [ "$gap" -gt 5 ] && woke=1
+  if [ "$pwstate" = Active ] && [ -n "$pwlast" ] && [ "$pwlast" != Active ] && [ "$pwlast" != "Screen Saver" ]; then woke=1; fi
+  [ -n "$pwstate" ] && pwlast=$pwstate
+  if [ "$woke" -eq 1 ]; then
+    wakeuntil=$((now + WAKE_SECS)); last=0
+    echo "$(date +%T) wake (gap ${gap}s, power $pwstate)" >> /tmp/homehook.log
+  fi
   out=$(luna-send -n 1 luna://com.webos.applicationManager/getForegroundAppInfo '{}' </dev/null 2>/dev/null)
   front=$(me_in_front "$out") && lastme=$front
   app=$(printf '%s' "$out" | sed -n 's/.*"appId":"\([^"]*\)".*/\1/p')
@@ -65,7 +86,10 @@ while true; do
           [ "$age" -ge 0 ] && [ "$age" -lt 30 ] && okhome=1
         fi
       fi
-      if [ -f "$TAKEOVER_FLAG" ] && [ "$okhome" -eq 0 ] && target=$(me_target) && { [ $((now - last)) -ge 3 ] || [ $((now - last)) -lt 0 ]; }; then
+      takeover=0
+      [ -f "$TAKEOVER_FLAG" ] && takeover=1
+      [ ! -f "$NOWAKE_FLAG" ] && [ "$now" -lt "$wakeuntil" ] && takeover=1
+      if [ "$takeover" -eq 1 ] && [ "$okhome" -eq 0 ] && target=$(me_target) && { [ $((now - last)) -ge 3 ] || [ $((now - last)) -lt 0 ]; }; then
         last=$now
         luna-send -n 1 luna://com.webos.applicationManager/launch "{\"id\":\"$target\"}" </dev/null >/dev/null 2>&1
       fi
@@ -77,12 +101,10 @@ while true; do
   vid=0
   if [ -f "$VIDEO_FLAG" ] && [ -n "$front" ]; then vid=1; fi
   if [ "$vid" -eq 1 ]; then
-    pw=$(luna-send -n 1 luna://com.webos.service.tvpower/power/getPowerState '{}' </dev/null 2>/dev/null)
     case "$pw" in
       *'"Screen Saver"'*) luna-send -n 1 luna://com.webos.service.tvpower/power/turnOnScreen '{}' </dev/null >/dev/null 2>&1; echo "$(date +%T) ended screensaver (video wallpaper)" >> /tmp/homehook.log ;;
     esac
   elif [ -f "$SAVER_FLAG" ] && [ -d "$APPS/$FRAME" ]; then
-    pw=$(luna-send -n 1 luna://com.webos.service.tvpower/power/getPowerState '{}' </dev/null 2>/dev/null)
     case "$pw" in
       *'"Screen Saver"'*)
         if [ "$pwprev" != "saver" ]; then
