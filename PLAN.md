@@ -146,18 +146,15 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 
 ---
 
-## Phase 4: Performance (needs DevTools on the TV)
+## Phase 4: Performance
 
-Goal: know how fast Lumen is on this TV, make cold start faster, and check every later change against the numbers.
-
-- [ ] Record three numbers as the baseline, with DevTools traces: Home press to home screen visible; key press to focus moving; cold start to
-      interactive.
-- [ ] Then the cold-start items: draw the first row first (done), defer the rest until the first frame is up, images at screen size or smaller.
-  Built, not yet tried on the TV (lib/boot.ts): the app list, inputs, Recent row, weather and clock format from the last launch are drawn at
-  once and the TV is asked again 400 ms after the first frame; index.html paints the last fixed wallpaper (not a shuffle) and its blurred
-  copies before app.js loads. Re-encoding the bundled wallpapers smaller was tried and dropped: about 30% smaller at quality 86, but the
-  painting's canvas texture visibly smoothed, and the decode cost is set by the 1920x1080 size, which stays. Compare against the baseline.
-- [ ] Graphics setting Low/High, only if the blur spike passed.
+Closed 2026-10-16 without baseline numbers: on the TV, cold start is as good as it gets (the launch screen with the icon and title is webOS
+showing `splash.png` until the first frame), and the live blur test is settled.
+- [x] Cold start: the last launch's apps, inputs, Recent row, weather, clock format and wallpaper are drawn at once (lib/boot.ts), the TV is
+      asked again 400 ms after the first frame. Accepted on the TV.
+- [x] Live blur: the glass bar and top buttons blur live (`backdrop-filter`) and look right; a live full-screen backdrop was too slow, so the
+      lower rows and Settings keep the pre-blurred copy. Now the default (Settings > Options > Live blur, on).
+- [ ] ~~Baseline numbers with DevTools~~: dropped, not needed for now.
 
 ### Lower rows transition (Down from the dock to the blurred backdrop)
 Done so far (commit 167253b, dev 1.0.9003): the rows slide with `transform` instead of `top`; the blurred backdrop is a permanent

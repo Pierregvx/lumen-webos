@@ -39,7 +39,7 @@ function classicScriptTag (): Plugin {
 		const privateDir = join(APP_DIR, 'private');
 		return {
 			appId: env.LUMEN_APP_ID || 'com.samrenfrew.lumen.dev',
-			title: env.LUMEN_APP_TITLE || 'Lumen Dev',
+			title: env.LUMEN_APP_TITLE || 'Home Dev',
 			// a dev build (the .dev id, or LUMEN_DEV=1 from the release workflow for branch pushes) offers tools that stable does not
 			dev: env.LUMEN_DEV === '1' || (env.LUMEN_DEV !== '0' && /\.dev$/.test(env.LUMEN_APP_ID || 'com.samrenfrew.lumen.dev')),
 			privateDir: env.LUMEN_PRIVATE !== '0' && existsSync(privateDir) ? privateDir : ''

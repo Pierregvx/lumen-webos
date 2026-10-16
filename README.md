@@ -58,8 +58,8 @@ npm run build:ipk           # -> build/<app-id>_<version>_all.ipk
 npm run deploy              # builds, copies the .ipk to the TV over ssh, installs and launches it
 ```
 
-The default app id is `com.samrenfrew.lumen.dev` ("Lumen Dev"), so a dev build installs beside the stable one. For stable, set
-`LUMEN_APP_ID=com.samrenfrew.lumen` and `LUMEN_APP_TITLE=Lumen`. `npm run dev` starts the preview in a browser on port 5199.
+The default app id is `com.samrenfrew.lumen.dev` ("Home Dev"), so a dev build installs beside the stable one. For stable, set
+`LUMEN_APP_ID=com.samrenfrew.lumen` and `LUMEN_APP_TITLE=Home`. `npm run dev` starts the preview in a browser on port 5199.
 
 Brand icons and logos of third-party apps, your own photographs and the private SF font are **not** included here. Put them in `app/private/`
 (gitignored); the build lays that folder over the app if it is there. The layout is described at the top of `app/vite.config.ts`.

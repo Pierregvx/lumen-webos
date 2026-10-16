@@ -1,26 +1,32 @@
 #!/usr/bin/env python3
-"""App icon (80x80, 130x130) and launch screen (1920x1080) for Lumen. The artwork is tools/icon-lumen.html (a glowing orb and a small glass dock on indigo),
+"""App icon (80x80, 130x130) and launch screen (1920x1080). The artwork is tools/icon-home.html (a house drawn in one white line with a lit door, on indigo;
+the old orb is tools/icon-lumen.html, ICON_ART=tools/icon-lumen.html to use it),
 rendered once at 1024 px by headless Chrome and scaled down, so the small sizes stay crisp. Output goes to app/public/.
-Run: python3 tools/gen_appicon.py  (needs Google Chrome, or CHROME set, and macOS `sips`)"""
+Run: python3 tools/gen_appicon.py  (needs Google Chrome, or CHROME set to Chrome/Chromium/headless_shell; scales with macOS `sips` or Pillow)"""
 import base64, os, re, subprocess, tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = f'{ROOT}/app/public'
 CHROME = os.environ.get('CHROME', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
 FONT = f'{ROOT}/app/src/assets/geist-wght.woff2'
-NAME = os.environ.get('APP_NAME', 'Lumen')
-ART = open(f'{ROOT}/tools/icon-lumen.html').read()
+NAME = os.environ.get('APP_NAME', 'Home')
+ART = open(os.environ.get('ICON_ART', f'{ROOT}/tools/icon-home.html')).read()
 
 def shot(html, w, h, dst):
     with tempfile.NamedTemporaryFile('w', suffix='.html', delete=False) as f:
         f.write(html); src = f.name
-    subprocess.run([CHROME, '--headless=new', '--disable-gpu', '--hide-scrollbars', f'--window-size={w},{h}', '--force-device-scale-factor=1',
+    headless = ['--no-sandbox'] if CHROME.endswith('headless_shell') else ['--headless=new']
+    subprocess.run([CHROME, *headless, '--disable-gpu', '--hide-scrollbars', f'--window-size={w},{h}', '--force-device-scale-factor=1',
                     '--virtual-time-budget=1500', f'--screenshot={dst}', f'file://{src}'], capture_output=True)
     os.unlink(src)
 
-master = '/tmp/lumen-icon-1024.png'
+master = os.path.join(tempfile.gettempdir(), 'lumen-icon-1024.png')
 shot(ART, 1024, 1024, master)
 for size, name in ((130, 'largeIcon.png'), (80, 'icon.png')):
-    subprocess.run(['sips', '-z', str(size), str(size), master, '--out', f'{OUT}/{name}'], capture_output=True)
+    try:
+        subprocess.run(['sips', '-z', str(size), str(size), master, '--out', f'{OUT}/{name}'], capture_output=True, check=True)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        from PIL import Image
+        Image.open(master).convert('RGB').resize((size, size), Image.LANCZOS).save(f'{OUT}/{name}', optimize=True)
     print(name, os.path.getsize(f'{OUT}/{name}') // 1024, 'KB')
 
 # launch screen: the same colours, the icon in the middle with the name under it

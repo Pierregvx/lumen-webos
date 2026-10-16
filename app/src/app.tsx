@@ -429,8 +429,8 @@ export function App () {
 		},
 		{
 			id: OPTION.liveBlur,
-			label: 'Live blur (test)',
-			description: 'The glass bar, the top buttons and the panels blur whatever is behind them, live, instead of showing a blurred copy of the wallpaper. The full-screen backdrops (lower rows, Settings) stay a blurred copy. Smoother to look at, harder work for the TV.',
+			label: 'Live blur',
+			description: 'The glass bar, the top buttons and the panels blur whatever is behind them, live, instead of showing a blurred copy of the wallpaper. The full-screen backdrops (lower rows, Settings) stay a blurred copy. On by default. Off: the cheaper blurred copy everywhere.',
 			value: config.liveBlur
 		},
 		{
