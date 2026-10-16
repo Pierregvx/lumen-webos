@@ -67,7 +67,7 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [x] Does the clock go wrong after a reboot here? No: right time and BST with the clock fix moved aside. `clockfix.sh` deleted (it is in git
       history if the clock ever goes wrong after a power cut).
 - [x] Does the TV kill background apps? Lumen yes, YouTube no (see `docs/spikes.md`). Cold start stays the thing to make fast.
-- [ ] Power button opens LG Home, not Lumen: `watch.sh` now treats a wake (power state back to Active, or a gap in its ticks) and a boot as
+- [x] Power button opens LG Home, not Lumen (confirmed fixed on the TV 2026-10-16): `watch.sh` now treats a wake (power state back to Active, or a gap in its ticks) and a boot as
       a 30 s window in which LG Home is replaced by Lumen (off with `/var/lib/homehook/no-wake-launch`). **(verify)** on the TV; wakes are
       logged in `/tmp/homehook.log`.
 - [ ] `"keepAlive": true` in appinfo.json (added in the dev build): does Lumen survive opening Plex with it? No installed app's appinfo.json uses the key, so likely
