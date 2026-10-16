@@ -1125,3 +1125,61 @@ html.focus-strong .rows .tile--focused .tile__box { box-shadow: 0 0 0 4px rgba(2
 .status__weather { display: flex; flex-direction: row; align-items: center; margin: 0 0 0 26px; font-size: 30px; font-weight: 500; opacity: 0.9; animation: status-in 600ms ease-out; }
 .screen > .pill.status .status__icon { width: 36px; height: 36px; margin: 0 10px 0 0; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .status__cond { margin-left: 12px; font-weight: 400; opacity: 0.85; }
+
+/* ---------- tvOS 26 layout: a wider glass bar, the app grid peeking in under it, the grid scrolled to the top ----------
+   The rows reach out to --layout-rows-edge (the bar is about 95% of the screen wide). The first grid row's tops show at the bottom of the
+   screen; going down slides the bar to the top (Home.tsx, GRID_TOP) with the grid under it, and the clock and top buttons fade out. */
+.rows { left: var(--layout-rows-edge); right: var(--layout-rows-edge); top: 784px; }
+.rows > .row + .row, .rows > .row:nth-child(2) { margin-top: -132px; }
+.rows .row__viewport, .rows .row--dock .row__viewport { opacity: 1; }
+.rows > .row:not(:first-child) .row__track--centered { padding-left: calc((1920px - 2 * var(--layout-rows-edge) - var(--first-w, 1740px)) / 2); }
+.status, .topbar { transition: transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 220ms ease; }
+.screen--lower .status, .screen--lower .topbar { opacity: 0; pointer-events: none; }
+
+/* focus: in the glass bar the icon grows a little and stays inside the glass; in the grid it lifts with a soft shadow */
+.rows { --motion-focus-scale: 1.1; }
+.rows > .row:first-child { --motion-focus-scale: 1.06; }
+.rows .row .tile--focused .tile__box { box-shadow: 0 26px 40px rgba(0, 0, 0, 0.42), 0 8px 14px rgba(0, 0, 0, 0.22); }
+.rows > .row:first-child .tile--focused .tile__box { box-shadow: 0 10px 18px rgba(0, 0, 0, 0.28); }
+.rows .row .tile--focused .tile__box { transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--motion-focus-scale)) translateY(-3px); }
+html.focus-subtle .rows { --motion-focus-scale: 1.06; }
+html.focus-subtle .rows > .row:first-child { --motion-focus-scale: 1.03; }
+html.focus-strong .rows { --motion-focus-scale: 1.16; }
+html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.1; }
+.tile__label { margin-top: 22px; }
+
+/* the clock, the top buttons and the panels line up with the glass bar's outer tiles */
+.screen > .pill.status { left: var(--layout-rows-edge); }
+.topbar { right: var(--layout-rows-edge); }
+.panel { right: var(--layout-rows-edge); background-position: 0 0, calc(var(--pw) + var(--layout-rows-edge) - 1920px) calc(-1 * var(--pt)); }
+
+/* ---------- Control Center, tvOS 26 style: a narrow panel of squircle modules, no title ----------
+   Wide tiles two to a row, five icon squares (the focused one named under them), then the two sliders. Every module has the same corner,
+   and the panel's corner is that plus the padding, so they are concentric. */
+.panel--cc { --pw: 600px; --pt: 150px; width: 600px; padding: 20px; border-radius: 48px; top: 150px; }
+.panel--cc .cc__row { justify-content: space-between; margin-bottom: 14px; }
+.panel--cc .cc__tile { width: 273px; height: 104px; border-radius: 28px; padding: 0 14px; transform: none; }
+.panel--cc .cc__badge { width: 56px; height: 56px; border-radius: 28px; margin-right: 14px; }
+.panel--cc .cc__badge svg { width: 28px; height: 28px; }
+.panel--cc .cc__name { font-size: 24px; }
+.panel--cc .cc__sub { font-size: 20px; }
+.panel--cc .cc__tile--focused { transform: scale(1.04); box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28); }
+.cc__row--squares { margin-bottom: 0 !important; }
+.cc__square {
+	width: 100px; height: 100px; border-radius: 28px; display: flex; align-items: center; justify-content: center;
+	background: rgba(28, 34, 48, 0.34); box-shadow: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.55), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.22);
+	transition: transform var(--motion-focus-ms) ease-out;
+}
+.cc__square svg { position: static; width: 36px; height: 36px; stroke: rgba(255, 255, 255, 0.72); }
+.cc__square--focused { background: #fff; transform: scale(1.06); box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28); }
+.cc__square--focused svg { stroke: #111; }
+.cc__caption { height: 36px; line-height: 36px; text-align: center; font-size: 21px; font-weight: 600; color: var(--color-text-primary); }
+.panel--cc .cc__slider { height: 88px; border-radius: 28px; margin-top: 0; }
+.panel--cc .cc__slider + .cc__slider { margin-top: 14px; }
+.panel--cc .cc__slider--focused { transform: scale(1.02); }
+.panel--cc .cc__slidertext { padding: 0 24px; font-size: 24px; }
+html.light .cc__square { background: rgba(255, 255, 255, 0.42); box-shadow: 0 2px 8px rgba(20, 24, 40, 0.10); }
+html.light .cc__square svg { stroke: rgba(20, 22, 32, 0.72); }
+html.light .cc__square--focused { background-color: #14151b !important; }
+html.light .cc__square--focused svg { stroke: #fff; }
+.cc__caption span { display: inline-block; white-space: nowrap; }

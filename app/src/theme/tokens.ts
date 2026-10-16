@@ -47,6 +47,7 @@ export const LAYOUT = {
 	screenWidth: 1920,
 	screenHeight: 1080,
 	edgePadding: 140,       // heavy padding around the screen edges
+	rowsEdge: 90,           // the home rows reach further out: the glass bar is about 95% of the screen wide, as on tvOS
 	headerTop: 84,
 	rowsTop: 846,           // rows start here, below the greeting and clock
 	tileSize: 236,          // Apple TV's home-screen icons are 5:3 landscape

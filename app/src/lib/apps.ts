@@ -14,6 +14,7 @@ import {listLaunchPoints, readIcons} from './root';
 import {appExists} from './launch';
 import {ICON_PACK} from '../config/iconpack';
 import {SYSTEM_APPS} from '../config/systemApps';
+import type {GlyphName} from '../components/Glyph';
 import {readCache, writeCache} from './boot';
 
 export interface AppEntry {
@@ -24,6 +25,8 @@ export interface AppEntry {
 	color?: string;
 	/** a small square icon (not full tile artwork): drawn at a sharp size on a tile coloured like it */
 	plain?: boolean;
+	/** a built-in vector icon on the colour (the built-in tiles, config/builtinApps.ts) */
+	glyph?: GlyphName;
 }
 
 export type AppSource = 'catalog' | 'homebrew';

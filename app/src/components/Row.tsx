@@ -24,7 +24,7 @@ interface Props {
 	onActivate: (index: number) => void;
 }
 
-const VIEWPORT_WIDTH = LAYOUT.screenWidth - 2 * LAYOUT.edgePadding;
+const VIEWPORT_WIDTH = LAYOUT.screenWidth - 2 * LAYOUT.rowsEdge;
 
 /** Horizontal strip of tiles. Centred when it fits; otherwise a carousel that keeps
  *  the selected tile in the middle (clamped at the ends). */

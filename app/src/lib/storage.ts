@@ -65,6 +65,8 @@ export interface UserConfig {
 	fpsCounter: boolean;
 	/** false on a fresh install until the installed apps have been put on the home screen once */
 	seeded: boolean;
+	/** the built-in tiles (Settings, TV Settings, Inputs) have been put on the home screen once; taken off, they stay off */
+	builtinTiles: boolean;
 }
 
 export const DEFAULT_CONFIG: UserConfig = {
@@ -97,7 +99,8 @@ export const DEFAULT_CONFIG: UserConfig = {
 	firstRow: 6,
 	videoHours: 'always',
 	fpsCounter: false,
-	seeded: false
+	seeded: false,
+	builtinTiles: false
 };
 
 export function loadConfig (): UserConfig {
@@ -147,7 +150,8 @@ export function parseConfig (raw: string): UserConfig {
 		firstRow: parsed.firstRow === 5 || parsed.firstRow === 7 ? parsed.firstRow : 6,
 		videoHours: parsed.videoHours === 'day' || parsed.videoHours === 'evening' || parsed.videoHours === 'night' ? parsed.videoHours : 'always',
 		fpsCounter: parsed.fpsCounter === true,
-		seeded: parsed.seeded !== false
+		seeded: parsed.seeded !== false,
+		builtinTiles: parsed.builtinTiles === true
 	};
 }
 

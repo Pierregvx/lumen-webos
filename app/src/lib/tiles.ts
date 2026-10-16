@@ -7,7 +7,7 @@ import type {TileModel} from '../components/Tile';
 const INPUT_ICON_DIR = 'icons/inputs/';
 
 export function appTile (app: AppEntry): TileModel {
-	return {key: app.id, label: app.title, imageUrl: app.iconUrl, color: app.color, plain: app.plain};
+	return {key: app.id, label: app.title, imageUrl: app.iconUrl, color: app.color, plain: app.plain, glyph: app.glyph};
 }
 
 export function inputTile (input: InputSource): TileModel {

@@ -5,6 +5,7 @@ import type {WallpaperEntry} from './components/WallpaperPicker';
 import type {OptionItem} from './components/OptionList';
 import {Toast, type ToastMessage} from './components/Toast';
 import type {TileModel} from './components/Tile';
+import {BUILTIN, BUILTIN_APPS, withBuiltins} from './config/builtinApps';
 import {cachedApps, listApps, sameApps, saveAppsCache, seedAppIds, type AppEntry} from './lib/apps';
 import {afterFirstFrame, readCache, writeCache} from './lib/boot';
 import {listInputs, MOCK_INPUTS, type InputSource} from './lib/inputs';
@@ -13,7 +14,6 @@ import {isWebOS} from './lib/luna';
 import {hidePointerOnForeground} from './lib/pointer';
 import {DEFAULT_CONFIG, hasSavedConfig, loadConfig, saveConfig, toggleId, type UserConfig} from './lib/storage';
 import {readBackup, scheduleBackup} from './lib/backup';
-import {mergeRecent, readTvRecent} from './lib/recent';
 import {onRelaunch, startParams, type LaunchParams} from './lib/launchParams';
 import {appTile, inputTile, pickInOrder} from './lib/tiles';
 import {TIMING} from './config/constants';
@@ -29,7 +29,7 @@ import {isDark, LANGS, nextDark, setClockMode, setLang} from './lib/i18n';
 
 type Screen = 'home' | 'settings';
 
-const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock', recent: 'recent'} as const;
+const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock'} as const;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
 const OPTION = {fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 15, 30, 60];
@@ -41,13 +41,12 @@ function inVideoHours (mode: string, now = new Date()): boolean {
 	const h = now.getHours();
 	return span[0] < span[1] ? h >= span[0] && h < span[1] : h >= span[0] || h < span[1];
 }
-/** first-row sizes: 7 apps only fit the glass bar with smaller tiles (still 5:3) */
-const TILES_FOR: Record<number, {size: number; height: number; gap: number}> = {5: {size: 236, height: 142, gap: 28}, 6: {size: 236, height: 142, gap: 28}, 7: {size: 208, height: 125, gap: 24}};
+/** tile sizes for 5, 6 or 7 apps a row: always about 1740px wide (the glass bar about 95% of the screen, as on tvOS), still 5:3 */
+const TILES_FOR: Record<number, {size: number; height: number; gap: number}> = {5: {size: 300, height: 180, gap: 56}, 6: {size: 250, height: 150, gap: 48}, 7: {size: 214, height: 128, gap: 40}};
 const IDLE_CHOICES = [0, 5, 10, 20, 30];
 const RECENT_MAX = 8;
 /** what the last launch showed, drawn at once on a cold start (lib/boot.ts) */
 const INPUTS_CACHE_KEY = 'lumen-boot-inputs-v1';
-const RECENT_CACHE_KEY = 'lumen-boot-recent-v1';
 
 /** The top bar: Inputs, Control Center and Settings. */
 const TOP_ITEMS: TileModel[] = [
@@ -110,10 +109,10 @@ export function App () {
 		});
 	}, []);
 
-	// launch parameters: {"view":"recent"} opens on the Recent row
+	// launch parameters: {"view":"recent"} opens on the app grid (it opened the Recent row, which has gone: every app is in the grid)
 	useEffect(() => {
 		let seq = 0;
-		const apply = (p: LaunchParams) => { if (p.view === 'recent') setFocusRow({id: ROW.recent, seq: ++seq}); };
+		const apply = (p: LaunchParams) => { if (p.view === 'recent') setFocusRow({id: ROW.dock, seq: ++seq}); };
 		apply(startParams());
 		return onRelaunch(apply);
 	}, []);
@@ -143,21 +142,6 @@ export function App () {
 		if (!wait) { read(); return undefined; }
 		return afterFirstFrame(read);
 	}, [config.useHomebrew, config.showAllApps, showToast]);
-
-	// the apps watch.sh saw in front, read at start and each time Lumen comes back
-	const [tvRecent, setTvRecent] = useState<string[]>(() => readCache<string[]>(RECENT_CACHE_KEY) || []);
-	useEffect(() => {
-		const read = () => {
-			if (document.hidden) return;
-			readTvRecent().then((ids) => {
-				writeCache(RECENT_CACHE_KEY, ids);
-				setTvRecent((now) => (now.join() === ids.join() ? now : ids));
-			});
-		};
-		const cancel = afterFirstFrame(read);
-		document.addEventListener('visibilitychange', read);
-		return () => { cancel(); document.removeEventListener('visibilitychange', read); };
-	}, []);
 
 	useEffect(() => {
 		const refresh = () => {
@@ -238,9 +222,13 @@ export function App () {
 	// first run: put the installed apps on the home screen (the catalogue's favourites first)
 	useEffect(() => {
 		const c = configRef.current;
-		if (restoring || c.seeded || apps.length === 0) return;
-		updateConfig({...c, seeded: true, appIds: seedAppIds(apps, DEFAULT_CONFIG.appIds)});
+		if (restoring || apps.length === 0) return;
+		const builtins = (ids: string[]) => ids.concat(BUILTIN_APPS.map((b) => b.id).filter((id) => ids.indexOf(id) === -1));
+		if (!c.seeded) updateConfig({...c, seeded: true, builtinTiles: true, appIds: builtins(seedAppIds(apps, DEFAULT_CONFIG.appIds))});
+		// an install from before the built-in tiles: add them once at the end
+		else if (!c.builtinTiles) updateConfig({...c, builtinTiles: true, appIds: builtins(c.appIds)});
 	}, [apps, restoring]);
+	const allApps = useMemo(() => withBuiltins(apps), [apps]);
 
 	// idle screensaver: after the chosen minutes without a key press or pointer move, while the launcher is in front
 	useEffect(() => {
@@ -258,17 +246,16 @@ export function App () {
 	useEffect(() => { setVideoFlag(videoOn); }, [videoOn]);
 
 	// ----- derived rows -----
-	const shownApps = useMemo(() => pickInOrder(apps, config.appIds, (a) => a.id), [apps, config.appIds]);
+	const shownApps = useMemo(() => pickInOrder(allApps, config.appIds, (a) => a.id), [allApps, config.appIds]);
 	const shownInputs = useMemo(
 		() => (config.sourceIds ? pickInOrder(inputs, config.sourceIds, (s) => s.appId) : inputs),
 		[inputs, config.sourceIds]
 	);
 
-	const recentApps = useMemo(() => pickInOrder(apps, mergeRecent(tvRecent, config.recentIds, RECENT_MAX), (a) => a.id), [apps, config.recentIds, tvRecent]);
 
 	const folderTiles = useMemo(
-		() => config.folders.map((f) => ({name: f.name, items: pickInOrder(apps, f.appIds, (a) => a.id).map(appTile)})).filter((f) => f.items.length > 0),
-		[apps, config.folders]
+		() => config.folders.map((f) => ({name: f.name, items: pickInOrder(allApps, f.appIds, (a) => a.id).map(appTile)})).filter((f) => f.items.length > 0),
+		[allApps, config.folders]
 	);
 	const folderMap = useMemo(() => {
 		const map: Record<string, TileModel[]> = {};
@@ -282,18 +269,19 @@ export function App () {
 			.concat(folderTiles.map((f): TileModel => ({key: 'folder:' + f.name, label: f.name, color: '#3b4256', children: f.items.map((t) => t.imageUrl)})));
 	}, [shownApps, folderTiles, config.folders]);
 
-	// the first row (in the glass bar) holds config.firstRow apps; the rest go in a plain row below, like the tvOS home screen
+	// the first row (in the glass bar) holds config.firstRow apps; the rest make a grid of rows as wide below it, like the tvOS home screen
+	// (the grid rows are 'dock', 'dock:1', 'dock:2'...)
 	const firstRow = config.firstRow;
-	const rows: HomeRow[] = useMemo(() => [
-		{id: ROW.apps, label: 'Apps', items: homeTiles.slice(0, firstRow), emptyText: 'No apps selected — add some in Settings'},
-		...(homeTiles.length > firstRow ? [{id: ROW.dock, label: 'More apps', items: homeTiles.slice(firstRow)}] : []),
-		...(recentApps.length > 0 ? [{id: ROW.recent, label: 'Recent', titled: true, items: recentApps.map(appTile)}] : [])
-	], [homeTiles, shownInputs, recentApps, config.language, firstRow]);
+	const rows: HomeRow[] = useMemo(() => {
+		const list: HomeRow[] = [{id: ROW.apps, label: 'Apps', items: homeTiles.slice(0, firstRow), emptyText: 'No apps selected — add some in Settings'}];
+		for (let at = firstRow, n = 0; at < homeTiles.length; at += firstRow, n++) list.push({id: n ? `${ROW.dock}:${n}` : ROW.dock, label: 'More apps', items: homeTiles.slice(at, at + firstRow)});
+		return list;
+	}, [homeTiles, shownInputs, config.language, firstRow]);
 
 	const tabs: SettingsTab[] = useMemo(() => [
-		{id: ROW.apps, label: 'Apps', noun: 'apps', items: apps.map(appTile), shown: shownApps.map(appTile)},
+		{id: ROW.apps, label: 'Apps', noun: 'apps', items: allApps.map(appTile), shown: shownApps.map(appTile)},
 		{id: ROW.sources, label: 'Sources', noun: 'sources', items: inputs.map(inputTile), shown: shownInputs.map(inputTile)}
-	], [apps, inputs, shownApps, shownInputs, config.language]);
+	], [allApps, inputs, shownApps, shownInputs, config.language]);
 
 	/** options that pick from a list: the labels shown in the pop-up list, the stored values, and which one is set now */
 	type Choice = {labels: string[]; values: (string | number)[]; now: string | number};
@@ -383,7 +371,7 @@ export function App () {
 		{
 			id: OPTION.firstRow,
 			label: 'Apps in the glass bar',
-			description: 'How many apps the first row holds; the rest go in the row below. With 7 the tiles are a little smaller so they still fit.',
+			description: 'How many apps a row holds: the glass bar, and each row of the grid below it. With 7 the tiles are a little smaller, with 5 a little bigger.',
 			value: true,
 			...listed(OPTION.firstRow)
 		},
@@ -492,11 +480,11 @@ export function App () {
 	};
 
 	const onActivate = useCallback((_rowId: string, item: TileModel) => {
-		if (item.key === MISC.settings) { setScreen('settings'); return; }
+		if (item.key === MISC.settings || item.key === BUILTIN.settings) { setScreen('settings'); return; }
 		if (item.key === 'screensaver') { startScreensaver().catch(() => showToast("Couldn't start the screensaver (it needs the Homebrew Channel)", 'error')); return; }
 		if (item.key === MISC.lgHome) { launchLgHome().catch(() => showToast("Couldn't open LG Home", 'error')); return; }
 		if (item.key === 'controls') { setControls(true); return; }
-		if (_rowId === ROW.apps || _rowId === ROW.dock || _rowId === ROW.recent || _rowId === 'folder') {
+		if (_rowId === ROW.apps || _rowId.indexOf(ROW.dock) === 0 || _rowId === 'folder') {
 			const c = configRef.current;
 			updateConfig({...c, recentIds: [item.key].concat(c.recentIds.filter((x) => x !== item.key)).slice(0, RECENT_MAX)});
 		}
@@ -516,7 +504,7 @@ export function App () {
 		}
 		if (action === 'folder-out') { updateConfig({...c, folders: strip(c.folders).filter((f) => f.appIds.length > 0)}); return; }
 		const inFolder = c.folders.reduce((all, f) => all.concat(f.appIds), [] as string[]);
-		const ids = c.appIds.filter((id) => apps.some((a) => a.id === id) && inFolder.indexOf(id) === -1);   // what the rows show, in order
+		const ids = c.appIds.filter((id) => allApps.some((a) => a.id === id) && inFolder.indexOf(id) === -1);   // what the rows show, in order
 		const kept = c.appIds.filter((id) => ids.indexOf(id) === -1);                                          // apps in folders keep their place
 		const at = ids.indexOf(key);
 		if (at < 0) return;
@@ -527,7 +515,7 @@ export function App () {
 		next.splice(at, 1);
 		next.splice(to, 0, key);
 		updateConfig({...c, appIds: next.concat(kept)});
-	}, [apps]);
+	}, [allApps]);
 
 	const onToggle = useCallback((tabId: string, key: string) => {
 		if (tabId === ROW.apps) {

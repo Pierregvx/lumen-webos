@@ -9,6 +9,7 @@ import {Tile, type TileModel} from '../components/Tile';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
 import {Status} from '../components/Status';
+import {BUILTIN} from '../config/builtinApps';
 
 export interface HomeRow {
 	id: string;
@@ -48,8 +49,12 @@ interface Props {
 }
 
 
-/** the rows whose apps can be moved or removed (Recent is automatic) */
-const EDITABLE = ['apps', 'dock'];
+/** the rows whose apps can be moved or removed: the glass bar and the grid rows ('dock', 'dock:1'...) */
+const editable = (rowId: string) => rowId === 'apps' || rowId.indexOf('dock') === 0;
+/** where the glass bar's row goes when the remote is down in the grid: near the top of the screen, as on tvOS (its tiles sit 40px lower) */
+const GRID_TOP = 60;
+/** the lowest a focused grid row may sit before the grid scrolls on (its tiles 40px lower) */
+const GRID_BOTTOM = 820;
 const FOLDER_PRESETS = ['Games', 'Tools', 'Media'];
 const CTX_ITEMS = ['Move', 'Remove from Home'].concat(FOLDER_PRESETS.map((f) => 'Add to ' + f));
 const CTX_FOLDER_ITEMS = ['Take out of Folder'];
@@ -83,6 +88,8 @@ interface Nav {
 	mode: 'key' | 'pointer';
 	/** the dock is slid away; any key brings it back */
 	dockHidden: boolean;
+	/** where the Inputs panel was opened from (the top bar button or the Inputs tile), and where Back returns to */
+	panelFrom: 'top' | 'rows';
 }
 
 const PANEL_COLUMNS = 3;
@@ -95,7 +102,7 @@ const MENU_KEY = 'menu';
  *  - OK on Inputs opens the inputs panel, OK on the time pill opens the menu; Back closes either.
  *  - The second row stays hidden until the remote goes down to it. */
 export function Home ({rows, topItems, menuItems, inputs, active, onActivate, showPeriod, onEdit, folders, weather, dockHide, focusRow, tiles, perRow = 6}: Props) {
-	const nav = useRef<Nav>({engaged: false, zone: 'rows', rowIndex: 0, columns: {}, topIndex: 0, panelIndex: 0, menuIndex: 0, ctxIndex: 0, moving: null, swallowOk: false, suppressClick: false, folder: '', folderIndex: 0, ctxFrom: 'rows', mode: 'key', dockHidden: false});
+	const nav = useRef<Nav>({engaged: false, zone: 'rows', rowIndex: 0, columns: {}, topIndex: 0, panelIndex: 0, menuIndex: 0, ctxIndex: 0, moving: null, swallowOk: false, suppressClick: false, folder: '', folderIndex: 0, ctxFrom: 'rows', mode: 'key', dockHidden: false, panelFrom: 'top'});
 	const latest = useRef({rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide});
 	latest.current = {rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide};
 	const [late, setLate] = useState(false);   // the rows below the first are drawn a moment after launch
@@ -168,14 +175,14 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 		const n = nav.current;
 		const item = latest.current.topItems[i];
 		if (!item) return;
-		if (item.key === INPUTS_KEY) { n.panelIndex = 0; n.zone = 'panel'; render(); }
+		if (item.key === INPUTS_KEY) { n.panelIndex = 0; n.panelFrom = 'top'; n.zone = 'panel'; render(); }
 		else if (item.key === MENU_KEY) { n.menuIndex = 0; n.zone = 'menu'; render(); }
 		else latest.current.onActivate('top', item);
 	};
 	const activatePanel = (i: number) => {
 		const item = latest.current.inputs[i];
 		if (!item) return;
-		nav.current.zone = 'top';
+		nav.current.zone = nav.current.panelFrom;
 		render();
 		latest.current.onActivate('inputs', item);
 	};
@@ -211,6 +218,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 	const activateRowItem = (rowId: string, item: TileModel) => {
 		const n = nav.current;
 		if (item.key.indexOf(FOLDER_PREFIX) === 0) { n.folder = item.key.slice(FOLDER_PREFIX.length); n.folderIndex = 0; n.zone = 'folder'; render(); return; }
+		if (item.key === BUILTIN.inputs) { n.panelIndex = 0; n.panelFrom = 'rows'; n.zone = 'panel'; render(); return; }
 		latest.current.onActivate(rowId, item);
 	};
 
@@ -244,7 +252,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 		const {rows: allRows} = latest.current;
 		const row = allRows[clamp(n.rowIndex, 0, allRows.length - 1)];
 		const held = row && row.items[columnOf(row)];
-		if (!row || EDITABLE.indexOf(row.id) === -1 || !held || held.key.indexOf(FOLDER_PREFIX) === 0) return;
+		if (!row || !editable(row.id) || !held || held.key.indexOf(FOLDER_PREFIX) === 0) return;
 		n.ctxFrom = 'rows'; n.ctxIndex = 0; n.zone = 'ctx'; render();
 	};
 	useOkPress({onPress: press, onLongPress: longPress}, active);
@@ -291,7 +299,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 				case 'right': n.panelIndex = clamp(n.panelIndex + 1, 0, last); break;
 				case 'up': if (n.panelIndex - PANEL_COLUMNS >= 0) n.panelIndex -= PANEL_COLUMNS; break;
 				case 'down': if (n.panelIndex + PANEL_COLUMNS <= last) n.panelIndex += PANEL_COLUMNS; break;
-				case 'back': n.zone = 'top'; break;
+				case 'back': n.zone = n.panelFrom; break;
 			}
 			render();
 			return true;
@@ -383,14 +391,19 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 		const t = setTimeout(() => setSettling(false), 300);
 		return () => clearTimeout(t);
 	}, [lower]);
-	// going down slides the rows up until the focused row's tiles are where the first row's were (a row title stays above them)
+	// going down into the grid slides everything up until the glass bar is near the top of the screen with the grid under it, as on tvOS;
+	// a focused row lower than GRID_BOTTOM scrolls the grid on
 	const rowsRef = useRef<HTMLDivElement>(null);
 	useLayoutEffect(() => {
 		const el = rowsRef.current;
 		if (!el) return;
 		const kids = el.children as HTMLCollectionOf<HTMLElement>;
-		const tilesTop = (row: HTMLElement) => row.offsetTop + ((row.querySelector('.row__viewport') as HTMLElement | null)?.offsetTop || 0);
-		const shift = lower && kids[rowIndex] && kids[0] ? tilesTop(kids[rowIndex]) - tilesTop(kids[0]) : 0;
+		const tilesTop = (row: HTMLElement) => el.offsetTop + row.offsetTop + ((row.querySelector('.row__viewport') as HTMLElement | null)?.offsetTop || 0);
+		let shift = 0;
+		if (lower && kids[0] && kids[rowIndex]) {
+			shift = tilesTop(kids[0]) - GRID_TOP;
+			shift = Math.max(shift, tilesTop(kids[rowIndex]) - GRID_BOTTOM);
+		}
 		el.style.setProperty('--lower-shift', shift + 'px');
 	});
 	const overlay = n.zone === 'panel' || n.zone === 'menu' || n.zone === 'ctx' || n.zone === 'folder';
@@ -435,10 +448,9 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 						titled={row.titled}
 						tileSize={tiles && tiles.size}
 						tileGap={tiles && tiles.gap}
-						items={i > 0 && !late ? [] : row.items}
+						items={i > 1 && !late ? [] : row.items}
 						emptyText={row.emptyText && tr(row.emptyText)}
 						focused={n.engaged && n.zone === 'rows' && i === rowIndex}
-						hidden={i > 0 && !(n.zone === 'rows' && rowIndex >= i)}
 						rest={!n.engaged}
 						onLeave={pointerLeft}
 						selected={columnOf(row)}
@@ -449,7 +461,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 			</div>
 			{n.zone === 'panel' && (
 				<>
-					<div class="panel-backdrop" onClick={() => { n.zone = 'top'; render(); }} />
+					<div class="panel-backdrop" onClick={() => { n.zone = n.panelFrom; render(); }} />
 					<div class="panel">
 						<div class="panel__title">{tr('Inputs')}</div>
 						<div class="panel__grid">

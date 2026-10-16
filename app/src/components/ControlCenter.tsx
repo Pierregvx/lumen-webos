@@ -3,7 +3,6 @@ import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {Glyph, type GlyphName} from './Glyph';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {PICTURE_LABEL, PICTURE_MODES, SOUND_LABEL, SOUND_MODES, setSoundMode, readBacklight, readControls, setBacklight, setEyeComfort, restartTv, screenOff, setMuted, setPictureMode, setVolume, type Controls} from '../lib/tvcontrols';
-import {readStatus, type TvStatus} from '../lib/status';
 
 export type CenterAction = 'lg-home' | 'screensaver' | 'art';
 
@@ -20,7 +19,7 @@ interface Props {
 
 type CellId = 'sound' | 'picture' | 'startsaver' | 'art' | 'home' | 'screenoff' | 'restart' | 'backlight' | 'volume' | 'dark' | 'clock';
 
-/** The layout, like a control centre: wide tiles in pairs, a row of round buttons, then the backlight and volume sliders. */
+/** The layout, like the tvOS Control Center: wide tiles in pairs, a row of icon squares, then the backlight and volume sliders. */
 const GRID: CellId[][] = [['sound', 'picture'], ['dark', 'clock'], ['home', 'art', 'startsaver', 'screenoff', 'restart'], ['backlight'], ['volume']];
 
 /** Each backlight change is a root command (a luna-send process on the TV), so a run of presses sends only the last level, this long after. */
@@ -33,7 +32,6 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 	const outer = useRef({darkMode, clockFormat, onDarkMode, onClockFormat});
 	outer.current = {darkMode, clockFormat, onDarkMode, onClockFormat};
 	const [values, setValues] = useState<Controls>({volume: 0, muted: false, picture: 'normal', sound: 'standard', backlight: 100, eyeComfort: false});
-	const [net, setNet] = useState<TvStatus['network']>('unknown');
 	const [pos, setPos] = useState({row: 0, col: 0});
 	const [confirm, setConfirm] = useState(false);
 	const state = useRef({values, pos, confirm});
@@ -41,7 +39,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 
 	// read the TV's values a moment after the panel is on screen, so opening it is never held up by the TV answering
 	useEffect(() => {
-		const id = window.setTimeout(() => { readControls().then(setValues); readStatus().then((s) => setNet(s.network)).catch(() => undefined); }, 250);
+		const id = window.setTimeout(() => { readControls().then(setValues); }, 250);
 		return () => window.clearTimeout(id);
 	}, []);
 
@@ -129,21 +127,20 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			<div class="cc__text"><div class="cc__name">{title}</div><div class="cc__sub">{sub}</div></div>
 		</div>
 	);
-	const round = (cell: CellId, glyph: GlyphName, label: string) => (
-		<div key={cell} class="cc__round" onMouseEnter={() => setPos(at(cell))} onClick={() => press(cell)}>
-			<div class={`cc__circle${focused(cell) ? ' cc__circle--focused' : ''}`}><Glyph name={glyph} /></div>
-			<div class="cc__label">{tr(cell === 'restart' && confirm ? 'Press OK again' : label)}</div>
-		</div>
+	// icon-only squares, as on tvOS; the focused one is named under it (the squares are 115px apart)
+	const SQUARES: {cell: CellId; glyph: GlyphName; label: string}[] = [
+		{cell: 'home', glyph: 'house', label: 'LG Home'}, {cell: 'art', glyph: 'picture', label: 'Art mode'}, {cell: 'startsaver', glyph: 'screensaver', label: 'Start Screensaver'},
+		{cell: 'screenoff', glyph: 'power', label: 'Screen off'}, {cell: 'restart', glyph: 'restart', label: 'Restart'}
+	];
+	const square = ({cell, glyph}: {cell: CellId; glyph: GlyphName}) => (
+		<div key={cell} class={`cc__square${focused(cell) ? ' cc__square--focused' : ''}`} onMouseEnter={() => setPos(at(cell))} onClick={() => press(cell)}><Glyph name={glyph} /></div>
 	);
+	const named = SQUARES.filter((q) => focused(q.cell))[0];
 
 	return (
 		<>
 			<div class="panel-backdrop" onClick={onClose} />
 			<div class="panel panel--cc">
-				<div class="cc__top">
-					<span class="cc__title">{tr('Control Center')}</span>
-					{net !== 'unknown' && <span class="cc__net">{net === 'wifi' ? 'Wi-Fi' : net === 'ethernet' ? 'Ethernet' : tr('Offline')}</span>}
-				</div>
 				<div class="cc__row">
 					{wide('sound', 'speaker', tr('Sound mode'), SOUND_LABEL[values.sound] || values.sound)}
 					{wide('picture', 'picture', tr('Picture'), PICTURE_LABEL[values.picture] || values.picture)}
@@ -152,13 +149,8 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 					{wide('dark', 'screensaver', tr('Appearance'), darkMode === 'on' ? tr('Dark') : darkMode === 'auto' ? tr('Auto') : tr('Light'), darkMode === 'on')}
 					{wide('clock', 'timer', tr('Clock'), clockFormat === '12h' ? tr('12-hour') : clockFormat === '24h' ? tr('24-hour') : tr('Auto'), clockFormat !== 'auto')}
 				</div>
-				<div class="cc__row cc__row--round">
-					{round('home', 'house', tr('LG Home'))}
-					{round('art', 'picture', tr('Art mode'))}
-					{round('startsaver', 'screensaver', tr('Start now'))}
-					{round('screenoff', 'power', tr('Screen off'))}
-					{round('restart', 'restart', tr('Restart'))}
-				</div>
+				<div class="cc__row cc__row--squares">{SQUARES.map(square)}</div>
+				<div class="cc__caption"><span style={named ? `transform:translateX(${(SQUARES.indexOf(named) - 2) * 115}px)` : undefined}>{named ? tr(named.cell === 'restart' && confirm ? 'Press OK again' : named.label) : ''}</span></div>
 				<div
 					class={`cc__slider${focused('backlight') ? ' cc__slider--focused' : ''}`}
 					onMouseEnter={() => setPos(at('backlight'))}
