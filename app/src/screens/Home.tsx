@@ -52,7 +52,7 @@ interface Props {
 /** the rows whose apps can be moved or removed: the glass bar and the grid rows ('dock', 'dock:1'...) */
 const editable = (rowId: string) => rowId === 'apps' || rowId.indexOf('dock') === 0;
 /** where the glass bar's row goes when the remote is down in the grid: near the top of the screen, as on tvOS (its tiles sit 40px lower) */
-const GRID_TOP = 60;
+const GRID_TOP = 76;
 /** the lowest a focused grid row may sit before the grid scrolls on (its tiles 40px lower) */
 const GRID_BOTTOM = 820;
 const FOLDER_PRESETS = ['Games', 'Tools', 'Media'];

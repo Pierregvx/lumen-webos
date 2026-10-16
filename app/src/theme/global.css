@@ -1127,12 +1127,12 @@ html.focus-strong .rows .tile--focused .tile__box { box-shadow: 0 0 0 4px rgba(2
 .status__cond { margin-left: 12px; font-weight: 400; opacity: 0.85; }
 
 /* ---------- tvOS 26 layout: a wider glass bar, the app grid peeking in under it, the grid scrolled to the top ----------
-   The rows reach out to --layout-rows-edge (the bar is about 95% of the screen wide). The first grid row's tops show at the bottom of the
+   The rows reach out to --layout-rows-edge (the bar is about 91% of the screen wide). The first grid row's tops show at the bottom of the
    screen; going down slides the bar to the top (Home.tsx, GRID_TOP) with the grid under it, and the clock and top buttons fade out. */
-.rows { left: var(--layout-rows-edge); right: var(--layout-rows-edge); top: 784px; }
-.rows > .row + .row, .rows > .row:nth-child(2) { margin-top: -132px; }
+.rows { left: var(--layout-rows-edge); right: var(--layout-rows-edge); top: 820px; }
+.rows > .row + .row, .rows > .row:nth-child(2) { margin-top: -162px; }
 .rows .row__viewport, .rows .row--dock .row__viewport { opacity: 1; }
-.rows > .row:not(:first-child) .row__track--centered { padding-left: calc((1920px - 2 * var(--layout-rows-edge) - var(--first-w, 1740px)) / 2); }
+.rows > .row:not(:first-child) .row__track--centered { padding-left: calc((1920px - 2 * var(--layout-rows-edge) - var(--first-w, 1670px)) / 2); }
 .status, .topbar { transition: transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 220ms ease; }
 .screen--lower .status, .screen--lower .topbar { opacity: 0; pointer-events: none; }
 
@@ -1183,3 +1183,19 @@ html.light .cc__square svg { stroke: rgba(20, 22, 32, 0.72); }
 html.light .cc__square--focused { background-color: #14151b !important; }
 html.light .cc__square--focused svg { stroke: #fff; }
 .cc__caption span { display: inline-block; white-space: nowrap; }
+
+/* ---------- glass bar: 40px of glass round the tiles (it was 24), sitting low so the grid peeks in just under it ----------
+   The bar's tiles show no name (it would fall on the bar's edge and the row below); the grid's do. The grid rows are a little further apart
+   than the bar and the first grid row, so the names fit. */
+.rows .row:not(.row--dock)::before {
+	left: calc(50% - var(--row-w, 1670px) / 2 - 40px); width: calc(var(--row-w, 1670px) + 80px);
+	top: 0; height: calc(var(--layout-tile-height) + 80px); border-radius: calc(var(--layout-tile-radius) + 40px);
+}
+.rows > .row:first-child .tile__label { visibility: hidden; }
+.rows > .row:nth-child(n+3) { margin-top: -132px; }
+
+/* app icons fill more of their tile, as on tvOS: the small square icons at the tile's full height (their own colour runs into the tile's),
+   the built-in glyphs and the monograms larger */
+.rows .tile__image--icon, .panel .tile__image--icon { height: 100%; max-width: 100%; border-radius: 0; }
+.rows .tile__glyph { left: 21%; top: 21%; width: 58%; height: 58%; }
+.rows .tile__monogram { font-size: 92px; }

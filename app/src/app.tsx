@@ -41,8 +41,8 @@ function inVideoHours (mode: string, now = new Date()): boolean {
 	const h = now.getHours();
 	return span[0] < span[1] ? h >= span[0] && h < span[1] : h >= span[0] || h < span[1];
 }
-/** tile sizes for 5, 6 or 7 apps a row: always about 1740px wide (the glass bar about 95% of the screen, as on tvOS), still 5:3 */
-const TILES_FOR: Record<number, {size: number; height: number; gap: number}> = {5: {size: 300, height: 180, gap: 56}, 6: {size: 250, height: 150, gap: 48}, 7: {size: 214, height: 128, gap: 40}};
+/** tile sizes for 5, 6 or 7 apps a row: always about 1670px wide, with 40px of glass round them (the bar about 91% of the screen), still 5:3 */
+const TILES_FOR: Record<number, {size: number; height: number; gap: number}> = {5: {size: 288, height: 173, gap: 58}, 6: {size: 240, height: 144, gap: 46}, 7: {size: 206, height: 124, gap: 38}};
 const IDLE_CHOICES = [0, 5, 10, 20, 30];
 const RECENT_MAX = 8;
 /** what the last launch showed, drawn at once on a cold start (lib/boot.ts) */
