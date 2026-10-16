@@ -28,9 +28,14 @@ export function afterFirstFrame (cb: () => void, delayMs = AFTER_FIRST_FRAME_MS)
 export const BOOT_WALLPAPER_KEY = 'lumen-boot-wallpaper-v1';
 
 export interface BootWallpaper {
-	/** the picture's URL */
-	url: string;
-	/** the --wp-blur and --wp-bg values (the pre-blurred copies the glass shows), when loaded */
+	/** the wallpaper choice this was written for */
+	sel?: string;
+	/** a bundled picture's URL (a local file), painted sharp at once */
+	url?: string;
+	/** the --wp-blur and --wp-bg values (the pre-blurred copies the glass shows). For a cloud choice, bg is a data: URL of the strong blur of
+	 *  the picture the next launch opens on, painted full-screen until the sharp one fades in. */
 	blur?: string;
 	bg?: string;
+	/** a shuffle: the cloud id the next launch shows (stored on the TV by lib/wpstore.ts) */
+	next?: string;
 }

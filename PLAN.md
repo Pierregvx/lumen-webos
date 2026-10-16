@@ -155,6 +155,11 @@ showing `splash.png` until the first frame), and the live blur test is settled.
 - [x] Live blur: the glass bar and top buttons blur live (`backdrop-filter`) and look right; a live full-screen backdrop was too slow, so the
       lower rows and Settings keep the pre-blurred copy. Now the default (Settings > Options > Live blur, on).
 - [ ] ~~Baseline numbers with DevTools~~: dropped, not needed for now.
+- [ ] Cloud wallpaper at cold start (shuffle or a fixed cloud picture): the next launch's picture is chosen and downloaded 8 s after the
+      current one is up, stored on the TV in IndexedDB (lib/wpstore.ts), and its strong blur (about 7 KB, a data: URL) is put in the boot
+      record. index.html paints that blur before the script loads, the glass row draws over it, and the sharp picture, read from the TV
+      with no network, fades in (450 ms). Works in the browser preview; **(verify)** on the TV, including that IndexedDB keeps the
+      pictures across launches.
 
 ### Lower rows transition (Down from the dock to the blurred backdrop)
 Done so far (commit 167253b, dev 1.0.9003): the rows slide with `transform` instead of `top`; the blurred backdrop is a permanent
