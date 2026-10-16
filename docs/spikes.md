@@ -10,7 +10,8 @@ for some app types, or a keep-alive allow list). Every Home press is a cold star
 Possible follow-up: `"keepAlive": true` in appinfo.json. In webOS OSE it makes the app manager suspend an app instead of ending it when
 another app opens; LG's webOS TV docs don't list it, and LG's forum answer is that background apps can be ended for memory with no way to
 stop it. `grep -l keepAlive /usr/palm/applications/*/appinfo.json /media/developer/apps/usr/palm/applications/*/appinfo.json` found
-nothing: no LG app and not youtube-webos uses it, so whatever keeps YouTube alive is not this key. Not yet tried on Lumen.
+nothing: no LG app and not youtube-webos uses it, so whatever keeps YouTube alive is not this key. Tried on Lumen 2026-10-16 (dev build with
+`"keepAlive": true`): no effect, Lumen still reloads from scratch after Plex. Removed again.
 
 ## Sleep timer (2026-10-15)
 `timer/sleep/getRemainTime` from the app: `Denied method call "getRemainTime" for category "/timer/sleep"`. As root, both `getRemainTime`

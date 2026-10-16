@@ -70,8 +70,8 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [x] Power button opens LG Home, not Lumen (confirmed fixed on the TV 2026-10-16): `watch.sh` now treats a wake (power state back to Active, or a gap in its ticks) and a boot as
       a 30 s window in which LG Home is replaced by Lumen (off with `/var/lib/homehook/no-wake-launch`). **(verify)** on the TV; wakes are
       logged in `/tmp/homehook.log`.
-- [ ] `"keepAlive": true` in appinfo.json (added in the dev build): does Lumen survive opening Plex with it? No installed app's appinfo.json uses the key, so likely
-      ignored on webOS 25, but it is harmless to try.
+- [x] `"keepAlive": true` in appinfo.json: tried 2026-10-16, no effect (Lumen still reloads from scratch after Plex). Removed. Cold start
+      stays the thing to make fast (Phase 4).
 - [ ] Recents button: rebind it with Input Hook to launch Lumen with `{"view":"recent"}` (needs the launch-parameter check above).
 - [ ] Colour buttons: which does this remote have, and which key codes reach the app?
 - [ ] Chrome DevTools on the TV: which method works on webOS 25 (Dev Manager Desktop inspect, `ares-inspect`). Needed for Phase 4 traces.
