@@ -1129,8 +1129,8 @@ html.focus-strong .rows .tile--focused .tile__box { box-shadow: 0 0 0 4px rgba(2
 /* ---------- tvOS 26 layout: a wider glass bar, the app grid peeking in under it, the grid scrolled to the top ----------
    The rows reach out to --layout-rows-edge (the bar is about 91% of the screen wide). The first grid row's tops show at the bottom of the
    screen; going down slides the bar to the top (Home.tsx, GRID_TOP) with the grid under it, and the clock and top buttons fade out. */
-.rows { left: var(--layout-rows-edge); right: var(--layout-rows-edge); top: 820px; }
-.rows > .row + .row, .rows > .row:nth-child(2) { margin-top: -162px; }
+.rows { left: var(--layout-rows-edge); right: var(--layout-rows-edge); top: 846px; }
+.rows > .row + .row, .rows > .row:nth-child(2) { margin-top: -168px; }
 .rows .row__viewport, .rows .row--dock .row__viewport { opacity: 1; }
 .rows > .row:not(:first-child) .row__track--centered { padding-left: calc((1920px - 2 * var(--layout-rows-edge) - var(--first-w, 1670px)) / 2); }
 .status, .topbar { transition: transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 220ms ease; }
@@ -1199,3 +1199,13 @@ html.light .cc__square--focused svg { stroke: #fff; }
 .rows .tile__image--icon, .panel .tile__image--icon { height: 100%; max-width: 100%; border-radius: 0; }
 .rows .tile__glyph { left: 21%; top: 21%; width: 58%; height: 58%; }
 .rows .tile__monogram { font-size: 92px; }
+
+/* ---------- peek and grid spacing, measured from tvOS ----------
+   At rest only a sliver of the grid's first row shows under the bar. Down in the grid, the grid rows drop 40px further from the bar
+   (about 70px of space under the glass, as on tvOS) so the focused tile has room. The focused grid tile grows 1.2x, which brings it to about
+   22px from its neighbours, as on tvOS; the bar's stays at 1.06x so it stays inside the glass. */
+.screen--lower .rows > .row:not(:first-child) { transform: translateY(40px); }
+.rows { --motion-focus-scale: 1.2; }
+html.focus-subtle .rows { --motion-focus-scale: 1.12; }
+html.focus-strong .rows { --motion-focus-scale: 1.26; }
+.rows > .row:not(:first-child) .tile__label { margin-top: 32px; }

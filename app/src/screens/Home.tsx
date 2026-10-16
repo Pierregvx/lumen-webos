@@ -54,7 +54,7 @@ const editable = (rowId: string) => rowId === 'apps' || rowId.indexOf('dock') ==
 /** where the glass bar's row goes when the remote is down in the grid: near the top of the screen, as on tvOS (its tiles sit 40px lower) */
 const GRID_TOP = 76;
 /** the lowest a focused grid row may sit before the grid scrolls on (its tiles 40px lower) */
-const GRID_BOTTOM = 820;
+const GRID_BOTTOM = 780;   // 40px less than it looks: the grid rows sit 40px lower while the remote is in them (global.css)
 const FOLDER_PRESETS = ['Games', 'Tools', 'Media'];
 const CTX_ITEMS = ['Move', 'Remove from Home'].concat(FOLDER_PRESETS.map((f) => 'Add to ' + f));
 const CTX_FOLDER_ITEMS = ['Take out of Folder'];
