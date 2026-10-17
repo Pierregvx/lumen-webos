@@ -221,8 +221,9 @@ Done when: each button does its chosen action on the TV.
       day, Favourites, All and each album; landscape only; API calls through curl on the TV because Immich sends no CORS headers; blur made
       on the TV from the thumbnail; next photo prepared for the next cold start. Tested against a fake Immich server only. **(verify)** on
       the TV with your server, including the auto-change timer.
-- [ ] Step 2: ambient screensaver that replaces LG's screensaver, through the same `watch.sh` hook that launches Lumen Gallery: full-screen
-      photos, crossfades, slow zoom (opacity and transform only), clock and weather overlay, "On this day" memories.
+- [x] Step 2: ambient screensaver (built 2026-10-17, docs/immich.md): Settings > Options > Screensaver picks an Immich source; `watch.sh`
+      opens Lumen with `{"view":"ambient"}` when LG's screensaver starts and only ends LG's while the ambient screen is up. Crossfade every
+      30 s, slow zoom, clock bottom left, any key goes home. Simulated in `watch.sh` and the preview only. **(verify)** on the TV.
 - [ ] Decide the rule for ambient versus video wallpaper. Today, with video wallpaper on and Lumen in front, `watch.sh` ends LG's screensaver as
       soon as it starts, so the ambient hook would never fire in that state. Proposed: ambient wins after N minutes idle even with video on,
       and the video-wallpaper flag only suppresses LG's own screensaver.

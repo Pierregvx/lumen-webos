@@ -20,19 +20,20 @@ import {TIMING} from './config/constants';
 import {LOCAL_WALLPAPERS, WALLPAPERS, WALLPAPER_CATEGORIES, cloudUrl} from './config/wallpapers';
 import {resized, setFavorites, setLiveBlur, setWallpaper} from './lib/wallpaper';
 import {albums as immichAlbums, cachedServer, IMMICH_SOURCES, loadServer} from './lib/immich';
+import {Ambient} from './components/Ambient';
 import {setVideoChoice, setVideoPaused, setVideoWallpaper, VIDEO_PLACES} from './lib/wallpaperVideo';
-import {setVideoFlag, startScreensaver} from './lib/system';
+import {setAmbientFlag, setVideoFlag, startScreensaver} from './lib/system';
 import {setFpsCounter} from './lib/fps';
 import {ControlCenter, type CenterAction} from './components/ControlCenter';
 import {CITIES, COUNTRIES} from './config/cities';
 import {AUTO_PLACE, peekWeather, readWeather, type Weather} from './lib/weather';
 import {isDark, LANGS, nextDark, setClockMode, setLang} from './lib/i18n';
 
-type Screen = 'home' | 'settings';
+type Screen = 'home' | 'settings' | 'ambient';
 
 const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock'} as const;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
+const OPTION = {ambient: 'ambient', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 15, 30, 60];
 /** when the video wallpaper plays (Settings > Options > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
 const VIDEO_HOURS: Record<string, [number, number]> = {day: [7, 19], evening: [17, 23], night: [19, 7]};
@@ -122,7 +123,11 @@ export function App () {
 	// launch parameters: {"view":"recent"} opens on the app grid (it opened the Recent row, which has gone: every app is in the grid)
 	useEffect(() => {
 		let seq = 0;
-		const apply = (p: LaunchParams) => { if (p.view === 'recent') setFocusRow({id: ROW.dock, seq: ++seq}); };
+		const apply = (p: LaunchParams) => {
+			if (p.view === 'recent') setFocusRow({id: ROW.dock, seq: ++seq});
+			// watch.sh opens Lumen with {"view":"ambient"} when the TV's screensaver starts (Settings > Options > Screensaver)
+			if (p.view === 'ambient' && configRef.current.ambient) setScreen('ambient');
+		};
 		apply(startParams());
 		return onRelaunch(apply);
 	}, []);
@@ -225,7 +230,8 @@ export function App () {
 		root.toggle('focus-subtle', config.focusStrength === 'subtle');
 		root.toggle('focus-strong', config.focusStrength === 'strong');
 	}, [config.focusStrength]);
-	useEffect(() => { setVideoPaused(screen === 'settings'); document.documentElement.classList.toggle('in-settings', screen === 'settings'); }, [screen]);
+	useEffect(() => { setAmbientFlag(config.ambient !== ''); }, [config.ambient]);
+	useEffect(() => { setVideoPaused(screen === 'settings' || screen === 'ambient'); document.documentElement.classList.toggle('in-settings', screen === 'settings'); }, [screen]);
 
 	const updateConfig = (next: UserConfig) => { configRef.current = next; setConfig(next); saveConfig(next); scheduleBackup(next); };
 
@@ -308,9 +314,10 @@ export function App () {
 			[OPTION.clock]: {labels: ['Auto', '12-hour', '24-hour'], values: ['auto', '12h', '24h'], now: config.clockFormat},
 			[OPTION.focus]: {labels: ['Subtle', 'Normal', 'Strong'], values: ['subtle', 'normal', 'strong'], now: config.focusStrength},
 			[OPTION.firstRow]: {labels: ['5', '6', '7'], values: [5, 6, 7], now: config.firstRow},
+			[OPTION.ambient]: {labels: ['LG\'s own'].concat(IMMICH_SOURCES.map((x) => `Photos: ${x.title}`), immich.albums.map((a) => `Photos: ${a.title}`)), values: [''].concat(IMMICH_SOURCES.map((x) => x.key), immich.albums.map((a) => `immich:album:${a.id}`)), now: config.ambient},
 			[OPTION.videoHours]: {labels: ['Always', 'Daytime (7 am to 7 pm)', 'Evenings (5 pm to 11 pm)', 'Night (7 pm to 7 am)'], values: ['always', 'day', 'evening', 'night'], now: config.videoHours}
 		};
-	}, [config]);
+	}, [config, immich]);
 	/** the list fields of an option: its choices, which is set, and the text shown on the right */
 	const listed = (id: string, fallback = '') => {
 		const c = choices[id];
@@ -357,6 +364,15 @@ export function App () {
 			description: 'With a Shuffle wallpaper chosen, pick a new picture every 15, 30 or 60 minutes.',
 			value: config.wpAutoMinutes > 0,
 			...listed(OPTION.wpAuto)
+		},
+		{
+			id: OPTION.ambient,
+			label: 'Screensaver',
+			description: immich.ready
+				? 'When the TV\'s screensaver starts, show your photos from Immich instead: a slow crossfade every 30 seconds, with the clock. Any key returns to the home screen.'
+				: 'Your photos from Immich instead of LG\'s screensaver. Set up Immich first (Settings > Wallpaper > Photos).',
+			value: config.ambient !== '',
+			...listed(OPTION.ambient)
 		},
 		{
 			id: OPTION.videoHours,
@@ -450,7 +466,7 @@ export function App () {
 			description: 'Frames drawn in the last second and the longest frame, in the top-left corner. Only in dev builds.',
 			value: config.fpsCounter
 		}] : [])
-	], [config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur]);
+	], [config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur, config.ambient, immich.ready]);
 
 	const wallpaper: WallpaperTab = useMemo(() => {
 		const entries: WallpaperEntry[] = [
@@ -591,6 +607,7 @@ export function App () {
 		else if (optionId === OPTION.focus) updateConfig({...c, focusStrength: v});
 		else if (optionId === OPTION.firstRow) updateConfig({...c, firstRow: Number(value)});
 		else if (optionId === OPTION.videoHours) updateConfig({...c, videoHours: v});
+		else if (optionId === OPTION.ambient) updateConfig({...c, ambient: v});
 	}, [choices]);
 
 	/** Replace a row's order with `keys` (the full list of what's shown). */
@@ -603,6 +620,7 @@ export function App () {
 		<>
 			{/* Home stays mounted under Settings so it keeps its focus position. */}
 			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} menuItems={MENU_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} dockHide={config.dockHide} focusRow={focusRow} />
+			{screen === 'ambient' && <Ambient source={config.ambient} weather={weather} showPeriod={config.showAmPm} onExit={() => setScreen('home')} />}
 			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onChoose={onChoose} onClose={() => setScreen('home')} />}
 			{controls && <ControlCenter
 				darkMode={config.darkMode}

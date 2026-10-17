@@ -8,6 +8,8 @@
 #    /var/lib/homehook/no-wake-launch.
 #  - Keeps /var/lib/homehook/recent: the last eight apps that were in front (not Lumen, not LG Home), newest first, one id per line. Lumen reads
 #    it for its Recent row, so apps opened from anywhere show there.
+#  - When the TV's power state becomes "Screen Saver" and /var/lib/homehook/ambient-screensaver exists (Settings > Options > Screensaver):
+#    opens Lumen with {"view":"ambient"} (your Immich photos) and ends LG's screensaver. The video wallpaper, when on and in front, wins.
 #  - When the TV's power state becomes "Screen Saver" (LG's screensaver is not a foreground app, so the power state is what shows it) and
 #    /var/lib/homehook/frame-screensaver exists: opens Frame in screensaver mode, then ends LG's screensaver (turnOnScreen) so Frame is what shows.
 # Never spins: reacts only when the app changes, and at most once every 3 s. Does nothing if the app is not installed.
@@ -19,6 +21,8 @@ LGHOME=com.webos.app.home
 FLAG=/tmp/allow_lg_home
 SAVER_FLAG=/var/lib/homehook/frame-screensaver
 VIDEO_FLAG=/var/lib/homehook/video-wallpaper
+AMBIENT_FLAG=/var/lib/homehook/ambient-screensaver
+AMBIENT_ON=/tmp/lumen-ambient-on
 APPS=/media/developer/apps/usr/palm/applications
 EXTRA=/var/lib/homehook/hosts-extra
 TAKEOVER_FLAG=/var/lib/homehook/home-takeover
@@ -103,6 +107,24 @@ while true; do
   if [ "$vid" -eq 1 ]; then
     case "$pw" in
       *'"Screen Saver"'*) luna-send -n 1 luna://com.webos.service.tvpower/power/turnOnScreen '{}' </dev/null >/dev/null 2>&1; echo "$(date +%T) ended screensaver (video wallpaper)" >> /tmp/homehook.log ;;
+    esac
+  elif [ -f "$AMBIENT_FLAG" ] && target=$(me_target); then
+    # Lumen's ambient screen (your photos) instead of LG's screensaver. While it is up, LG's screensaver still starts after its timer (nothing
+    # is pressed), so it is only ended, not answered by opening Lumen again.
+    case "$pw" in
+      *'"Screen Saver"'*)
+        if [ -n "$front" ] && [ -f "$AMBIENT_ON" ]; then
+          luna-send -n 1 luna://com.webos.service.tvpower/power/turnOnScreen '{}' </dev/null >/dev/null 2>&1
+        elif [ "$pwprev" != "saver" ] && [ $((now - saverlast)) -ge 5 ]; then
+          saverlast=$now
+          r=$(luna-send -n 1 luna://com.webos.applicationManager/launch "{\"id\":\"$target\",\"params\":{\"view\":\"ambient\"}}" </dev/null 2>&1)
+          echo "$(date +%T) screensaver: ambient ($target): $r" >> /tmp/homehook.log
+          sleep 1
+          luna-send -n 1 luna://com.webos.service.tvpower/power/turnOnScreen '{}' </dev/null >/dev/null 2>&1
+        fi
+        pwprev="saver"
+        ;;
+      *) pwprev="other" ;;
     esac
   elif [ -f "$SAVER_FLAG" ] && [ -d "$APPS/$FRAME" ]; then
     case "$pw" in

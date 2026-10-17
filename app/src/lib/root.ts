@@ -100,6 +100,17 @@ export function setVideoFlag (on: boolean): Promise<void> {
 	return run(on ? `mkdir -p ${HOMEHOOK} && touch ${HOMEHOOK}/video-wallpaper` : `rm -f ${HOMEHOOK}/video-wallpaper`).then(() => undefined);
 }
 
+/** Tells watch.sh to replace LG's screensaver with Lumen's ambient screen (your photos). */
+export function setAmbientFlag (on: boolean): Promise<void> {
+	return run(on ? `mkdir -p ${HOMEHOOK} && touch ${HOMEHOOK}/ambient-screensaver` : `rm -f ${HOMEHOOK}/ambient-screensaver`).then(() => undefined);
+}
+
+/** While the ambient screen is up, watch.sh only ends LG's screensaver (which starts again after its timer, as nothing is pressed) instead of
+ *  opening Lumen again. */
+export function setAmbientShowing (on: boolean): Promise<void> {
+	return run(on ? 'touch /tmp/lumen-ambient-on' : 'rm -f /tmp/lumen-ambient-on', 4000).then(() => undefined);
+}
+
 /** With the Home watcher running, LG Home would bounce straight back to Lumen: this flag lets it open once. */
 export function allowLgHome (): Promise<void> {
 	return run('touch /tmp/allow_lg_home', 4000).then(() => undefined);

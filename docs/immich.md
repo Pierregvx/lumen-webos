@@ -40,3 +40,15 @@ make in their EXIF, which drops screenshots and saved images. Recently shown pho
   and the photo fades in over it, as for the cloud wallpapers.
 - The key is kept in the app's localStorage on the TV (to build the photo URL at start-up without a root call) and in
   `/var/lib/homehook/immich.json`. Use a read-only key.
+
+## Screensaver
+
+Settings > Options > Screensaver: pick a Photos source instead of "LG's own". When the TV's screensaver starts, `watch.sh` opens Lumen on
+its ambient screen instead: your photos full-screen, a 1.6 s crossfade every 30 seconds, each photo zooming in very slowly, and the clock,
+date and weather bottom left. Any key returns to the home screen.
+
+- Needs the updated `tools/tv/watch.sh` on the TV (it looks for `/var/lib/homehook/ambient-screensaver`, which the setting creates).
+- LG's screensaver keeps starting after its timer while the ambient screen is up (nothing is pressed); `watch.sh` sees
+  `/tmp/lumen-ambient-on` and only ends it.
+- With the video wallpaper on and Lumen in front, the video wallpaper wins, as before.
+- Like Lumen Gallery's screensaver, it takes the screen from whatever app was in front (a paused Plex film, for example).
