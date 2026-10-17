@@ -42,6 +42,10 @@ All commands so far are read-only and run as root over SSH on the TV.
   `"16522_17546_9018"` that matches the guide's `signalChannelId`. Only the channels flipped to appear, so this is the current-channel
   reply, not a list. Next: try `getChannelList` on `legacybroadcast.channel`, `utp.broadcast` and `legacybroadcast.broadcast`, and
   capture the `changeChannel` payload for tuning from Lumen.
+- **Step 1d (2026-10-17):** `getChannelList` is `Unknown method` on all three (`legacybroadcast.channel`, `utp.broadcast`,
+  `legacybroadcast.broadcast`). Next: ask each service for its method list (luna-service2 introspection, and the api-permissions
+  files). The `changeChannel` grep printed nothing, probably because `[^»]` breaks on the multibyte `«` in busybox grep; use a plain
+  grep with `cut` instead.
 
 ## Plan (do in order, stop when one works)
 
