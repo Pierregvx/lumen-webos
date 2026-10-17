@@ -3,6 +3,8 @@ import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
 import {channelColor, clockText, findChannel, nowNextAt, progress, timeLeft, type Channel, type Listings} from '../lib/livetv';
+import {FullGuide} from './FullGuide';
+import type {LiveTv} from '../hooks/useLiveTv';
 
 interface Props {
 	channels: Channel[];
@@ -10,6 +12,11 @@ interface Props {
 	logos: Record<string, string>;
 	/** the current minute, ms */
 	now: number;
+	/** the Full guide's listings (useLiveTv) */
+	schedule: LiveTv['schedule'];
+	/** showing the Full guide rather than Now and Next */
+	full: boolean;
+	onMode: (full: boolean) => void;
 	active: boolean;
 	onOpen: (channel: Channel) => void;
 	onClose: () => void;
@@ -30,23 +37,30 @@ const TYPED_MAX = 4;
 /** a remote's number key (0-9, either row of a keyboard), or -1 */
 const digitOf = (e: KeyboardEvent) => (e.keyCode >= 48 && e.keyCode <= 57 ? e.keyCode - 48 : e.keyCode >= 96 && e.keyCode <= 105 ? e.keyCode - 96 : -1);
 
-/** The Guide, Now and Next: one row per channel (number, logo, now with its times and progress, next with its start time).
- *  Up/Down move, OK opens Live TV on the channel, Back returns home. The number keys type a channel number and the list follows each digit
- *  (1 goes to 1, then 0 to 10, then 1 to 101); the digits show at the top and clear a moment after the last one. Only the rows near the view are drawn.
- *  Phase 2 adds a Now and Next / Full guide switcher at the top right (.guide__switch); nothing else moves for it. */
-export function Guide ({channels, listings, logos, now, active, onOpen, onClose}: Props) {
+/** The Guide. Now and Next: one row per channel (number, logo, now with its times and progress, next with its start time); the Full guide
+ *  is the time grid (screens/FullGuide.tsx). The switcher at the top right picks between them: Up from the first channel reaches it,
+ *  Left/Right or OK on it switch, Down goes back to the channels. The choice is kept for next time. Up/Down move, OK opens Live TV on the
+ *  channel, Back returns home. The number keys type a channel number and the list follows each digit (1 goes to 1, then 0 to 10, then 1 to
+ *  101); the digits show at the top and clear a moment after the last one. Only the rows near the view are drawn. */
+export function Guide ({channels, listings, logos, now, schedule, full, onMode, active, onOpen, onClose}: Props) {
 	const [focus, setFocus] = useState(0);
+	const [onSwitch, setOnSwitch] = useState(false);
 	const last = channels.length - 1;
 	const at = clamp(focus, 0, Math.max(0, last));
+	const gridKeys = active && full && !onSwitch;
 
 	const handleKey = useCallback((key: NavKey): boolean => {
-		if (key === 'up') setFocus((f) => clamp(f - 1, 0, Math.max(0, last)));
+		if (key === 'back') onClose();
+		else if (onSwitch) {
+			if (key === 'left' || key === 'right') onMode(key === 'right');
+			else if (key === 'down') setOnSwitch(false);
+		}
+		else if (key === 'up') { if (at === 0) setOnSwitch(true); else setFocus(at - 1); }
 		else if (key === 'down') setFocus((f) => clamp(f + 1, 0, Math.max(0, last)));
-		else if (key === 'back') onClose();
 		return true;
-	}, [last, onClose]);
-	useKeys(handleKey, active);
-	useOkPress({onPress: () => { if (channels[at]) onOpen(channels[at]); }, onLongPress: () => undefined}, active);
+	}, [at, last, onSwitch, onMode, onClose]);
+	useKeys(handleKey, active && !gridKeys);
+	useOkPress({onPress: () => { if (onSwitch) onMode(!full); else if (channels[at]) onOpen(channels[at]); }, onLongPress: () => undefined}, active && !gridKeys);
 
 	const [typed, setTyped] = useState('');
 	const typedRef = useRef('');
@@ -78,12 +92,17 @@ export function Guide ({channels, listings, logos, now, active, onOpen, onClose}
 	const t = Date.now();
 
 	return (
-		<div class="screen screen--settings screen--guide">
+		<div class={`screen screen--settings screen--guide${full ? ' screen--guide-full' : ''}`}>
 			<div class="guide__head">
 				<h1 class="guide__title">{tr('Guide')}</h1>
 				{typed && <div class={`guide__typed${typedHit ? '' : ' guide__typed--miss'}`}>{typed}</div>}
-				<div class="guide__switch" />
+				<div class={`guide__switch${onSwitch ? ' guide__switch--focused' : ''}`}>
+					<span class={`guide__seg${full ? '' : ' guide__seg--on'}`} onClick={() => onMode(false)}>{tr('Now and Next')}</span>
+					<span class={`guide__seg${full ? ' guide__seg--on' : ''}`} onClick={() => onMode(true)}>{tr('Full guide')}</span>
+				</div>
 			</div>
+			{full && <FullGuide channels={channels} listings={schedule.listings} from={schedule.from} thin={schedule.state === 'pf'} logos={logos} now={now} at={at} onAt={setFocus} active={gridKeys} onOpen={onOpen} onTop={() => setOnSwitch(true)} onClose={onClose} />}
+			{!full && <>
 			<div class="guide__cols">
 				<span class="guide__col guide__col--now">{tr('Now')} · {clockText(now)}</span>
 				<span class="guide__col guide__col--next">{tr('Next')}</span>
@@ -122,6 +141,7 @@ export function Guide ({channels, listings, logos, now, active, onOpen, onClose}
 					})}
 				</div>
 			</div>
+			</>}
 		</div>
 	);
 }

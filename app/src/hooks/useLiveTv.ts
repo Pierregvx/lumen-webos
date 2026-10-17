@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {cachedLive, cachedLogos, readChannels, readListings, readLogos, rowChannels, saveLive, type Channel, type Listings, type LiveCache} from '../lib/livetv';
+import {cachedLive, cachedLogos, mergeListings, readChannels, readListings, readLogos, readSchedule, rowChannels, saveLive, type Channel, type Listings, type LiveCache} from '../lib/livetv';
 import {wallpaperShown} from '../lib/wallpaper';
 import {bootMark} from '../lib/log';
 
@@ -10,7 +10,16 @@ export interface LiveTv {
 	logos: Record<string, string>;
 	/** the current minute (ms), for progress and what is on now */
 	now: number;
+	/** the Full guide's listings: the schedule from `scheduleFrom` for SCHEDULE_HOURS, with Now and Next's where the schedule has nothing.
+	 *  'pf' when the schedule could not be read, so the grid holds only now and next */
+	schedule: {listings: Listings; from: number; state: 'loading' | 'ready' | 'pf'};
 }
+
+/** how far ahead the Full guide reads, and so how far right it scrolls */
+export const SCHEDULE_HOURS = 8;
+const HALF_HOUR = 1800000;
+/** the schedule is read again when the Full guide opens this long after the last read */
+const SCHEDULE_STALE_MS = 10 * 60000;
 
 const minute = () => { const t = Date.now(); return t - (t % 60000); };
 /** after the wallpaper is up: how long before the row is drawn from the cache, and then before the TV is asked */
@@ -24,7 +33,7 @@ const NONE: LiveCache = {channels: [], listings: {}};
  *  apps first: then the last answer (and its logos) comes out of localStorage, and a moment later the TV is asked again. After that it is asked
  *  whenever the Guide opens, and when a programme on one of the row's channels (`rowIds`, see rowChannels) ends. No timer reads the TV:
  *  the once-a-minute tick only moves the progress bars. */
-export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[] | null): LiveTv {
+export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[] | null, fullOpen: boolean): LiveTv {
 	const [data, setData] = useState(NONE);
 	const [logos, setLogos] = useState<Record<string, string>>({});
 	const [started, setStarted] = useState(false);
@@ -76,6 +85,21 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[
 	useEffect(() => { if (started) bootMark('live-drawn'); }, [started]);
 	useEffect(() => { if (guideOpen && started) refresh(false); }, [guideOpen]);
 
+	// the Full guide: the schedule from the half hour now is in, read when it opens (again if the last read is old)
+	const [sch, setSch] = useState<{listings: Listings; from: number; at: number; state: 'loading' | 'ready' | 'pf'}>({listings: {}, from: 0, at: 0, state: 'loading'});
+	useEffect(() => {
+		if (!fullOpen) return undefined;
+		const t = Date.now();
+		if (sch.state !== 'loading' && t - sch.at < SCHEDULE_STALE_MS) return undefined;
+		let gone = false;
+		const from = t - (t % HALF_HOUR);
+		readSchedule(from, from + SCHEDULE_HOURS * 3600000)
+			.then((listings) => ({listings, state: 'ready' as const}), () => ({listings: {}, state: 'pf' as const}))
+			.then((r) => { if (!gone) setSch({...r, from, at: Date.now()}); });
+		return () => { gone = true; };
+	}, [fullOpen]);
+	const schedule = {listings: mergeListings(sch.listings, data.listings), from: sch.from || now - (now % HALF_HOUR), state: sch.state};
+
 	useEffect(() => {
 		if (!enabled || !started) return undefined;
 		const id = window.setInterval(() => {
@@ -89,5 +113,5 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[
 		return () => window.clearInterval(id);
 	}, [enabled, started]);
 
-	return {channels: data.channels, listings: data.listings, logos, now};
+	return {channels: data.channels, listings: data.listings, logos, now, schedule};
 }

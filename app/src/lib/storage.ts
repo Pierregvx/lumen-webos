@@ -75,6 +75,8 @@ export interface UserConfig {
 	liveTvRow: boolean;
 	/** the Live TV row's channels (channel ids), in order, picked in Settings > Channels; null = the first five by number */
 	liveChannels: string[] | null;
+	/** the Guide opens on the Full guide (the time grid) rather than Now and Next; the switcher at its top right sets it */
+	guideFull: boolean;
 }
 
 export const DEFAULT_CONFIG: UserConfig = {
@@ -112,7 +114,8 @@ export const DEFAULT_CONFIG: UserConfig = {
 	seeded: false,
 	builtinTiles: false,
 	liveTvRow: true,
-	liveChannels: null
+	liveChannels: null,
+	guideFull: false
 };
 
 export function loadConfig (): UserConfig {
@@ -167,7 +170,8 @@ export function parseConfig (raw: string): UserConfig {
 		seeded: parsed.seeded !== false,
 		builtinTiles: parsed.builtinTiles === true,
 		liveTvRow: parsed.liveTvRow !== false,
-		liveChannels: Array.isArray(parsed.liveChannels) ? parsed.liveChannels.filter((x) => typeof x === 'string') : null
+		liveChannels: Array.isArray(parsed.liveChannels) ? parsed.liveChannels.filter((x) => typeof x === 'string') : null,
+		guideFull: parsed.guideFull === true
 	};
 }
 

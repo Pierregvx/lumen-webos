@@ -92,6 +92,22 @@ export function nowNext (page?: string, slim = true): Promise<string> {
 	return run(luna('luna://com.webos.epgdb/find', {query}), 12000);
 }
 
+/** the full schedule (the Full guide); about 11,900 rows when Live TV has run lately */
+const PROGRAM_SCH = 'com.webos.service.legacybroadcast.programSCH:4';
+const SCH_FIELDS = ['signalChannelId', 'programName', 'startTime', 'endTime', 'isSubtitle', 'isAD'];
+/** a guide time, UTC: "2026,10,17,17,05,00" */
+const GUIDE_TIME = /^\d{4}(,\d{2}){5}$/;
+
+/** One page (up to 500 rows) of the schedule from `after` on, as the TV's JSON reply. db8 only filters on an indexed field, and which of
+ *  `endTime` and `startTime` the kind indexes is not known yet (verify), so the caller tries one and then the other. */
+export function schedule (field: 'endTime' | 'startTime', after: string, page?: string): Promise<string> {
+	if (!GUIDE_TIME.test(after)) return Promise.reject(new Error('refused: guide time'));
+	if (page !== undefined && !DB8_PAGE.test(page)) return Promise.reject(new Error('refused: db8 page'));
+	const query: Record<string, unknown> = {from: PROGRAM_SCH, where: [{prop: field, op: '>', val: after}], select: SCH_FIELDS, limit: 500};
+	if (page) query.page = page;
+	return run(luna('luna://com.webos.epgdb/find', {query}), 12000);
+}
+
 /** Opens Live TV on a channel (from Home too). */
 export function openChannel (channelId: string): Promise<void> {
 	if (!CHANNEL_ID.test(channelId)) return Promise.reject(new Error('refused: channel id'));

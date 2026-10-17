@@ -64,6 +64,9 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [ ] Recent row: `watch.sh` writes `/var/lib/homehook/recent` correctly (seen 2026-10-15: PlxNative, YouTube). The row was there but drawn
       below the screen (going down slid the rows a fixed 300px, enough for the second row only); now each row slides into view. **(verify)**:
       press Down twice from the glass row.
+- [ ] Full guide (Live TV phase 2, `docs/live-tv-build.md`). **(verify)**: open the Guide, press Up to the switcher, Right to Full guide.
+      The grid should fill with the schedule, not only now and next. Then `cat /var/lib/homehook/lumen.log` and send the `guide` lines:
+      they say whether the schedule was read by end time or by start time, how many pages, and how long it took.
 
 ### Spikes (yes/no answers, noted in `docs/spikes.md`)
 - [x] Does the clock go wrong after a reboot here? No: right time and BST with the clock fix moved aside. `clockfix.sh` deleted (it is in git
