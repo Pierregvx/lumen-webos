@@ -53,9 +53,11 @@ is in `docs/live-tv.md`; this file only keeps what the build needs.
   programme at a time and scroll the grid. It goes back as far as the half hour now is in, and on as far as the schedule was read (8 hours).
 - The schedule is read when the Full guide opens (again after 10 minutes), from `programSCH:4` with six fields (`root.ts` `schedule()`).
   Seen on the TV 2026-10-17: the kind has no index on `startTime` or `endTime`, so db8 refuses any time filter ("no index for query",
-  -3965). Lumen reads every page with no filter (about 24 of 500 rows) and keeps what overlaps the next 8 hours. The grid shows Now and
-  Next's listings at first and fills in every 3 pages. Each read writes a `guide` line to `lumen.log` with pages, rows and time.
-  **(verify)** how long the whole read takes on the TV.
+  -3965). Lumen reads every page with no filter and keeps what overlaps the next 8 hours. The kind holds about a week: over 20,000 rows,
+  more than 40 pages, at about 155 ms a page. The grid shows Now and Next's listings at first and fills in every 3 pages. Each read writes
+  a `guide` line to `lumen.log` with pages, rows and time.
+- The schedule kind does not hold the programmes on now and next, so Now and Next's rows always stay in the grid and the schedule's
+  rows fill in around them (`mergeListings`). **(verify)** that the current slot is filled on every channel.
 - Not done: the programme description from the mock. Rows carry a description block, but reading it for every row is heavy; reading
   it for the focused programme alone needs a way to ask db8 for one row, which is not tried yet.
 

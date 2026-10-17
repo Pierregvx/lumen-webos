@@ -179,8 +179,8 @@ export function groupListings (rows: RawProgramme[]): Listings {
 
 // ---------- the full schedule (Full guide) ----------
 
-/** about 11,900 rows a full schedule, 500 a page: more pages than this is a reply gone wrong */
-const MAX_SCH_PAGES = 40;
+/** the schedule holds about a week, over 20,000 rows (seen on the TV 2026-10-17), 500 a page: more pages than this is a reply gone wrong */
+const MAX_SCH_PAGES = 120;
 /** the grid is drawn again after every this many pages, so it fills while the rest is read */
 const PART_EVERY = 3;
 
@@ -212,10 +212,15 @@ export function readSchedule (from: number, to: number, onPart?: (l: Listings) =
 	});
 }
 
-/** The schedule's listings, with Now and Next's for any channel the schedule has nothing for. */
+/** Each channel's Now and Next listings, with the schedule's programmes added around them. The schedule kind does not hold what is on
+ *  now and next (seen on the TV 2026-10-17), so Now and Next's rows always stay, and a schedule row that overlaps one is dropped. */
 export function mergeListings (sch: Listings, pf: Listings): Listings {
 	const out: Listings = {...pf};
-	for (const k in sch) if (sch[k].length) out[k] = sch[k];
+	for (const k in sch) {
+		const keep = (pf[k] || []).slice();
+		for (const p of sch[k]) if (!keep.some((q) => p.start < q.end && q.start < p.end)) keep.push(p);
+		out[k] = keep.sort((a, b) => a.start - b.start);
+	}
 	return out;
 }
 
