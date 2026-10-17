@@ -110,6 +110,10 @@ All commands so far are read-only and run as root over SSH on the TV.
   Also seen: the HbbTV plugin calls `iepg/getChannelList {"channelGroup":["All"],"channelMode":["Tuner"],"dataType":0,"sort":0}`
   (another working form), and `nlpmanager` calls `iepg/getEventInfo {"channelMode":["Tuner","IP"],"programId":"bbc_two_hd_1/2026-10-1717:05","dataType":0}`.
   Next: print Live TV's full `changeChannel` payload.
+- **Step 1r (2026-10-17): Live TV's tune call in full:** `luna://com.webos.service.utp.broadcast/changeChannel`
+  `{"broadcastId":"00000001-559c-d46a-2902-723da034b853","channelId":"1_41_2_102_16522_17472_9018","connection_timeout":500,"fallback":true,"ignorable":false}`.
+  The `broadcastId` is Live TV's own broadcast session, so another caller needs the current one. Next: send the same call as root with
+  that id while Live TV is open, and list `utp.broadcast` methods that could return the current broadcast id.
 
 ## Answer
 
