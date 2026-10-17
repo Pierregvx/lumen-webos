@@ -5,7 +5,7 @@ import {setAmbientShowing} from '../lib/system';
 import type {Weather} from '../lib/weather';
 
 /** Screensaver with your own photos (Immich). Opened by watch.sh with {"view":"ambient"} when the TV's screensaver starts, instead of LG's.
- *  Two full-screen layers: the next photo is loaded and decoded on the hidden one, then they swap with a crossfade (opacity only) every `seconds` (Settings > Options > Time on each photo, 30 by default); each photo
+ *  Two full-screen layers: the next photo is loaded and decoded on the hidden one, then they swap with a crossfade (opacity only) every `seconds` (Settings > Screensaver > Time on each photo, 30 by default); each photo
  *  zooms in very slowly (transform only). The clock, date and weather sit bottom left. Any key or a click goes back to the home screen. */
 export function Ambient ({source, seconds = 30, weather, showPeriod, onExit}: {source: string; seconds?: number; weather?: Weather | null; showPeriod?: boolean; onExit: () => void}) {
 	const [layers, setLayers] = useState<[string, string]>(['', '']);

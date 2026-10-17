@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings mockup</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap">
+<style>
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: 'Geist', system-ui, sans-serif; }
+#stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden; color: #fff; }
+.bg { position: absolute; inset: -40px; background: url(../../screenshots/home.jpg) center/cover; filter: blur(40px) saturate(1.1); }
+.bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(rgba(10, 12, 22, 0.50), rgba(10, 12, 22, 0.62)); }
+.page { position: absolute; inset: 0; transition: transform 260ms ease-out, opacity 260ms ease-out; }
+.title { position: absolute; top: 64px; left: 0; right: 0; text-align: center; font-size: 56px; font-weight: 600; letter-spacing: -0.02em; color: rgba(255, 255, 255, 0.62); }
+.side { position: absolute; left: 110px; top: 0; bottom: 0; width: 640px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.icon { width: 520px; height: 520px; border-radius: 120px; display: flex; align-items: center; justify-content: center;
+	background: linear-gradient(145deg, rgba(255, 255, 255, 0.30), rgba(255, 255, 255, 0.10)); box-shadow: inset 2px 2px 2px -1px rgba(255, 255, 255, 0.7), 0 30px 60px rgba(0, 0, 0, 0.25); }
+.icon svg { width: 200px; height: 200px; stroke: rgba(15, 18, 28, 0.78); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.desc { margin-top: 44px; width: 520px; min-height: 120px; font-size: 26px; line-height: 1.45; color: rgba(255, 255, 255, 0.62); text-align: center; }
+.list { position: absolute; left: 860px; right: 140px; top: 190px; bottom: 60px; overflow: hidden; }
+.track { transition: transform 220ms ease-out; }
+.row { height: 70px; margin: 0 0 14px; padding: 0 32px; border-radius: 22px; display: flex; align-items: center; font-size: 34px; font-weight: 500;
+	background: linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06)); color: rgba(255, 255, 255, 0.94); transition: transform 160ms ease-out, background-color 160ms; }
+.row .label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .value { color: rgba(255, 255, 255, 0.55); margin-left: 24px; }
+.row .chev { width: 18px; height: 30px; margin-left: 20px; stroke: rgba(255, 255, 255, 0.5); fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.row .tick { width: 30px; height: 30px; margin-right: 18px; stroke: currentColor; fill: none; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; visibility: hidden; }
+.row .tick.on { visibility: visible; }
+.row.focus { background: #fff; color: #111; transform: scale(1.03); box-shadow: 0 16px 30px rgba(0, 0, 0, 0.30); }
+.row.focus .value { color: rgba(17, 17, 17, 0.55); }
+.row.focus .chev { stroke: rgba(17, 17, 17, 0.45); }
+/* grid page */
+.gridhead { position: absolute; top: 64px; left: 160px; right: 160px; height: 70px; }
+.gridhead .title { top: 0; }
+.btn { position: absolute; right: 0; top: 4px; padding: 14px 30px; border-radius: 40px; font-size: 26px; font-weight: 600; background: linear-gradient(145deg, rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0.06)); }
+.btn.focus { background: #fff; color: #111; transform: scale(1.06); }
+.hint { position: absolute; top: 170px; left: 0; right: 0; text-align: center; font-size: 24px; color: rgba(255, 255, 255, 0.5); }
+.grid { position: absolute; top: 250px; left: 160px; right: 160px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 34px 30px; }
+.tile { aspect-ratio: 16 / 9; border-radius: 24px; position: relative; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 600; transition: transform 160ms; }
+.tile.off { opacity: 0.45; }
+.tile .check { position: absolute; top: 12px; right: 12px; width: 34px; height: 34px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; }
+.tile .check svg { width: 20px; stroke: #111; fill: none; stroke-width: 3.4; }
+.tile.focus { transform: scale(1.10); box-shadow: 0 0 0 5px #fff, 0 20px 40px rgba(0, 0, 0, 0.4); }
+.tile-name { position: absolute; bottom: -38px; left: 0; right: 0; text-align: center; font-size: 22px; font-weight: 500; color: rgba(255, 255, 255, 0.8); }
+.keys { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); font: 14px system-ui; color: rgba(255, 255, 255, 0.55); background: rgba(0, 0, 0, 0.5); padding: 6px 14px; border-radius: 20px; z-index: 5; }
+</style>
+</head>
+<body>
+<div id="stage"><div class="bg"></div><div id="view"></div></div>
+<div class="keys">Mockup: arrows move, Enter is OK, Backspace or Esc is Back</div>
+<script>
+const G = {
+	apps: '<rect x="3" y="3" width="7" height="7" rx="1.6"/><rect x="14" y="3" width="7" height="7" rx="1.6"/><rect x="3" y="14" width="7" height="7" rx="1.6"/><rect x="14" y="14" width="7" height="7" rx="1.6"/>',
+	sources: '<rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>',
+	channels: '<rect x="2.5" y="6" width="19" height="14" rx="2"/><path d="M8 2l4 4 4-4"/>',
+	wallpaper: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="15.5" cy="8.5" r="1.5"/>',
+	home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+	screensaver: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+	weather: '<circle cx="9" cy="9" r="3.5"/><path d="M9 2.5v1.5M2.5 9H4M4.4 4.4l1 1M13.6 4.4l-1 1"/><path d="M8 19h10a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.6 1.5A3 3 0 0 0 8 19z"/>',
+	appearance: '<circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18z" fill="rgba(15,18,28,0.78)"/>',
+	clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+	system: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'
+};
+const sw = (on, d) => ({type: 'switch', on, desc: d});
+const ch = (choices, at, d) => ({type: 'choice', choices, at, desc: d});
+const P = {
+	root: {title: 'Settings', rows: [
+		{label: 'Apps', glyph: 'apps', open: 'grid:Apps'},
+		{label: 'Sources', glyph: 'sources', open: 'grid:Sources'},
+		{label: 'Channels', glyph: 'channels', open: 'grid:Channels'},
+		{label: 'Wallpaper', glyph: 'wallpaper', open: 'wallpaper'},
+		{label: 'Home Screen', glyph: 'home', open: 'home'},
+		{label: 'Screensaver', glyph: 'screensaver', open: 'screensaver'},
+		{label: 'Weather', glyph: 'weather', open: 'weather'},
+		{label: 'Appearance', glyph: 'appearance', open: 'appearance'},
+		{label: 'Language and Clock', glyph: 'clock', open: 'clock'},
+		{label: 'System', glyph: 'system', open: 'system'}
+	]},
+	wallpaper: {title: 'Wallpaper', glyph: 'wallpaper', rows: [
+		{label: 'Choose wallpaper', open: 'grid:Wallpaper', desc: 'Pick a picture, a set of photos or a video place.'},
+		{label: 'Change wallpaper automatically', ...ch(['Off', 'Every hour', 'Every day'], 1, 'Moves on to the next picture in the category on a timer.')},
+		{label: 'Video wallpaper hours', ...ch(['Always', 'Daytime 7-19', 'Evening 17-23'], 0, 'When the video wallpaper plays. The still wallpaper shows outside these hours.')},
+		{label: 'Dim the wallpaper at night', ...sw(true, 'Darkens the wallpaper after sunset.')}
+	]},
+	home: {title: 'Home Screen', glyph: 'home', rows: [
+		{label: 'Live TV row', ...sw(true, 'Shows the channels picked in Settings > Channels below the apps, with what is on now.')},
+		{label: 'Hide the dock', ...ch(['Never', 'After 10 s', 'After 30 s'], 0, 'Hides the lower rows until you press down.')},
+		{label: 'Apps in the glass bar', ...ch(['5', '6', '7'], 1, 'How many apps sit in the top row.')},
+		{label: 'Hide app names', ...sw(false, 'Shows the icons only.')}
+	]},
+	screensaver: {title: 'Screensaver', glyph: 'screensaver', rows: [
+		{label: 'Screensaver', ...ch(['TV default', 'Lumen photos', 'Off'], 1, 'Shows photos when the TV starts its screensaver.')},
+		{label: 'Time on each photo', ...ch(['10 s', '20 s', '30 s', '1 min'], 1, 'How long each photo stays on screen.')}
+	]},
+	weather: {title: 'Weather', glyph: 'weather', rows: [
+		{label: 'Date and weather', ...sw(true, "Shows today's date and the temperature at the top left of the home screen. The weather comes from open-meteo.com.")},
+		{label: 'Weather country', ...ch(['Auto', 'United Kingdom', 'Ireland', 'France'], 1, 'Narrows the city list.')},
+		{label: 'Weather city', ...ch(['Auto', 'London', 'Manchester', 'Edinburgh', 'Bristol'], 1, 'Auto finds your area from your internet connection (ipwho.is).')}
+	]},
+	appearance: {title: 'Appearance', glyph: 'appearance', rows: [
+		{label: 'Appearance', ...ch(['Dark', 'Light', 'Automatic'], 0, 'Light or dark glass. Automatic follows the time of day.')},
+		{label: 'Focus highlight', ...ch(['Subtle', 'Normal', 'Strong'], 1, 'How much the focused tile grows and glows.')},
+		{label: 'Reduce motion', ...sw(false, 'Turns off slides and zooms.')},
+		{label: 'Live blur', ...sw(true, 'Blurs the wallpaper behind the glass live. Off uses a pre-blurred copy, which is faster.')}
+	]},
+	clock: {title: 'Language and Clock', glyph: 'clock', rows: [
+		{label: 'Language', ...ch(['English', 'Français', 'Deutsch', 'Español'], 0, 'The language of Lumen. Apps keep their own.')},
+		{label: 'Clock', ...ch(['24-hour', '12-hour'], 0, 'The time at the top right of the home screen.')},
+		{label: 'AM/PM on the clock', ...sw(false, 'Only for the 12-hour clock.')}
+	]},
+	system: {title: 'System', glyph: 'system', rows: [
+		{label: 'Live app list via Homebrew Channel', ...sw(true, 'Rooted TVs only. Lists every installed app with its real icon. When off, the built-in app catalogue is used.')},
+		{label: 'Show system apps', ...sw(false, "Offers the TV's own apps (Live TV, AirPlay, TV Settings) in Settings > Apps.")},
+		{label: 'Restore settings from the TV', type: 'action', desc: 'Loads the last backup saved on the TV.'},
+		{label: 'Frame-rate counter', ...sw(false, 'Dev builds only.')}
+	]}
+};
+const APPS = [['Netflix', '#e50914', 1], ['YouTube', '#ff0033', 1], ['Prime Video', '#1a98ff', 1], ['Disney+', '#0b2a6b', 1], ['BBC iPlayer', '#e6007e', 1], ['ITVX', '#1b1b1b', 1],
+	['Plex', '#e5a00d', 0], ['Spotify', '#1db954', 1], ['Apple TV', '#222', 0], ['Channel 4', '#3a3a3a', 0], ['Twitch', '#9146ff', 0], ['Jellyfin', '#4a2c7a', 0]];
+
+const stack = [{id: 'root', i: 0}];
+let tiles = APPS.map((a) => a.slice());
+const chev = '<svg class="chev" viewBox="0 0 18 30"><path d="M3 3l12 12L3 27"/></svg>';
+const tick = (on) => `<svg class="tick${on ? ' on' : ''}" viewBox="0 0 30 30"><path d="M5 16l7 7L25 7"/></svg>`;
+const icon = (g) => `<div class="icon"><svg viewBox="0 0 24 24">${G[g]}</svg></div>`;
+
+function pageOf (top) {
+	if (top.id.startsWith('grid:')) return null;
+	if (top.id.startsWith('choice:')) {
+		const [, pid, ri] = top.id.split(':');
+		const r = P[pid].rows[ri];
+		return {title: r.label, glyph: P[pid].glyph, choice: r, rows: r.choices.map((c, i) => ({label: c, ticked: i === r.at}))};
+	}
+	return P[top.id];
+}
+
+function render () {
+	const top = stack[stack.length - 1];
+	const v = document.getElementById('view');
+	if (top.id.startsWith('grid:')) { v.innerHTML = gridHtml(top); return; }
+	const p = pageOf(top);
+	const f = p.rows[top.i];
+	const glyph = p.glyph || f.glyph;
+	const desc = p.choice ? p.choice.desc : (f.desc || '');
+	const rows = p.rows.map((r, i) => {
+		let right = '';
+		if (r.open) right = chev;
+		else if (r.type === 'switch') right = `<span class="value">${r.on ? 'On' : 'Off'}</span>`;
+		else if (r.type === 'choice') right = `<span class="value">${r.choices[r.at]}</span>${chev}`;
+		const left = p.choice ? tick(r.ticked) : '';
+		return `<div class="row${i === top.i ? ' focus' : ''}" data-i="${i}">${left}<span class="label">${r.label}</span>${right}</div>`;
+	}).join('');
+	const offset = Math.max(0, (top.i - 6) * 84);
+	v.innerHTML = `<div class="page"><div class="title">${p.title}</div>
+		<div class="side">${icon(glyph)}<div class="desc">${desc}</div></div>
+		<div class="list"><div class="track" style="transform: translateY(${-offset}px)">${rows}</div></div></div>`;
+}
+
+function gridHtml (top) {
+	const name = top.id.slice(5);
+	const btnFocus = top.i === -1;
+	const t = tiles.map(([n, c, on], i) => `<div class="tile${on ? '' : ' off'}${i === top.i ? ' focus' : ''}" style="background:${c}">${n}${on ? '<div class="check"><svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg></div>' : ''}<div class="tile-name">${n}</div></div>`).join('');
+	return `<div class="page"><div class="gridhead"><div class="title">${name}</div><div class="btn${btnFocus ? ' focus' : ''}">Re-order ${name.toLowerCase()}</div></div>
+		<div class="hint">OK adds or removes an app · Hold OK to re-order</div><div class="grid">${t}</div></div>`;
+}
+
+function ok () {
+	const top = stack[stack.length - 1];
+	if (top.id.startsWith('grid:')) { if (top.i >= 0) tiles[top.i][2] = !tiles[top.i][2]; render(); return; }
+	const p = pageOf(top);
+	const r = p.rows[top.i];
+	if (p.choice) { p.choice.at = top.i; stack.pop(); render(); return; }
+	if (r.open) stack.push({id: r.open, i: 0});
+	else if (r.type === 'switch') r.on = !r.on;
+	else if (r.type === 'choice') stack.push({id: `choice:${top.id}:${top.i}`, i: r.at});
+	render();
+}
+
+addEventListener('keydown', (e) => {
+	const top = stack[stack.length - 1];
+	const grid = top.id.startsWith('grid:');
+	const n = grid ? tiles.length : pageOf(top).rows.length;
+	if (e.key === 'Enter') ok();
+	else if (e.key === 'Escape' || e.key === 'Backspace') { if (stack.length > 1) stack.pop(); render(); }
+	else if (grid) {
+		if (e.key === 'ArrowRight') top.i = top.i === -1 ? -1 : Math.min(n - 1, top.i + 1);
+		else if (e.key === 'ArrowLeft') top.i = Math.max(0, top.i - 1);
+		else if (e.key === 'ArrowDown') top.i = top.i === -1 ? 5 : Math.min(n - 1, top.i + 6);
+		else if (e.key === 'ArrowUp') top.i = top.i < 6 ? -1 : top.i - 6;
+		render();
+	}
+	else if (e.key === 'ArrowDown') { top.i = Math.min(n - 1, top.i + 1); render(); }
+	else if (e.key === 'ArrowUp') { top.i = Math.max(0, top.i - 1); render(); }
+	else return;
+	e.preventDefault();
+});
+
+const stage = document.getElementById('stage');
+const fit = () => { const s = Math.min(innerWidth / 1920, innerHeight / 1080); stage.style.transform = `translate(${(innerWidth - 1920 * s) / 2}px, ${(innerHeight - 1080 * s) / 2}px) scale(${s})`; };
+addEventListener('resize', fit); fit();
+const start = new URLSearchParams(location.search).get('page');
+if (start) start.split(',').forEach((s) => { const [id, i] = s.split('@'); stack.push({id, i: Number(i || 0)}); });
+render();
+</script>
+</body>
+</html>

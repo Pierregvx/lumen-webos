@@ -1,8 +1,8 @@
 import {t as tr} from '../lib/i18n';
-import {useCallback, useState} from 'preact/hooks';
+import {useRef, useState} from 'preact/hooks';
 import {Grid} from '../components/Grid';
-import {OptionList, type OptionItem} from '../components/OptionList';
-import {ChoicePicker} from '../components/ChoicePicker';
+import {SettingsList, type ListRow, type OptionGroup, type OptionItem} from '../components/SettingsList';
+import type {GlyphName} from '../components/Glyph';
 import type {TileModel} from '../components/Tile';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
@@ -13,6 +13,7 @@ import {WallpaperPicker, WALLPAPER_COLUMNS, type WallpaperEntry} from '../compon
 export interface SettingsTab {
 	id: string;
 	label: string;
+	glyph: GlyphName;
 	/** noun for the re-order button, e.g. "apps" → "Re-order apps" */
 	noun: string;
 	/** everything available */
@@ -38,13 +39,38 @@ interface Props {
 	onToggle: (tabId: string, key: string) => void;
 	onReorder: (tabId: string, keys: string[]) => void;
 	onOption: (optionId: string) => void;
-	/** a value picked from an option's pop-up list */
+	/** a value picked from an option's choices page */
 	onChoose: (optionId: string, index: number) => void;
 	onClose: () => void;
 }
 
-/** Focus is on the tabs row (a tab, or the re-order button) or in the tab's content. */
-type Zone = 'tabs' | 'button' | 'content' | 'chips';
+/** The option pages, in the order the top page lists them (after the grid pages). */
+const GROUPS: {id: OptionGroup; label: string; glyph: GlyphName}[] = [
+	{id: 'wallpaper', label: 'Wallpaper', glyph: 'image'},
+	{id: 'home', label: 'Home Screen', glyph: 'house'},
+	{id: 'screensaver', label: 'Screensaver', glyph: 'screensaver'},
+	{id: 'weather', label: 'Weather', glyph: 'cloud'},
+	{id: 'appearance', label: 'Appearance', glyph: 'contrast'},
+	{id: 'language', label: 'Language and Clock', glyph: 'globe'},
+	{id: 'system', label: 'System', glyph: 'gear'}
+];
+const CHOOSE_WALLPAPER = 'choose-wallpaper';
+
+type Page =
+	| {kind: 'root'}
+	| {kind: 'group'; id: OptionGroup}
+	| {kind: 'grid'; tabId: string}
+	| {kind: 'wallpaper'}
+	| {kind: 'choice'; optionId: string};
+
+/** A page on the stack, and the row in focus on it (kept for when Back returns to it). */
+interface Entry {
+	page: Page;
+	focus: number;
+}
+
+/** On a grid page focus is on the re-order button or the grid; on the wallpaper page, the category chips or the grid. */
+type Zone = 'button' | 'content' | 'chips';
 
 /** A tile that has been picked up in re-order mode, and the order to restore on Back. */
 interface Held {
@@ -52,54 +78,137 @@ interface Held {
 	original: string[];
 }
 
-const OPTIONS_LABEL = 'Options';
-const WALLPAPER_LABEL = 'Wallpaper';
-
 const HINT = {
-	select: 'OK adds or removes an item · Hold OK to re-order · Back returns home',
+	select: 'OK adds or removes an item · Hold OK to re-order · Back returns',
 	reorder: 'OK picks up an item · Hold OK or choose Done to finish',
 	holding: 'Arrows move it · OK puts it down · Back cancels',
-	options: 'OK turns an option on or off · Back returns home',
-	picker: 'Up and down move · OK sets it · Back cancels',
-	wallpaper: 'Left and right change category · OK sets the wallpaper · hold OK adds it to Favorites · Back returns home'
+	wallpaper: 'Left and right change category · OK sets the wallpaper · hold OK adds it to Favorites · Back returns'
 } as const;
 
-/** Settings: pick which apps and sources appear on the home rows and their order, plus options.
+/** What a list page shows, and what OK on each row does. */
+interface ListPage {
+	title: string;
+	glyph: GlyphName;
+	rows: ListRow[];
+	descriptions: string[];
+	ticks?: boolean;
+	activate: (i: number) => void;
+}
+
+/** dev only: ?settings=weather or ?settings=grid:apps opens Settings on that page */
+function startStack (): Entry[] {
+	const stack: Entry[] = [{page: {kind: 'root'}, focus: 0}];
+	if (!import.meta.env.DEV) return stack;
+	const at = (/[?&]settings=([\w:-]+)/.exec(location.search) || [])[1];
+	if (!at) return stack;
+	if (at.indexOf('grid:') === 0) stack.push({page: {kind: 'grid', tabId: at.slice(5)}, focus: 0});
+	else if (at === 'wallpaper-picker') stack.push({page: {kind: 'wallpaper'}, focus: 0});
+	else stack.push({page: {kind: 'group', id: at as OptionGroup}, focus: 0});
+	return stack;
+}
+
+/** Settings, laid out like Apple TV's: a stack of pages. OK on a row opens its page, Back goes up one, Back on the top page closes.
  *
- *  Tabs: one grid tab per row (Apps, Sources), then Options.
- *  Grid tabs, select mode: everything available; OK adds/removes an item.
- *  Grid tabs, re-order mode (hold OK, or the button): only what's on the home screen, in order;
- *  OK picks an item up, arrows move it, OK puts it down. Hold OK or press Done to leave. */
+ *  List pages: the top page, one page per option group, and a choices page for each list option.
+ *  Grid pages (Apps, Sources, Channels): select mode, OK adds/removes an item; re-order mode (hold OK, or the button) shows only
+ *  what's on the home screen, in order: OK picks an item up, arrows move it, OK puts it down. Hold OK or press Done to leave. */
 export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder, onOption, onChoose, onClose}: Props) {
-	const [tabIndex, setTabIndex] = useState(import.meta.env.DEV ? Number((/[?&]tab=(\d)/.exec(location.search) || [])[1] || 0) : 0);
-	const [zone, setZone] = useState<Zone>('tabs');
+	const [stack, setStack] = useState<Entry[]>(startStack);
+	// keys can arrive faster than renders: changes go through the latest stack, not the one this render saw
+	const latest = useRef(stack);
+	const commit = (next: Entry[]) => { latest.current = next; setStack(next); };
+	const [zone, setZone] = useState<Zone>('content');
 	const [gridIndex, setGridIndex] = useState(0);
-	const [optionIndex, setOptionIndex] = useState(0);
 	const [reordering, setReordering] = useState(false);
 	const [held, setHeld] = useState<Held | null>(null);
 	const [wpCat, setWpCat] = useState(0);
 	const [wpIndex, setWpIndex] = useState(0);
-	/** the focused row of the open pop-up list (for options[optionIndex]), or null when none is open */
-	const [picker, setPicker] = useState<number | null>(null);
 
-	const tabCount = tabs.length + 2;                  // grid tabs + Wallpaper + Options
-	const onWallpaper = tabIndex === tabs.length;
-	const onOptions = tabIndex === tabs.length + 1;
-	const tab: SettingsTab | undefined = (onOptions || onWallpaper) ? undefined : tabs[tabIndex];
+	const top = stack[stack.length - 1];
+	const page = top.page;
+	const tab = page.kind === 'grid' ? tabs.filter((t) => t.id === page.tabId)[0] : undefined;
+	const onWallpaper = page.kind === 'wallpaper';
 	const wpName = wallpaper.categories[wpCat];
 	const wpList = wallpaper.entries.filter((e) => (wpName === 'All' ? e.key.indexOf('shuffle:') !== 0 && e.category !== 'Favorites' && e.category !== 'Video' && e.category !== 'Photos' : e.category === wpName));
 	const items = tab ? (reordering ? tab.shown : tab.items) : [];
-	const count = onOptions ? options.length : onWallpaper ? wpList.length : items.length;
 	const cols = LAYOUT.gridColumns;
 	const keysOf = (list: TileModel[]) => list.map((t) => t.key);
 
-	const selectTab = (i: number) => {
-		if (reordering) return;          // tab is locked while re-ordering
-		setTabIndex(i);
-		setGridIndex(0);
-		setOptionIndex(0);
-		setWpIndex(0);
+	const push = (next: Page, focus = 0) => {
+		commit(latest.current.concat({page: next, focus}));
+		if (next.kind === 'grid') { setGridIndex(0); setZone('content'); }
+		if (next.kind === 'wallpaper') { setWpIndex(0); setZone('chips'); }
 	};
+	const pop = () => {
+		if (latest.current.length === 1) { onClose(); return; }
+		commit(latest.current.slice(0, -1));
+		setReordering(false);
+		setHeld(null);
+	};
+	const setFocus = (i: number) => { const now = latest.current; commit(now.slice(0, -1).concat({page: now[now.length - 1].page, focus: i})); };
+	/** the page this render drew is still the top one (a key may have opened or closed one since) */
+	const current = () => latest.current[latest.current.length - 1].page === page;
+
+	const groupGlyph = (id: OptionGroup) => GROUPS.filter((g) => g.id === id)[0].glyph;
+
+	/** OK on an option: a list option opens its choices page, anything else is handed on (switches flip in place) */
+	const activateOption = (o: OptionItem) => {
+		if (o.choices && o.choices.length > 0) push({kind: 'choice', optionId: o.id}, Math.max(0, o.choice || 0));
+		else onOption(o.id);
+	};
+
+	const listPage = (): ListPage | null => {
+		if (page.kind === 'root') {
+			const groups = GROUPS.filter((g) => g.id === 'wallpaper' || options.some((o) => o.group === g.id));
+			return {
+				title: 'Settings',
+				glyph: top.focus < tabs.length ? tabs[top.focus].glyph : groups[top.focus - tabs.length].glyph,
+				rows: tabs.map((t): ListRow => ({key: 'tab:' + t.id, label: t.label, chevron: true}))
+					.concat(groups.map((g): ListRow => ({key: g.id, label: g.label, chevron: true}))),
+				descriptions: [],
+				activate: (i) => {
+					if (i < tabs.length) push({kind: 'grid', tabId: tabs[i].id});
+					else if (groups[i - tabs.length]) push({kind: 'group', id: groups[i - tabs.length].id});
+				}
+			};
+		}
+		if (page.kind === 'group') {
+			const g = GROUPS.filter((x) => x.id === page.id)[0];
+			const list = options.filter((o) => o.group === page.id);
+			const link = page.id === 'wallpaper';
+			const rows = list.map((o): ListRow => ({
+				key: o.id,
+				label: o.label,
+				value: o.valueText !== undefined ? o.valueText : o.value ? 'On' : 'Off',
+				chevron: !!(o.choices && o.choices.length)
+			}));
+			return {
+				title: g.label,
+				glyph: g.glyph,
+				rows: link ? [{key: CHOOSE_WALLPAPER, label: 'Choose wallpaper', chevron: true} as ListRow].concat(rows) : rows,
+				descriptions: (link ? ['A picture, a shuffle, your photos or a video.'] : []).concat(list.map((o) => o.description)),
+				activate: (i) => {
+					if (link && i === 0) { push({kind: 'wallpaper'}); return; }
+					const o = list[link ? i - 1 : i];
+					if (o) activateOption(o);
+				}
+			};
+		}
+		if (page.kind === 'choice') {
+			const o = options.filter((x) => x.id === page.optionId)[0];
+			if (!o || !o.choices) return null;
+			return {
+				title: o.label,
+				glyph: groupGlyph(o.group),
+				rows: o.choices.map((c, i): ListRow => ({key: String(i), label: c, ticked: i === o.choice})),
+				descriptions: o.choices.map(() => o.description),
+				ticks: true,
+				activate: (i) => { onChoose(o.id, i); pop(); }
+			};
+		}
+		return null;
+	};
+	const list = listPage();
 
 	const changeCategory = (i: number) => { setWpCat(clamp(i, 0, wallpaper.categories.length - 1)); setWpIndex(0); };
 
@@ -112,13 +221,13 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 		setGridIndex(Math.max(0, i));
 		setHeld(null);
 		setReordering(next);
-		if (next && (zone === 'tabs' || target.length === 0)) setZone('button');
+		if (next && target.length === 0) setZone('button');
 	};
 
 	/** Move the held tile to `to`, updating the home screen as it goes. */
 	const moveHeld = (to: number) => {
 		if (!tab || !held) return;
-		const dest = clamp(to, 0, count - 1);
+		const dest = clamp(to, 0, items.length - 1);
 		if (dest === held.index) return;
 		onReorder(tab.id, moveItem(keysOf(tab.shown), held.index, dest));
 		setHeld({...held, index: dest});
@@ -137,21 +246,12 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 		setGridIndex(i);
 	};
 
-	/** OK on an option: a list option opens its pop-up list (OK there sets the value), anything else is handed on */
-	const activateOption = (i: number) => {
-		const o = options[i];
-		if (!o) return;
-		if (picker !== null) { if (o.choices) onChoose(o.id, picker); setPicker(null); return; }
-		if (o.choices && o.choices.length > 0) { setPicker(Math.max(0, o.choice || 0)); return; }
-		onOption(o.id);
-	};
-
 	const onPress = () => {
+		if (!current()) return;
+		if (list) { list.activate(latest.current[latest.current.length - 1].focus); return; }
 		if (zone === 'button') { setMode(!reordering); return; }
-		if (zone === 'chips') { if (count > 0) setZone('content'); return; }
-		if (zone === 'tabs') { if (onWallpaper) setZone('chips'); else if (count > 0) setZone('content'); return; }
+		if (zone === 'chips') { if (wpList.length > 0) setZone('content'); return; }
 		if (onWallpaper) { if (wpList[wpIndex]) wallpaper.onPick(wpList[wpIndex].key); return; }
-		if (onOptions) { activateOption(optionIndex); return; }
 		activateGridItem(gridIndex);
 	};
 
@@ -162,21 +262,22 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 
 	useOkPress({onPress, onLongPress}, active);
 
-	const handleKey = useCallback((key: NavKey): boolean => {
+	const handleKey = (key: NavKey): boolean => {
 		if (key === 'enter') return true;           // handled by useOkPress (press vs hold)
-
-		if (picker !== null) {
-			const n = ((options[optionIndex] || {choices: []}).choices || []).length;
-			if (key === 'up') setPicker(clamp(picker - 1, 0, n - 1));
-			else if (key === 'down') setPicker(clamp(picker + 1, 0, n - 1));
-			else if (key === 'back') setPicker(null);
-			return true;
-		}
 
 		if (key === 'back') {
 			if (held && tab) { onReorder(tab.id, held.original); setGridIndex(held.index); setHeld(null); }
 			else if (reordering) setMode(false);
-			else onClose();
+			else pop();
+			return true;
+		}
+
+		if (!current()) return true;
+
+		if (list) {
+			const at = latest.current[latest.current.length - 1].focus;
+			if (key === 'up') setFocus(clamp(at - 1, 0, list.rows.length - 1));
+			else if (key === 'down') setFocus(clamp(at + 1, 0, list.rows.length - 1));
 			return true;
 		}
 
@@ -188,27 +289,19 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 			return true;
 		}
 
-		if (zone === 'tabs') {
-			if (key === 'left') selectTab(clamp(tabIndex - 1, 0, tabCount - 1));
-			else if (key === 'right') selectTab(clamp(tabIndex + 1, 0, tabCount - 1));
-			else if (key === 'down') { if (onWallpaper) setZone('chips'); else if (count > 0) setZone('content'); }
-			return true;
-		}
 		if (zone === 'chips') {
 			if (key === 'left') changeCategory(wpCat - 1);
 			else if (key === 'right') changeCategory(wpCat + 1);
-			else if (key === 'up') setZone('tabs');
-			else if (key === 'down' && count > 0) setZone('content');
+			else if (key === 'down' && wpList.length > 0) setZone('content');
 			return true;
 		}
 		if (zone === 'button') {
-			if (key === 'left' && !reordering) setZone('tabs');
-			else if (key === 'down' && count > 0) setZone('content');
+			if (key === 'down' && items.length > 0) setZone('content');
 			return true;
 		}
 
 		if (onWallpaper) {
-			const last = count - 1;
+			const last = wpList.length - 1;
 			if (key === 'left') setWpIndex((i) => clamp(i - 1, 0, last));
 			else if (key === 'right') setWpIndex((i) => clamp(i + 1, 0, last));
 			else if (key === 'up') { if (wpIndex < WALLPAPER_COLUMNS) setZone('chips'); else setWpIndex((i) => i - WALLPAPER_COLUMNS); }
@@ -216,48 +309,48 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 			return true;
 		}
 
-		if (onOptions) {
-			if (key === 'up') { if (optionIndex === 0) setZone('tabs'); else setOptionIndex(optionIndex - 1); }
-			else if (key === 'down') setOptionIndex(clamp(optionIndex + 1, 0, count - 1));
-			return true;
-		}
-
+		const count = items.length;
 		switch (key) {
 			case 'left': setGridIndex((i) => clamp(i - 1, 0, count - 1)); break;
 			case 'right': setGridIndex((i) => clamp(i + 1, 0, count - 1)); break;
-			case 'up':
-				if (gridIndex >= cols) setGridIndex((i) => i - cols);
-				// Spatial: the button sits top-right, so leave the grid towards whichever is above.
-				else setZone(reordering || gridIndex % cols >= cols / 2 ? 'button' : 'tabs');
-				break;
+			case 'up': if (gridIndex >= cols) setGridIndex((i) => i - cols); else setZone('button'); break;
 			case 'down': setGridIndex((i) => (i + cols < count ? i + cols : i)); break;
 		}
 		return true;
-	}, [picker, zone, tabIndex, tabCount, gridIndex, optionIndex, wpIndex, wpCat, wpList, wallpaper, onWallpaper, count, tab, onOptions, options, reordering, held, items, onReorder, onClose]);
+	};
 
 	useKeys(handleKey, active);
 
-	const hint = picker !== null ? HINT.picker : onWallpaper ? HINT.wallpaper : onOptions ? HINT.options : held ? HINT.holding : reordering ? HINT.reorder : HINT.select;
-	const labels = tabs.map((t) => t.label).concat(WALLPAPER_LABEL, OPTIONS_LABEL);
+	const depth = stack.length;
+
+	if (list) {
+		return (
+			<div class="screen screen--settings">
+				<div class="settings settings--list" key={depth}>
+					<SettingsList
+						title={list.title}
+						glyph={list.glyph}
+						description={list.descriptions[top.focus]}
+						rows={list.rows}
+						ticks={list.ticks}
+						selected={top.focus}
+						onSelect={setFocus}
+						onActivate={(i) => { setFocus(i); list.activate(i); }}
+					/>
+				</div>
+			</div>
+		);
+	}
+
+	const title = tab ? tab.label : 'Wallpaper';
+	const hint = onWallpaper ? HINT.wallpaper : held ? HINT.holding : reordering ? HINT.reorder : HINT.select;
 	const buttonClass = ['settings__button', reordering && 'settings__button--active', zone === 'button' && 'settings__button--focused'].filter(Boolean).join(' ');
 
 	return (
 		<div class="screen screen--settings">
-			<div class="settings">
-				<h1 class="settings__title">{tr('Settings')}</h1>
-				<p class="settings__hint">{tr(hint)}</p>
-				<div class="settings__tabs">
-					<div class="tabbar">
-					{labels.map((label, i) => (
-						<div
-							key={label}
-							class={['tab', i === tabIndex && 'tab--active', reordering && i !== tabIndex && 'tab--locked', zone === 'tabs' && i === tabIndex && 'tab--focused'].filter(Boolean).join(' ')}
-							onMouseEnter={() => { if (!reordering) { setZone('tabs'); selectTab(i); } }}
-						>
-							{tr(label)}
-						</div>
-					))}
-					</div>
+			<div class="settings settings--grid" key={depth}>
+				<div class="settings__head">
+					<h1 class="settings__title">{tr(title)}</h1>
 					{tab && (
 						<div
 							class={buttonClass}
@@ -268,6 +361,7 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 						</div>
 					)}
 				</div>
+				<p class="settings__hint">{tr(hint)}</p>
 				{tab && (
 					<Grid
 						items={items}
@@ -293,30 +387,10 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 						onSelect={(i) => { setZone('content'); setWpIndex(i); }}
 						onActivate={(i) => { setZone('content'); if (wpList[i]) wallpaper.onPick(wpList[i].key); }}
 						onHold={(i) => { if (wpList[i]) wallpaper.onFavorite(wpList[i].key); }}
-						note={wpName === 'Video' ? tr('Pick one or more places and the video wallpaper plays them in random order. Shuffle all places plays everything: aerial videos and free stock videos of European countries. Videos stream from the internet (up to about 3 GB an hour) and take a few seconds to start. Settings > Options > Video wallpaper hours limits when they play.') : undefined}
+						note={wpName === 'Video' ? tr('Pick one or more places and the video wallpaper plays them in random order. Shuffle all places plays everything: aerial videos and free stock videos of European countries. Videos stream from the internet (up to about 3 GB an hour) and take a few seconds to start. Settings > Wallpaper > Video wallpaper hours limits when they play.') : undefined}
 					/>
 				)}
-				{onOptions && (
-					<OptionList
-						options={options}
-						focused={zone === 'content'}
-						selected={optionIndex}
-						onSelect={(i) => { setZone('content'); setOptionIndex(i); }}
-						onActivate={(i) => { if (picker !== null) return; setZone('content'); setOptionIndex(i); activateOption(i); }}
-					/>
-				)}
-				{onOptions && picker !== null && options[optionIndex] && options[optionIndex].choices && (
-					<ChoicePicker
-						title={options[optionIndex].label}
-						choices={options[optionIndex].choices || []}
-						selected={picker}
-						current={options[optionIndex].choice || 0}
-						onSelect={setPicker}
-						onChoose={(i) => { onChoose(options[optionIndex].id, i); setPicker(null); }}
-						onClose={() => setPicker(null)}
-					/>
-				)}
-				{reordering && count === 0 && <p class="settings__hint">{tr('Nothing on the home screen yet.')}</p>}
+				{reordering && items.length === 0 && <p class="settings__hint">{tr('Nothing on the home screen yet.')}</p>}
 			</div>
 		</div>
 	);

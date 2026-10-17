@@ -14,6 +14,12 @@ export const LANGS = [
 ];
 const ORDER = ["de", "es", "fr", "it", "pt", "nl", "tr", "hi"];
 const TABLE: Record<string, string[]> = {
+	"Home Screen": ["Startbildschirm", "Pantalla de inicio", "Écran d'accueil", "Schermata Home", "Ecrã principal", "Startscherm", "Ana ekran", "होम स्क्रीन"],
+	"Weather": ["Wetter", "Tiempo", "Météo", "Meteo", "Tempo", "Weer", "Hava durumu", "मौसम"],
+	"Language and Clock": ["Sprache und Uhr", "Idioma y reloj", "Langue et horloge", "Lingua e orologio", "Idioma e relógio", "Taal en klok", "Dil ve saat", "भाषा और घड़ी"],
+	"System": ["System", "Sistema", "Système", "Sistema", "Sistema", "Systeem", "Sistem", "सिस्टम"],
+	"Choose wallpaper": ["Hintergrund wählen", "Elegir fondo", "Choisir le fond d'écran", "Scegli sfondo", "Escolher fundo", "Achtergrond kiezen", "Duvar kağıdı seç", "वॉलपेपर चुनें"],
+	"Channels": ["Sender", "Canales", "Chaînes", "Canali", "Canais", "Zenders", "Kanallar", "चैनल"],
 	"Appearance": ["Darstellung", "Apariencia", "Apparence", "Aspetto", "Aspeto", "Weergave", "Görünüm", "दिखावट"],
 	"Light": ["Hell", "Claro", "Clair", "Chiaro", "Claro", "Licht", "Açık", "लाइट"],
 	"Dark": ["Dunkel", "Oscuro", "Sombre", "Scuro", "Escuro", "Donker", "Koyu", "डार्क"],
@@ -615,7 +621,7 @@ const TABLE: Record<string, string[]> = {
 		"Fırtına",
 		"तूफ़ान"
 	],
-	"OK adds or removes an item · Hold OK to re-order · Back returns home": [
+	"OK adds or removes an item · Hold OK to re-order · Back returns": [
 		"OK fügt hinzu oder entfernt · OK halten zum Anordnen · Zurück zum Start",
 		"OK añade o quita · Mantén OK para reordenar · Atrás vuelve al inicio",
 		"OK ajoute ou retire · Maintenez OK pour réorganiser · Retour revient à l'accueil",
@@ -645,17 +651,7 @@ const TABLE: Record<string, string[]> = {
 		"Oklar taşır · OK bırakır · Geri iptal eder",
 		"तीर खिसकाते हैं · OK छोड़ता है · Back रद्द करता है"
 	],
-	"OK turns an option on or off · Back returns home": [
-		"OK schaltet eine Option ein oder aus · Zurück zum Start",
-		"OK activa o desactiva una opción · Atrás vuelve al inicio",
-		"OK active ou désactive une option · Retour revient à l'accueil",
-		"OK attiva o disattiva un'opzione · Indietro torna alla Home",
-		"OK liga ou desliga uma opção · Voltar regressa ao início",
-		"OK zet een optie aan of uit · Terug naar start",
-		"OK seçeneği açar veya kapatır · Geri ana ekrana döner",
-		"OK से विकल्प चालू या बंद करें · वापस जाने के लिए Back"
-	],
-	"Left and right change category · OK sets the wallpaper · hold OK adds it to Favorites · Back returns home": [
+	"Left and right change category · OK sets the wallpaper · hold OK adds it to Favorites · Back returns": [
 		"Links/Rechts wechselt Kategorie · OK setzt Hintergrund · OK halten = Favorit · Zurück zum Start",
 		"Izquierda/derecha cambia categoría · OK fija el fondo · Mantén OK para favoritos · Atrás vuelve",
 		"Gauche/droite change de catégorie · OK applique · Maintenez OK pour favori · Retour",

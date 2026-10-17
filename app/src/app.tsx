@@ -3,7 +3,7 @@ import {Home, type HomeRow} from './screens/Home';
 import {Settings, type SettingsTab, type WallpaperTab} from './screens/Settings';
 import {Guide} from './screens/Guide';
 import type {WallpaperEntry} from './components/WallpaperPicker';
-import type {OptionItem} from './components/OptionList';
+import type {OptionItem} from './components/SettingsList';
 import {Toast, type ToastMessage} from './components/Toast';
 import type {TileModel} from './components/Tile';
 import {BUILTIN, BUILTIN_APPS, withBuiltins} from './config/builtinApps';
@@ -46,7 +46,7 @@ const LIVE_BELOW = 150;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
 const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientSeconds: 'ambient-seconds', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 15, 30, 60];
-/** when the video wallpaper plays (Settings > Options > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
+/** when the video wallpaper plays (Settings > Wallpaper > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
 const VIDEO_HOURS: Record<string, [number, number]> = {day: [7, 19], evening: [17, 23], night: [19, 7]};
 function inVideoHours (mode: string, now = new Date()): boolean {
 	const span = VIDEO_HOURS[mode];
@@ -137,7 +137,7 @@ export function App () {
 		let seq = 0;
 		const apply = (p: LaunchParams) => {
 			if (p.view === 'recent') setFocusRow({id: ROW.dock, seq: ++seq});
-			// watch.sh opens Lumen with {"view":"ambient"} when the TV's screensaver starts (Settings > Options > Screensaver)
+			// watch.sh opens Lumen with {"view":"ambient"} when the TV's screensaver starts (Settings > Screensaver)
 			if (p.view === 'ambient' && configRef.current.ambient) setScreen('ambient');
 		};
 		apply(startParams());
@@ -327,8 +327,8 @@ export function App () {
 	const tabs: SettingsTab[] = useMemo(() => {
 		if (!inSettings) return [];
 		const list: SettingsTab[] = [
-			{id: ROW.apps, label: 'Apps', noun: 'apps', items: allApps.map(appTile), shown: shownApps.map(appTile)},
-			{id: ROW.sources, label: 'Sources', noun: 'sources', items: inputs.map(inputTile), shown: shownInputs.map(inputTile)}
+			{id: ROW.apps, label: 'Apps', glyph: 'grid', noun: 'apps', items: allApps.map(appTile), shown: shownApps.map(appTile)},
+			{id: ROW.sources, label: 'Sources', glyph: 'inputs', noun: 'sources', items: inputs.map(inputTile), shown: shownInputs.map(inputTile)}
 		];
 		// the Live TV row's channels: every channel, the row's ticked, in the row's order
 		if (config.liveTvRow && live.channels.length) {
@@ -336,7 +336,7 @@ export function App () {
 				const logo = c.logoPath && live.logos[c.logoPath];
 				return {key: c.id, label: `${c.number} · ${c.name}`, imageUrl: logo || undefined, plain: true, color: '#22262f', wordmark: logo ? undefined : c.name};
 			};
-			list.push({id: ROW.channels, label: 'Channels', noun: 'channels', items: live.channels.map(tile), shown: rowChannels(live.channels, config.liveChannels).map(tile)});
+			list.push({id: ROW.channels, label: 'Channels', glyph: 'guide', noun: 'channels', items: live.channels.map(tile), shown: rowChannels(live.channels, config.liveChannels).map(tile)});
 		}
 		return list;
 	}, [inSettings, allApps, inputs, shownApps, shownInputs, config.language, config.liveTvRow, config.liveChannels, live.channels, live.logos]);
@@ -371,30 +371,35 @@ export function App () {
 	const options: OptionItem[] = useMemo(() => [
 		{
 			id: OPTION.liveTv,
+			group: 'home' as const,
 			label: 'Live TV row',
 			description: 'A row of TV channels under your apps, showing what is on now and next, with the Guide at the end. OK on a channel opens Live TV on it. Needs the Homebrew Channel.',
 			value: config.liveTvRow
 		},
 		{
 			id: OPTION.useHomebrew,
+			group: 'system' as const,
 			label: 'Live app list via Homebrew Channel',
 			description: 'Rooted TVs only. Lists every installed app with its real icon, using the Homebrew Channel, which runs commands as root. When off, the built-in app catalogue is used.',
 			value: config.useHomebrew
 		},
 		{
 			id: OPTION.showAll,
+			group: 'system' as const,
 			label: 'Show system apps',
 			description: 'Offer the TV\'s own apps (Live TV, LG Channels, AirPlay, Screen Share, Game Optimizer, TV Settings) in Settings > Apps, so you can add them to the home screen.',
 			value: config.showAllApps
 		},
 		{
 			id: OPTION.weather,
+			group: 'weather' as const,
 			label: 'Date and weather',
 			description: 'Show today\'s date and the temperature at the top left of the home screen. The temperature needs a Weather city below; it comes from open-meteo.com.',
 			value: config.showWeather
 		},
 		{
 			id: OPTION.country,
+			group: 'weather' as const,
 			label: 'Weather country',
 			description: 'Pick your country, then the city below. Until a city is chosen no weather is shown and nothing is fetched.',
 			value: config.weatherCountry !== '',
@@ -402,6 +407,7 @@ export function App () {
 		},
 		{
 			id: OPTION.city,
+			group: 'weather' as const,
 			label: 'Weather city',
 			description: 'Not set: no weather. Auto finds your area from your internet connection, which sends your IP address to ipwho.is and can be a few towns off. Or pick a city.',
 			value: config.weatherCity !== '',
@@ -409,6 +415,7 @@ export function App () {
 		},
 		{
 			id: OPTION.wpAuto,
+			group: 'wallpaper' as const,
 			label: 'Change wallpaper automatically',
 			description: 'With a Shuffle wallpaper chosen, pick a new picture every 15, 30 or 60 minutes.',
 			value: config.wpAutoMinutes > 0,
@@ -416,15 +423,17 @@ export function App () {
 		},
 		{
 			id: OPTION.ambient,
+			group: 'screensaver' as const,
 			label: 'Screensaver',
 			description: immich.ready
 				? 'When the TV\'s screensaver starts, show your photos from Immich instead: a slow crossfade every 30 seconds, with the clock. Any key returns to the home screen.'
-				: 'Your photos from Immich instead of LG\'s screensaver. Set up Immich first (Settings > Wallpaper > Photos).',
+				: 'Your photos from Immich instead of LG\'s screensaver. Set up Immich first (Settings > Wallpaper > Choose wallpaper > Photos).',
 			value: config.ambient !== '',
 			...listed(OPTION.ambient)
 		},
 		...(config.ambient ? [{
 			id: OPTION.ambientSeconds,
+			group: 'screensaver' as const,
 			label: 'Time on each photo',
 			description: 'How long each photo stays on the screensaver before the next one fades in.',
 			value: true,
@@ -432,6 +441,7 @@ export function App () {
 		}] : []),
 		{
 			id: OPTION.videoHours,
+			group: 'wallpaper' as const,
 			label: 'Video wallpaper hours',
 			description: 'When the video wallpaper plays. Outside these hours the still wallpaper shows instead, and nothing streams.',
 			value: config.videoHours !== 'always',
@@ -439,12 +449,14 @@ export function App () {
 		},
 		{
 			id: OPTION.nightDim,
+			group: 'wallpaper' as const,
 			label: 'Dim the wallpaper at night',
 			description: 'Between 7 pm and 6 am the wallpaper is darker, easier on the eyes in a dark room.',
 			value: config.nightDim
 		},
 		{
 			id: OPTION.dockHide,
+			group: 'home' as const,
 			label: 'Hide the dock',
 			description: 'Down arrow: Down on the last row slides the dock away. After idle: it hides itself after 8 seconds without a key press. Any key brings it back.',
 			value: config.dockHide !== 'off',
@@ -452,6 +464,7 @@ export function App () {
 		},
 		{
 			id: OPTION.firstRow,
+			group: 'home' as const,
 			label: 'Apps in the glass bar',
 			description: 'How many apps a row holds: the glass bar, and each row of the grid below it. With 7 the tiles are a little smaller, with 5 a little bigger.',
 			value: true,
@@ -459,6 +472,7 @@ export function App () {
 		},
 		{
 			id: OPTION.focus,
+			group: 'appearance' as const,
 			label: 'Focus highlight',
 			description: 'How much the app in focus stands out: how far it grows and how strong its shadow and shine are.',
 			value: config.focusStrength !== 'normal',
@@ -466,6 +480,7 @@ export function App () {
 		},
 		{
 			id: OPTION.darkMode,
+			group: 'appearance' as const,
 			label: 'Appearance',
 			description: 'Light: bright glass with dark text. Dark: dark glass and a dimmer wallpaper or video. Auto is dark from 7 pm to 6 am.',
 			value: config.darkMode !== 'off',
@@ -473,6 +488,7 @@ export function App () {
 		},
 		{
 			id: OPTION.language,
+			group: 'language' as const,
 			label: 'Language',
 			description: "Language of the menus, dates and weather. Auto follows the TV. The long descriptions on this screen stay in English.",
 			value: config.language !== 'auto',
@@ -480,6 +496,7 @@ export function App () {
 		},
 		{
 			id: OPTION.clock,
+			group: 'language' as const,
 			label: 'Clock',
 			description: "Auto follows the TV's own 12/24-hour setting. Choose 12-hour or 24-hour to override it.",
 			value: config.clockFormat !== 'auto',
@@ -487,30 +504,35 @@ export function App () {
 		},
 		{
 			id: OPTION.hideNames,
+			group: 'home' as const,
 			label: 'Hide app names',
 			description: 'No names under the apps on the home screen, not even the one in focus. Settings still shows them.',
 			value: config.hideNames
 		},
 		{
 			id: OPTION.reduceMotion,
+			group: 'appearance' as const,
 			label: 'Reduce motion',
 			description: 'Focus, rows and panels change at once, without sliding, fading or zooming.',
 			value: config.reduceMotion
 		},
 		{
 			id: OPTION.liveBlur,
+			group: 'appearance' as const,
 			label: 'Live blur',
 			description: 'The glass bar, the top buttons and the panels blur whatever is behind them, live, instead of showing a blurred copy of the wallpaper. The full-screen backdrops (lower rows, Settings) stay a blurred copy. On by default. Off: the cheaper blurred copy everywhere.',
 			value: config.liveBlur
 		},
 		{
 			id: OPTION.showAmPm,
+			group: 'language' as const,
 			label: 'AM/PM on the clock',
 			description: 'Show AM or PM beside the time when the TV is set to a 12-hour clock.',
 			value: config.showAmPm
 		},
 		{
 			id: OPTION.restore,
+			group: 'system' as const,
 			label: 'Restore settings from the TV',
 			description: 'Lumen keeps a copy of its settings on the TV (/var/lib/homehook/lumen-config.json) after every change. This puts that copy back, replacing the settings here. Needs the Homebrew Channel.',
 			value: false,
@@ -518,6 +540,7 @@ export function App () {
 		},
 		...(__LUMEN_DEV__ ? [{
 			id: OPTION.fps,
+			group: 'system' as const,
 			label: 'Frame-rate counter (dev builds)',
 			description: 'Frames drawn in the last second and the longest frame, in the top-left corner. Only in dev builds.',
 			value: config.fpsCounter

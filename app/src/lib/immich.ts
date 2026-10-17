@@ -10,7 +10,7 @@ import {readCache, writeCache} from './boot';
 
 export interface ImmichServer { url: string; key: string }
 
-/** The choices offered in Settings > Wallpaper > Photos. */
+/** The choices offered in Settings > Wallpaper > Choose wallpaper > Photos. */
 export const IMMICH_SOURCES: {key: string; title: string}[] = [
 	{key: 'immich:recent', title: 'Recent (last 90 days)'},
 	{key: 'immich:memories', title: 'On this day'},
