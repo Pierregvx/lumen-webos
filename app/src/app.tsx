@@ -40,7 +40,7 @@ const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock', live:
 const LIVE = {prefix: 'channel:', guide: 'livetv:guide'} as const;
 /** channels on the Live TV row, before the Guide tile */
 const LIVE_ROW_CHANNELS = 5;
-/** the width of a channel tile's now/next block (.chan__info in global.css): the tiles it would run off the row for hang it from their right edge */
+/** the widest a channel tile's now/next block gets (.chan__info in global.css); towards the end of the row it narrows to the space left */
 const LIVE_INFO_W = 660;
 /** how much higher the Live TV row sits when focused, so its now/next block fits on screen */
 const LIVE_BELOW = 150;
@@ -305,13 +305,13 @@ export function App () {
 	const liveTiles = useMemo((): TileModel[] => {
 		if (!config.liveTvRow || !live.channels.length) return [];
 		const step = (TILES_FOR[firstRow] || TILES_FOR[6]).size + (TILES_FOR[firstRow] || TILES_FOR[6]).gap;
-		const rowW = firstRow * step;
+		const rowW = firstRow * step - (TILES_FOR[firstRow] || TILES_FOR[6]).gap;
 		return live.channels.slice(0, LIVE_ROW_CHANNELS).map((c, i): TileModel => ({
 			key: LIVE.prefix + c.id,
 			label: c.name,
 			live: {
 				number: c.number, name: c.name, logo: c.logoPath && live.logos[c.logoPath], at: live.now,
-				alignEnd: i * step + LIVE_INFO_W > rowW,
+				infoWidth: Math.min(LIVE_INFO_W, rowW - i * step),
 				...nowNextAt(live.listings[c.signal], live.now)
 			}
 		})).concat({key: LIVE.guide, label: 'Guide', glyph: 'guide', color: 'rgba(255, 255, 255, 0.16)'});

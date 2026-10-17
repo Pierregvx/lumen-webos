@@ -9,8 +9,8 @@ export interface LiveTile extends NowNext {
 	logo?: string;
 	/** the current minute, ms */
 	at: number;
-	/** the now/next block hangs left from the tile's right edge (the last tiles of the row, so it stays on screen) */
-	alignEnd?: boolean;
+	/** the now/next block's width: less for the last tiles, so it stays on the row (the progress meter in it gives way first) */
+	infoWidth?: number;
 }
 
 interface Props {
@@ -32,7 +32,7 @@ export function ChannelTile ({live, classes, onHover, onActivate}: Props) {
 					: <div class="chan__name">{live.name}</div>}
 				{now && <div class="chan__bar"><span style={{transform: `scaleX(${progress(now, at)})`}} /></div>}
 			</div>
-			<div class={`chan__info${live.alignEnd ? ' chan__info--end' : ''}`}>
+			<div class="chan__info" style={live.infoWidth ? {width: `${live.infoWidth}px`} : undefined}>
 				<div class="chan__line">{live.number} · {live.name}</div>
 				{now ? (
 					<>

@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {afterFirstFrame} from '../lib/boot';
-import {cachedLive, cachedLogos, readChannels, readListings, readLogos, saveLive, type Channel, type Listings} from '../lib/livetv';
+import {cachedLive, cachedLogos, readChannels, readListings, readLogos, saveLive, type Channel, type Listings, type LiveCache} from '../lib/livetv';
+import {wallpaperShown} from '../lib/wallpaper';
 
 export interface LiveTv {
 	channels: Channel[];
@@ -12,13 +12,21 @@ export interface LiveTv {
 }
 
 const minute = () => { const t = Date.now(); return t - (t % 60000); };
+/** after the wallpaper is up: how long before the row is drawn from the cache, and then before the TV is asked */
+const DRAW_AFTER_MS = 600;
+const READ_AFTER_MS = 2000;
+/** if the wallpaper never reports in (a picture that hangs), Live TV starts anyway */
+const WALLPAPER_WAIT_MS = 10000;
+const NONE: LiveCache = {channels: [], listings: {}};
 
-/** The Live TV row's and the Guide's data. The last answer is drawn at once on a cold start; the TV is asked again after the first frame,
+/** The Live TV row's and the Guide's data. Nothing happens until the wallpaper is on screen, so a cold start draws the wallpaper and the
+ *  apps first: then the last answer (and its logos) comes out of localStorage, and a moment later the TV is asked again. After that it is asked
  *  whenever the Guide opens, and when a programme on one of the first `watch` channels (the row's) ends. No timer reads the TV:
  *  the once-a-minute tick only moves the progress bars. */
 export function useLiveTv (enabled: boolean, guideOpen: boolean, watch: number): LiveTv {
-	const [data, setData] = useState(cachedLive);
-	const [logos, setLogos] = useState(cachedLogos);
+	const [data, setData] = useState(NONE);
+	const [logos, setLogos] = useState<Record<string, string>>({});
+	const [started, setStarted] = useState(false);
 	const [now, setNow] = useState(minute);
 	const readAt = useRef(0);
 	const busy = useRef(false);
@@ -40,15 +48,28 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, watch: number):
 			.then(() => { busy.current = false; });
 	};
 
+	// wait for the wallpaper, then draw from the cache, then ask the TV
 	useEffect(() => {
 		if (!enabled) return undefined;
-		return afterFirstFrame(() => refresh(true));
+		let done = false;
+		const timers: number[] = [];
+		const start = () => {
+			if (done) return;
+			done = true;
+			timers.push(window.setTimeout(() => {
+				if (!started) { setData(cachedLive()); setLogos(cachedLogos()); setStarted(true); }
+				timers.push(window.setTimeout(() => refresh(true), READ_AFTER_MS));
+			}, DRAW_AFTER_MS));
+		};
+		wallpaperShown.then(start);
+		timers.push(window.setTimeout(start, WALLPAPER_WAIT_MS));
+		return () => { done = true; timers.forEach((t) => window.clearTimeout(t)); };
 	}, [enabled]);
 
-	useEffect(() => { if (guideOpen) refresh(false); }, [guideOpen]);
+	useEffect(() => { if (guideOpen && started) refresh(false); }, [guideOpen]);
 
 	useEffect(() => {
-		if (!enabled) return undefined;
+		if (!enabled || !started) return undefined;
 		const id = window.setInterval(() => {
 			const t = minute();
 			setNow(t);
@@ -58,7 +79,7 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, watch: number):
 			if (ended && !document.hidden) refresh(false);
 		}, 15000);
 		return () => window.clearInterval(id);
-	}, [enabled]);
+	}, [enabled, started]);
 
 	return {channels: data.channels, listings: data.listings, logos, now};
 }

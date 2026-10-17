@@ -1286,12 +1286,11 @@ html.reduce-motion .ambient__photo { animation: none; }
 	position: absolute; left: 0; top: calc(var(--layout-tile-height) + 36px); width: 660px; text-align: left; color: #fff; pointer-events: none;
 	opacity: 0; transition: opacity var(--motion-focus-ms) ease-out; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
 }
-.chan__info--end { left: auto; right: 0; }
 .tile--focused .chan__info { opacity: 1; }
 .chan__line { font-size: 21px; font-weight: 500; opacity: 0.78; white-space: nowrap; }
 .chan__title { margin-top: 4px; font-size: 34px; font-weight: 650; letter-spacing: -0.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chan__times { display: flex; flex-direction: row; align-items: center; margin-top: 8px; font-size: 22px; font-weight: 500; opacity: 0.9; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.chan__meter { flex: 0 0 auto; width: 160px; height: 5px; margin: 0 16px; border-radius: 3px; background: rgba(255, 255, 255, 0.3); overflow: hidden; }
+.chan__meter { flex: 0 1 160px; min-width: 48px; height: 5px; margin: 0 16px; border-radius: 3px; background: rgba(255, 255, 255, 0.3); overflow: hidden; }
 .chan__next { margin-top: 10px; font-size: 21px; font-weight: 500; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 html.light .chan__info { color: #14151b; text-shadow: none; }
 html.light .chan__meter { background: rgba(20, 22, 32, 0.2); }
@@ -1330,7 +1329,7 @@ html.light .chan__meter span { background: #14151b; }
 .guide__prog { font-size: 32px; font-weight: 650; letter-spacing: -0.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .guide__prog--next { font-size: 28px; font-weight: 500; }
 .guide__meta { display: flex; flex-direction: row; align-items: center; margin-top: 8px; font-size: 22px; font-weight: 500; opacity: 0.8; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.guide__meter { flex: 0 0 auto; width: 220px; height: 5px; margin: 0 16px; border-radius: 3px; background: rgba(255, 255, 255, 0.3); overflow: hidden; }
+.guide__meter { flex: 0 1 220px; min-width: 48px; height: 5px; margin: 0 16px; border-radius: 3px; background: rgba(255, 255, 255, 0.3); overflow: hidden; }
 .guide__row--focused .guide__meter { background: rgba(0, 0, 0, 0.14); }
 .guide__row--focused .guide__meter span { background: #111; }
 .guide__empty { position: absolute; left: 30px; top: 40px; font-size: 28px; opacity: 0.8; }
@@ -1342,3 +1341,15 @@ html.light .guide__meter span { background: #14151b; }
 html.light .guide__row--focused .guide__meter { background: rgba(255, 255, 255, 0.25); }
 html.light .guide__row--focused .guide__meter span { background: #fff; }
 html.reduce-motion .guide__track, html.reduce-motion .guide__row { transition: none; }
+
+/* ---------- Settings and the Guide over the same backdrop as the lower rows (.lowerveil) ----------
+   The strong blurred copy (--wp-bg) under the same veil, fully opaque: before, Settings was at 0.9 opacity, so the sharp wallpaper showed
+   through, and with Live blur off it used the lighter copy (--wp-blur). The video wallpaper keeps its own see-through fill. */
+html:not(.wp-video) body .screen.screen--settings::before {
+	opacity: 1; background-color: #10131c; background-blend-mode: normal;
+	background-image: linear-gradient(rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.26)), var(--wp-bg, none);
+	background-size: auto, cover; background-position: 0 0, center;
+}
+html.light:not(.wp-video) body .screen.screen--settings::before {
+	background-color: rgb(120, 128, 148); background-image: linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10)), var(--wp-bg, none);
+}

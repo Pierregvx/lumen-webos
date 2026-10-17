@@ -229,13 +229,17 @@ function paint (el: HTMLElement, src: string): void {
 	fadeTimer = window.setTimeout(() => { el.style.backgroundImage = next; layer.remove(); }, FADE_MS + 60);
 }
 
+/** Resolves once the first wallpaper of this launch is on screen (or there is none to show), so heavier work can wait for it. */
+let markShown: () => void = () => undefined;
+export const wallpaperShown: Promise<void> = new Promise((resolve) => { markShown = resolve; });
+
 export function setWallpaper (sel: string): void {
 	const el = ensureElement();
 	const mine = ++token;
 	currentSel = sel;
 	const list = candidates(sel);
 	const root = document.documentElement.classList;
-	if (list.length === 0) { root.remove(HTML_CLASS); el.style.backgroundImage = 'none'; shown = null; shownId = ''; useLocal(null); setBlur(null); writeCache(BOOT_WALLPAPER_KEY, null); return; }
+	if (list.length === 0) { root.remove(HTML_CLASS); el.style.backgroundImage = 'none'; shown = null; shownId = ''; useLocal(null); setBlur(null); writeCache(BOOT_WALLPAPER_KEY, null); markShown(); return; }
 	const show = (c: Candidate, img: HTMLImageElement, src: string) => {
 		shown = c.src;
 		shownId = c.id || '';
@@ -246,6 +250,7 @@ export function setWallpaper (sel: string): void {
 		setBlur(c.src);
 		saveBoot();
 		prepareNext(sel);
+		markShown();
 	};
 	if (sel.indexOf('immich:') === 0) {
 		// on failure (no server set up, server away, nothing matches) the bundled default is shown, as for a cloud picture that will not load
@@ -265,7 +270,7 @@ export function setWallpaper (sel: string): void {
 	}
 	const tryAt = (i: number) => {
 		if (mine !== token) return;                      // a newer choice replaced this one
-		if (i >= list.length) { root.remove(HTML_CLASS); return; }
+		if (i >= list.length) { root.remove(HTML_CLASS); markShown(); return; }
 		const c = list[i];
 		// a cloud picture already on the TV (prepared by the last launch) is read from there; anything else comes from its URL
 		const stored = c.src.indexOf(PROXY) === 0 ? getPics(c.src) : Promise.resolve(null);
