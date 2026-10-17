@@ -54,6 +54,39 @@ export function readIcons (paths: string[]): Promise<string> {
 	return script ? run(script, 15000) : Promise.resolve('');
 }
 
+// ---------- Live TV (docs/live-tv-build.md) ----------
+
+/** "1_41_2_102_16522_17472_9018": seven numbers. */
+const CHANNEL_ID = /^\d+(_\d+){6}$/;
+/** db8's paging key from the last reply ("1mo403xJBZ3rD34pMoS5+F") */
+const DB8_PAGE = /^[A-Za-z0-9+\/=_.-]{1,128}$/;
+/** the now and next programmes of every channel */
+const PROGRAM_PF = 'com.webos.service.legacybroadcast.programPF:4';
+const PF_FIELDS = ['signalChannelId', 'programName', 'startTime', 'endTime', 'isPresent'];
+
+/** The aerial channel list (about 188 channels), as the TV's JSON reply. */
+export function channelList (): Promise<string> {
+	return run(luna('luna://com.webos.service.iepg/getChannelList', {dataType: 0, sort: 0, channelMode: 'Terrestrial', attribute: [{filterType: 'Invisible', value: false}]}), 12000);
+}
+
+/** One page (up to 500 rows) of the now and next programmes, as the TV's JSON reply. `slim` asks only for the fields Lumen reads; without
+ *  it every row carries its audio, rating and description blocks (about 1.5 KB a row). */
+export function nowNext (page?: string, slim = true): Promise<string> {
+	if (page !== undefined && !DB8_PAGE.test(page)) return Promise.reject(new Error('refused: db8 page'));
+	const query: Record<string, unknown> = {from: PROGRAM_PF, limit: 500};
+	if (slim) query.select = PF_FIELDS;
+	if (page) query.page = page;
+	return run(luna('luna://com.webos.epgdb/find', {query}), 12000);
+}
+
+/** Opens Live TV on a channel (from Home too). */
+export function openChannel (channelId: string): Promise<void> {
+	if (!CHANNEL_ID.test(channelId)) return Promise.reject(new Error('refused: channel id'));
+	return run(luna('luna://com.webos.service.apiadapter/tv/openChannel', {channelId})).then((text) => {
+		if (text.indexOf('"returnValue":false') !== -1) throw new Error('the TV refused the channel');
+	});
+}
+
 /** The value of one known setting, or '' when the TV has none. */
 export function getSetting (key: string): Promise<string> {
 	const s = SETTINGS[key];

@@ -11,6 +11,8 @@ interface Props {
 	compact?: boolean;
 	/** show the label above the row */
 	titled?: boolean;
+	/** extra class on the row (the Live TV row's is row--live) */
+	className?: string;
 	/** tile width and gap, when not the default (they must match --layout-tile-size and --layout-tile-gap) */
 	tileSize?: number;
 	tileGap?: number;
@@ -28,7 +30,7 @@ const VIEWPORT_WIDTH = LAYOUT.screenWidth - 2 * LAYOUT.rowsEdge;
 
 /** Horizontal strip of tiles. Centred when it fits; otherwise a carousel that keeps
  *  the selected tile in the middle (clamped at the ends). */
-export function Row ({label, items, focused, selected, emptyText, compact, titled, tileSize, tileGap, hidden, rest, onLeave, onSelect, onActivate}: Props) {
+export function Row ({label, items, focused, selected, emptyText, compact, titled, className, tileSize, tileGap, hidden, rest, onLeave, onSelect, onActivate}: Props) {
 	const size = compact ? LAYOUT.dockTileSize : tileSize || LAYOUT.tileSize;
 	const gap = compact ? LAYOUT.dockTileGap : tileGap || LAYOUT.tileGap;
 	const STEP = size + gap;
@@ -37,7 +39,7 @@ export function Row ({label, items, focused, selected, emptyText, compact, title
 	const offset = fits ? 0 : clamp(selected * STEP + size / 2 - VIEWPORT_WIDTH / 2, 0, total - VIEWPORT_WIDTH);
 
 	return (
-		<section class={`row${focused || rest ? ' row--focused' : ''}${compact ? ' row--dock' : ''}${titled ? ' row--titled' : ''}${hidden ? ' row--hidden' : ''}`} style={`--row-w:${total}px`} onMouseLeave={onLeave}>
+		<section class={`row${focused || rest ? ' row--focused' : ''}${compact ? ' row--dock' : ''}${titled ? ' row--titled' : ''}${hidden ? ' row--hidden' : ''}${className ? ' ' + className : ''}`} style={`--row-w:${total}px`} onMouseLeave={onLeave}>
 			<h2 class="row__label">{label}</h2>
 			<div class="row__viewport">
 				{items.length === 0

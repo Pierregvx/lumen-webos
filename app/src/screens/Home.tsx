@@ -19,6 +19,10 @@ export interface HomeRow {
 	compact?: boolean;
 	/** show the row's name above it (the Recent row); the app rows have none, as on tvOS */
 	titled?: boolean;
+	/** extra class on the row (row--live) */
+	className?: string;
+	/** how much higher the row must sit when focused, to leave room under it (the Live TV row's now/next block) */
+	below?: number;
 }
 
 interface Props {
@@ -402,7 +406,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 		let shift = 0;
 		if (lower && kids[0] && kids[rowIndex]) {
 			shift = tilesTop(kids[0]) - GRID_TOP;
-			shift = Math.max(shift, tilesTop(kids[rowIndex]) - GRID_BOTTOM);
+			shift = Math.max(shift, tilesTop(kids[rowIndex]) - GRID_BOTTOM + (rows[rowIndex].below || 0));
 		}
 		el.style.setProperty('--lower-shift', shift + 'px');
 	});
@@ -446,6 +450,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 						key={row.id}
 						label={tr(row.label)}
 						titled={row.titled}
+						className={row.className}
 						tileSize={tiles && tiles.size}
 						tileGap={tiles && tiles.gap}
 						items={i > 1 && !late ? [] : row.items}

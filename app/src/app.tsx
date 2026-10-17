@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {Home, type HomeRow} from './screens/Home';
 import {Settings, type SettingsTab, type WallpaperTab} from './screens/Settings';
+import {Guide} from './screens/Guide';
 import type {WallpaperEntry} from './components/WallpaperPicker';
 import type {OptionItem} from './components/OptionList';
 import {Toast, type ToastMessage} from './components/Toast';
@@ -27,13 +28,24 @@ import {setFpsCounter} from './lib/fps';
 import {ControlCenter, type CenterAction} from './components/ControlCenter';
 import {CITIES, COUNTRIES} from './config/cities';
 import {AUTO_PLACE, peekWeather, readWeather, type Weather} from './lib/weather';
+import {useLiveTv} from './hooks/useLiveTv';
+import {nowNextAt, type Channel} from './lib/livetv';
+import {openChannel} from './lib/root';
 import {isDark, LANGS, nextDark, setClockMode, setLang} from './lib/i18n';
 
-type Screen = 'home' | 'settings' | 'ambient';
+type Screen = 'home' | 'settings' | 'ambient' | 'guide';
 
-const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock'} as const;
+const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock', live: 'livetv'} as const;
+/** the Live TV row: its channels' tiles (channel:<channelId>) and the Guide tile at the end */
+const LIVE = {prefix: 'channel:', guide: 'livetv:guide'} as const;
+/** channels on the Live TV row, before the Guide tile */
+const LIVE_ROW_CHANNELS = 5;
+/** the width of a channel tile's now/next block (.chan__info in global.css): the tiles it would run off the row for hang it from their right edge */
+const LIVE_INFO_W = 660;
+/** how much higher the Live TV row sits when focused, so its now/next block fits on screen */
+const LIVE_BELOW = 150;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {ambient: 'ambient', ambientSeconds: 'ambient-seconds', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
+const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientSeconds: 'ambient-seconds', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 15, 30, 60];
 /** when the video wallpaper plays (Settings > Options > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
 const VIDEO_HOURS: Record<string, [number, number]> = {day: [7, 19], evening: [17, 23], night: [19, 7]};
@@ -91,6 +103,7 @@ export function App () {
 	// a fresh install first looks for the settings backup on the TV (lib/backup.ts); nothing is seeded until that has answered
 	const [restoring, setRestoring] = useState(() => !hasSavedConfig());
 	const [focusRow, setFocusRow] = useState<{id: string; seq: number} | undefined>(undefined);
+	const live = useLiveTv(config.liveTvRow, screen === 'guide', LIVE_ROW_CHANNELS);
 
 	const showToast = useCallback((text: string, kind: ToastMessage['kind'] = 'info') => {
 		window.clearTimeout(toastTimer.current);
@@ -231,7 +244,7 @@ export function App () {
 		root.toggle('focus-strong', config.focusStrength === 'strong');
 	}, [config.focusStrength]);
 	useEffect(() => { setAmbientFlag(config.ambient !== ''); }, [config.ambient]);
-	useEffect(() => { setVideoPaused(screen === 'settings' || screen === 'ambient'); document.documentElement.classList.toggle('in-settings', screen === 'settings'); }, [screen]);
+	useEffect(() => { setVideoPaused(screen !== 'home'); document.documentElement.classList.toggle('in-settings', screen === 'settings' || screen === 'guide'); }, [screen]);
 
 	const updateConfig = (next: UserConfig) => { configRef.current = next; setConfig(next); saveConfig(next); scheduleBackup(next); };
 
@@ -288,11 +301,27 @@ export function App () {
 	// the first row (in the glass bar) holds config.firstRow apps; the rest make a grid of rows as wide below it, like the tvOS home screen
 	// (the grid rows are 'dock', 'dock:1', 'dock:2'...)
 	const firstRow = config.firstRow;
+	/** the Live TV row: the first channels, each with what is on now, then the Guide tile */
+	const liveTiles = useMemo((): TileModel[] => {
+		if (!config.liveTvRow || !live.channels.length) return [];
+		const step = (TILES_FOR[firstRow] || TILES_FOR[6]).size + (TILES_FOR[firstRow] || TILES_FOR[6]).gap;
+		const rowW = firstRow * step;
+		return live.channels.slice(0, LIVE_ROW_CHANNELS).map((c, i): TileModel => ({
+			key: LIVE.prefix + c.id,
+			label: c.name,
+			live: {
+				number: c.number, name: c.name, logo: c.logoPath && live.logos[c.logoPath], at: live.now,
+				alignEnd: i * step + LIVE_INFO_W > rowW,
+				...nowNextAt(live.listings[c.signal], live.now)
+			}
+		})).concat({key: LIVE.guide, label: 'Guide', glyph: 'guide', color: 'rgba(255, 255, 255, 0.16)'});
+	}, [config.liveTvRow, live, firstRow, config.language]);
 	const rows: HomeRow[] = useMemo(() => {
 		const list: HomeRow[] = [{id: ROW.apps, label: 'Apps', items: homeTiles.slice(0, firstRow), emptyText: 'No apps selected — add some in Settings'}];
 		for (let at = firstRow, n = 0; at < homeTiles.length; at += firstRow, n++) list.push({id: n ? `${ROW.dock}:${n}` : ROW.dock, label: 'More apps', items: homeTiles.slice(at, at + firstRow)});
+		if (liveTiles.length) list.push({id: ROW.live, label: 'Live TV', titled: true, className: 'row--live', below: LIVE_BELOW, items: liveTiles});
 		return list;
-	}, [homeTiles, shownInputs, config.language, firstRow]);
+	}, [homeTiles, shownInputs, config.language, firstRow, liveTiles]);
 
 	const tabs: SettingsTab[] = useMemo(() => [
 		{id: ROW.apps, label: 'Apps', noun: 'apps', items: allApps.map(appTile), shown: shownApps.map(appTile)},
@@ -327,6 +356,12 @@ export function App () {
 	};
 
 	const options: OptionItem[] = useMemo(() => [
+		{
+			id: OPTION.liveTv,
+			label: 'Live TV row',
+			description: 'A row of TV channels under your apps, showing what is on now and next, with the Guide at the end. OK on a channel opens Live TV on it. Needs the Homebrew Channel.',
+			value: config.liveTvRow
+		},
 		{
 			id: OPTION.useHomebrew,
 			label: 'Live app list via Homebrew Channel',
@@ -474,7 +509,7 @@ export function App () {
 			description: 'Frames drawn in the last second and the longest frame, in the top-left corner. Only in dev builds.',
 			value: config.fpsCounter
 		}] : [])
-	], [config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur, config.ambient, config.ambientSeconds, immich.ready]);
+	], [config.liveTvRow, config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur, config.ambient, config.ambientSeconds, immich.ready]);
 
 	const wallpaper: WallpaperTab = useMemo(() => {
 		const entries: WallpaperEntry[] = [
@@ -521,7 +556,13 @@ export function App () {
 		launchApp(id).catch(() => showToast(`Couldn't open ${label}`, 'error'));
 	};
 
+	const watchChannel = useCallback((c: Channel) => {
+		openChannel(c.id).catch(() => showToast(`Couldn't open ${c.name}`, 'error'));
+	}, [showToast]);
+
 	const onActivate = useCallback((_rowId: string, item: TileModel) => {
+		if (item.key === LIVE.guide) { setScreen('guide'); return; }
+		if (item.key.indexOf(LIVE.prefix) === 0) { openChannel(item.key.slice(LIVE.prefix.length)).catch(() => showToast(`Couldn't open ${item.label}`, 'error')); return; }
 		if (item.key === MISC.settings || item.key === BUILTIN.settings) { setScreen('settings'); return; }
 		if (item.key === 'screensaver') { startScreensaver().catch(() => showToast("Couldn't start the screensaver (it needs the Homebrew Channel)", 'error')); return; }
 		if (item.key === MISC.lgHome) { launchLgHome().catch(() => showToast("Couldn't open LG Home", 'error')); return; }
@@ -578,6 +619,7 @@ export function App () {
 			return;
 		}
 		if (optionId === OPTION.useHomebrew) updateConfig({...config, useHomebrew: !config.useHomebrew});
+		else if (optionId === OPTION.liveTv) updateConfig({...config, liveTvRow: !config.liveTvRow});
 		else if (optionId === OPTION.videoWallpaper) updateConfig({...config, videoWallpaper: !config.videoWallpaper});
 		else if (optionId === OPTION.videoClip) {
 			const names = [''].concat(VIDEO_PLACES);
@@ -630,6 +672,7 @@ export function App () {
 			{/* Home stays mounted under Settings so it keeps its focus position. */}
 			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} menuItems={MENU_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} dockHide={config.dockHide} focusRow={focusRow} />
 			{screen === 'ambient' && <Ambient source={config.ambient} seconds={config.ambientSeconds} weather={weather} showPeriod={config.showAmPm} onExit={() => setScreen('home')} />}
+			{screen === 'guide' && <Guide channels={live.channels} listings={live.listings} logos={live.logos} now={live.now} active={!controls} onOpen={watchChannel} onClose={() => setScreen('home')} />}
 			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onChoose={onChoose} onClose={() => setScreen('home')} />}
 			{controls && <ControlCenter
 				darkMode={config.darkMode}

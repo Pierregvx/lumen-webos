@@ -1268,3 +1268,77 @@ html.light .panel--cc .cc__caption { color: #fff; }
 .screen.ambient__status { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: none; pointer-events: none; }
 .ambient .screen > .pill.status { top: auto; bottom: 72px; }
 html.reduce-motion .ambient__photo { animation: none; }
+
+/* ---------- Live TV row (components/ChannelTile.tsx, docs/live-tv-build.md) ----------
+   The last row, titled. Each channel's logo sits on the same dark tile, with a capsule along the bottom for how far through the programme
+   is. The focused tile's now/next block shows under it where an app's name would; the row's viewport reaches far enough down to show it. */
+.rows .row--live .row__viewport { padding-bottom: 250px; margin-bottom: -250px; }
+.tile--channel { position: relative; }
+.tile--channel .tile__box { background: linear-gradient(160deg, #2c3142 0%, #171a24 100%); }
+.chan__logo { position: absolute; left: 50%; top: 45%; max-width: 62%; max-height: 52%; transform: translate(-50%, -50%); object-fit: contain; }
+.chan__name {
+	position: absolute; left: 8%; right: 8%; top: 0; bottom: 12px; display: flex; align-items: center; justify-content: center; text-align: center;
+	font-size: 30px; font-weight: 700; line-height: 1.1; letter-spacing: -0.015em; color: #fff; overflow: hidden;
+}
+.chan__bar { position: absolute; left: 22px; right: 22px; bottom: 16px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.22); overflow: hidden; z-index: 2; }
+.chan__bar span, .chan__meter span, .guide__meter span { display: block; height: 100%; background: #fff; transform-origin: 0 50%; }
+.chan__info {
+	position: absolute; left: 0; top: calc(var(--layout-tile-height) + 36px); width: 660px; text-align: left; color: #fff; pointer-events: none;
+	opacity: 0; transition: opacity var(--motion-focus-ms) ease-out; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+.chan__info--end { left: auto; right: 0; }
+.tile--focused .chan__info { opacity: 1; }
+.chan__line { font-size: 21px; font-weight: 500; opacity: 0.78; white-space: nowrap; }
+.chan__title { margin-top: 4px; font-size: 34px; font-weight: 650; letter-spacing: -0.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chan__times { display: flex; flex-direction: row; align-items: center; margin-top: 8px; font-size: 22px; font-weight: 500; opacity: 0.9; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.chan__meter { flex: 0 0 auto; width: 160px; height: 5px; margin: 0 16px; border-radius: 3px; background: rgba(255, 255, 255, 0.3); overflow: hidden; }
+.chan__next { margin-top: 10px; font-size: 21px; font-weight: 500; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.light .chan__info { color: #14151b; text-shadow: none; }
+html.light .chan__meter { background: rgba(20, 22, 32, 0.2); }
+html.light .chan__meter span { background: #14151b; }
+
+/* ---------- Guide, Now and Next (screens/Guide.tsx) ----------
+   Over the blurred wallpaper with Settings' dark veil. Rows are faint glass, 120px tall every 132px (Guide.tsx ROW_STEP); the focused one is
+   the white capsule. The column heads line up with the rows' Now and Next blocks. The top right is kept for phase 2's switcher. */
+.screen--guide { padding: 0; color: #fff; }
+.guide__head { position: absolute; left: var(--layout-rows-edge); right: var(--layout-rows-edge); top: 50px; height: 84px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
+.guide__title { margin: 0; font-size: 56px; font-weight: 700; letter-spacing: -0.02em; }
+.guide__cols { position: absolute; left: var(--layout-rows-edge); right: var(--layout-rows-edge); top: 160px; font-size: 22px; font-weight: 500; opacity: 0.75; font-variant-numeric: tabular-nums; }
+.guide__col { position: absolute; top: 0; white-space: nowrap; }
+.guide__col--now { left: 330px; }
+.guide__col--next { left: 1160px; }
+.guide__view { position: absolute; left: calc(var(--layout-rows-edge) - 30px); right: calc(var(--layout-rows-edge) - 30px); top: 192px; height: 804px; overflow: hidden; }
+.guide__track { position: relative; transition: transform var(--motion-scroll-ms) cubic-bezier(0.2, 0.7, 0.2, 1); will-change: transform; }
+.guide__row {
+	position: absolute; left: 30px; right: 30px; margin-top: 12px; height: 120px; box-sizing: border-box; padding: 0 36px; border-radius: 30px;
+	display: flex; flex-direction: row; align-items: center; background: rgba(255, 255, 255, 0.09);
+	box-shadow: inset 0 1.5px 1px -1px rgba(255, 255, 255, 0.45), inset 1.5px 0 1px -1px rgba(255, 255, 255, 0.2);
+	transition: transform var(--motion-focus-ms) ease-out;
+}
+.guide__row--focused { background: #fff; color: #111; transform: scale(1.02); box-shadow: 0 18px 36px rgba(0, 0, 0, 0.32); z-index: 1; }
+.guide__row--off .guide__now, .guide__row--off .guide__next { opacity: 0.55; }
+.guide__row--off.guide__row--focused .guide__now, .guide__row--off.guide__row--focused .guide__next { opacity: 0.8; }
+.guide__num { flex: 0 0 64px; font-size: 30px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
+.guide__logo {
+	flex: 0 0 132px; height: 80px; margin-left: 16px; border-radius: 16px; display: flex; align-items: center; justify-content: center; overflow: hidden;
+	background: linear-gradient(160deg, #2c3142 0%, #171a24 100%); color: #fff; font-size: 19px; font-weight: 700; line-height: 1.1; text-align: center;
+}
+.guide__logo img { max-width: 80%; max-height: 64%; object-fit: contain; }
+.guide__logo span { padding: 0 8px; }
+.guide__now { flex: 0 0 750px; min-width: 0; margin-left: 82px; }
+.guide__next { flex: 1 1 auto; min-width: 0; margin-left: 80px; }
+.guide__prog { font-size: 32px; font-weight: 650; letter-spacing: -0.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.guide__prog--next { font-size: 28px; font-weight: 500; }
+.guide__meta { display: flex; flex-direction: row; align-items: center; margin-top: 8px; font-size: 22px; font-weight: 500; opacity: 0.8; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.guide__meter { flex: 0 0 auto; width: 220px; height: 5px; margin: 0 16px; border-radius: 3px; background: rgba(255, 255, 255, 0.3); overflow: hidden; }
+.guide__row--focused .guide__meter { background: rgba(0, 0, 0, 0.14); }
+.guide__row--focused .guide__meter span { background: #111; }
+.guide__empty { position: absolute; left: 30px; top: 40px; font-size: 28px; opacity: 0.8; }
+html.light .screen--guide { color: #14151b; }
+html.light .guide__row { background: rgba(255, 255, 255, 0.42); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7); }
+html.light .guide__row--focused { background: #14151b; color: #fff; }
+html.light .guide__meter { background: rgba(20, 22, 32, 0.2); }
+html.light .guide__meter span { background: #14151b; }
+html.light .guide__row--focused .guide__meter { background: rgba(255, 255, 255, 0.25); }
+html.light .guide__row--focused .guide__meter span { background: #fff; }
+html.reduce-motion .guide__track, html.reduce-motion .guide__row { transition: none; }

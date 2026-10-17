@@ -71,6 +71,8 @@ export interface UserConfig {
 	seeded: boolean;
 	/** the built-in tiles (Settings, TV Settings, Inputs) have been put on the home screen once; taken off, they stay off */
 	builtinTiles: boolean;
+	/** a row of aerial channels under the apps, with what is on now (needs the Homebrew Channel) */
+	liveTvRow: boolean;
 }
 
 export const DEFAULT_CONFIG: UserConfig = {
@@ -106,7 +108,8 @@ export const DEFAULT_CONFIG: UserConfig = {
 	videoHours: 'always',
 	fpsCounter: false,
 	seeded: false,
-	builtinTiles: false
+	builtinTiles: false,
+	liveTvRow: true
 };
 
 export function loadConfig (): UserConfig {
@@ -159,7 +162,8 @@ export function parseConfig (raw: string): UserConfig {
 		videoHours: parsed.videoHours === 'day' || parsed.videoHours === 'evening' || parsed.videoHours === 'night' ? parsed.videoHours : 'always',
 		fpsCounter: parsed.fpsCounter === true,
 		seeded: parsed.seeded !== false,
-		builtinTiles: parsed.builtinTiles === true
+		builtinTiles: parsed.builtinTiles === true,
+		liveTvRow: parsed.liveTvRow !== false
 	};
 }
 

@@ -1,4 +1,5 @@
 import {CheckMark, Glyph, type GlyphName} from './Glyph';
+import {ChannelTile, type LiveTile} from './ChannelTile';
 
 /** Everything a tile needs to draw itself; rows and grids build these from app/input data. */
 export interface TileModel {
@@ -16,6 +17,8 @@ export interface TileModel {
 	plain?: boolean;
 	/** a folder: the icons of the apps inside (up to 4 are drawn as a small collage) */
 	children?: (string | undefined)[];
+	/** a channel on the Live TV row: drawn by ChannelTile */
+	live?: LiveTile;
 }
 
 interface Props {
@@ -33,6 +36,7 @@ interface Props {
 
 export function Tile ({model, focused, lifted, checked, dimmed, onHover, onActivate}: Props) {
 	const classes = ['tile', focused && 'tile--focused', lifted && 'tile--lifted', dimmed && 'tile--dimmed'].filter(Boolean).join(' ');
+	if (model.live) return <ChannelTile live={model.live} classes={classes} onHover={onHover} onActivate={onActivate} />;
 	// pointer: the focused tile tilts a little towards the cursor, like the Apple TV parallax (transform only, set straight on the element)
 	const tilt = (e: MouseEvent) => {
 		const el = e.currentTarget as HTMLElement;
