@@ -28,14 +28,14 @@ interface Props {
 
 /** a row's height and the space under it (keep in step with .fg__row in global.css) */
 const ROW_STEP = 80;
-const IN_VIEW = 6;
-const FOCUS_AT = 2;
+const IN_VIEW = 7;
+const FOCUS_AT = 3;
 const SPARE = 2;
 const HALF_HOUR = 1800000;
 /** the grid shows two hours across, in half-hour columns */
 const SPAN = 4 * HALF_HOUR;
-/** the grid's width (keep in step with .fg__line in global.css): the rows' 1670px less the 302px channel column */
-const GRID_W = 1368;
+/** the grid's width (keep in step with .fg__line in global.css): the rows' 1670px less the 372px channel column */
+const GRID_W = 1298;
 const PX_PER_MS = GRID_W / SPAN;
 const halfHour = (ms: number) => ms - (ms % HALF_HOUR);
 
@@ -50,7 +50,7 @@ function pick (list: Programme[], a: number, winEnd: number): Programme | undefi
 	return list.find((p) => p.start <= a && a < p.end) || list.find((p) => p.start > a && p.start < winEnd);
 }
 
-/** The Full guide: two hours across, channels down, a line at now. The focused programme's details sit above the grid. Up/Down move
+/** The Full guide: two hours across, seven channels down, a line at now. The focused programme's details sit above the grid. Up/Down move
  *  between channels and keep the time the focus is at, so the focus stays on what is on now as it moves; Left/Right move between programmes
  *  and scroll the grid half an hour at a time, as far back as the half hour now is in and as far on as the schedule was read. OK opens Live TV
  *  on the channel. Only the rows near the view are drawn, and only the programmes inside the two hours. */

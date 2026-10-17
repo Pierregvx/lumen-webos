@@ -49,7 +49,7 @@ is in `docs/live-tv.md`; this file only keeps what the build needs.
 - The switcher sits at the top right of the Guide. Up from the first channel reaches it; Left/Right or OK switch; Down goes back. The
   choice is kept in the settings (`guideFull`), so the Guide opens on whichever was used last.
 - The Full guide follows `4-full-guide.jpg`: the focused programme's details on top (channel, title, times, progress, S and AD), then
-  two hours across in half-hour columns, six channels down, a line at now. Up/Down keep the time the focus is at; Left/Right move a
+  two hours across in half-hour columns, seven channels down, a line at now. Up/Down keep the time the focus is at; Left/Right move a
   programme at a time and scroll the grid. It goes back as far as the half hour now is in, and on as far as the schedule was read (8 hours).
 - The schedule is read when the Full guide opens (again after 10 minutes), from `programSCH:4` with six fields (`root.ts` `schedule()`).
   Seen on the TV 2026-10-17: the kind has no index on `startTime` or `endTime`, so db8 refuses any time filter ("no index for query",
