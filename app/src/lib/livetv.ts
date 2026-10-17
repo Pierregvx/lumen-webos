@@ -82,7 +82,7 @@ export function parseChannels (text: string): Channel[] {
 /** Each channel's brand colour, behind its white logo on the Live TV row and in the Guide, as tvOS does for apps. The logos are white on
  *  clear, so there is no colour to sample from them. Keys are lower case, without "HD", "+1" or a region; channels not listed stay dark. */
 const CHANNEL_COLORS: Record<string, string> = {
-	'bbc one': '#b5121b', 'bbc two': '#b8551a', 'bbc three': '#d1006a', 'bbc four': '#2b2e83', 'bbc news': '#a30000',
+	'bbc one': '#b5121b', 'bbc two': '#0e7c7b', 'bbc three': '#d1006a', 'bbc four': '#2b2e83', 'bbc news': '#a30000',
 	'bbc parliament': '#1b5e3b', 'bbc scotland': '#005eb8', 'bbc alba': '#1f6f8b', 'cbbc': '#4f9d2d', 'cbeebies': '#d97a00',
 	'itv1': '#0b8a8f', 'itv': '#0b8a8f', 'stv': '#0b8a8f', 'itv2': '#c2185b', 'itv3': '#6d2077', 'itv4': '#1d3c78', 'itvbe': '#9e2a8d',
 	'itv quiz': '#e05a00', 'channel 4': '#22348c', 'e4': '#5b2a86', 'e4 extra': '#5b2a86', 'more4': '#1f6f63', 'film4': '#a3162c',
