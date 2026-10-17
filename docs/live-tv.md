@@ -34,6 +34,14 @@ All commands so far are read-only and run as root over SSH on the TV.
   `epgdb`. Busiest TV services in the capture: `legacybroadcast.program`, `utp.broadcast`, `app.livetv`, `tvrmclient.tv`,
   `legacybroadcast.broadcast`. The channel list most likely comes from `utp.broadcast` or `legacybroadcast.broadcast`. Next: list the
   methods Live TV calls on those two, and look for `channelName`/`channelNumber` in any reply.
+- **Step 1c (2026-10-17): channel names found on the bus.** Methods seen: `utp.broadcast` calls `legacybroadcast.broadcast` with
+  `getCurrentChannel`, `changeChannel`, `getChannelState`, `getBroadcastComponentList`, `setBroadcastComponent`, and calls a separate
+  service `com.webos.service.legacybroadcast.channel` (only `/ci/getSasMessage` seen in this capture). Replies carry
+  `channelName` ("BBC ONE Yks HD", "BBC TWO HD", "ITV1 HD", "Channel 4 HD"), `channelNumber` ("101"...) and two channel id forms:
+  `"1_41_101_101_16522_17546_9018"` (guess: type, ?, major, minor, service id, transport stream id, network id) and the short
+  `"16522_17546_9018"` that matches the guide's `signalChannelId`. Only the channels flipped to appear, so this is the current-channel
+  reply, not a list. Next: try `getChannelList` on `legacybroadcast.channel`, `utp.broadcast` and `legacybroadcast.broadcast`, and
+  capture the `changeChannel` payload for tuning from Lumen.
 
 ## Plan (do in order, stop when one works)
 
