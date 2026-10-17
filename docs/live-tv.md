@@ -91,6 +91,10 @@ All commands so far are read-only and run as root over SSH on the TV.
 - **Step 1l (2026-10-17): names confirmed.** `channelName` on all 188 ("BBC ONE Yks HD" on 1, "BBC TWO HD" 2, "ITV1" 3, "Channel 4" 4,
   "5" 5, ...), plus `channelNameSortKey`. Logo candidates: `imgUrl` and `channelLogoSize` on every channel, `channelLogoServerUrl` once
   (LG's logo server, seen in Step 0). Next: look at `imgUrl` values, then tuning.
+- **Step 1m (2026-10-17): logos are cached files on the TV.** `imgUrl` is a path like `/tmp/gibbips/logo/s210a81942c909451daf38c567c71af39`
+  (no extension), `channelLogoSize` like `"H133x100"` or `"H356x200"` (empty for channel 1). Being in `/tmp`, they are probably
+  fetched again after each boot (from `channelLogoServerUrl`, LG's `gftsDownload.lge` server), so Lumen should copy them (as root) or
+  read them through the root exec rather than keep the paths. Next: check the files exist and what format they are.
 
 ## Plan (do in order, stop when one works)
 
