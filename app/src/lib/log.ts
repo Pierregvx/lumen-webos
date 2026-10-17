@@ -99,7 +99,7 @@ export function navMark (label: string): void {
 	let prev = t0;
 	const tick = (t: number) => {
 		if (nav !== mine) return;
-		if (prev === t0) mine.parts.push(`frame ${Math.round(t - t0)}`);
+		if (prev === t0) mine.parts.push(`frame ${Math.max(0, Math.round(t - t0))}`);
 		else if (t - prev > 50) mine.parts.push(`gap ${Math.round(prev - t0)}+${Math.round(t - prev)}`);
 		prev = t;
 		if (t - t0 < NAV_WINDOW_MS) window.requestAnimationFrame(tick);
@@ -108,6 +108,7 @@ export function navMark (label: string): void {
 	window.setTimeout(() => {
 		if (nav !== mine) return;
 		nav = null;
+		if (prev === t0) mine.parts.push('frame none');
 		write(read().concat(`${new Date().toISOString()} nav ${label} ${mine.parts.join(', ')}`));
 		window.clearTimeout(timer);
 		timer = window.setTimeout(flush, 100);
