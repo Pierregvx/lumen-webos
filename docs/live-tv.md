@@ -1,4 +1,4 @@
-# Live TV channel list: spike in progress
+# Live TV channel list: spike done
 
 Goal: read the TV's aerial (Freeview, DVB-T, digital only) channel list, so Lumen can show channel tiles and later a guide
 (PLAN.md, Spikes and Later item 9). The TV has been scanned and Live TV shows channels.
@@ -98,6 +98,21 @@ All commands so far are read-only and run as root over SSH on the TV.
 - **Step 1n (2026-10-17): logos are PNGs.** 176 files in `/tmp/gibbips/logo` (for 188 channels, so a few have none), about 2 to 3 KB
   each, PNG signature. Lumen can read them as base64 through the root exec and cache them. Next: tuning, by launching
   `com.webos.app.livetv` with `{"params":{"channelId":...}}` (a guess).
+- **Step 1o (2026-10-17): tuning works.** `luna-send -n 1 luna://com.webos.applicationManager/launch
+  '{"id":"com.webos.app.livetv","params":{"channelId":"1_41_2_102_16522_17472_9018"}}'` switched the TV to BBC Two. This is the same
+  launch call Lumen already makes for apps, so it should not need root (untested from the app).
+
+## Answer
+
+| What | Call | Notes |
+|---|---|---|
+| Channel list | `iepg/getChannelList {"dataType":0,"sort":0,"channelMode":"Terrestrial","attribute":[{"filterType":"Invisible","value":false}]}` | Root. 188 channels. `channelNumber`, `channelName`, `channelId`, `signalChannelId`, `imgUrl`, `Radio`, `HDTV`, `skipped`. |
+| Logos | read the file at `imgUrl` | Root. PNG, 2 to 3 KB, under `/tmp/gibbips/logo`, so cache them. 176 of 188 have one. |
+| Guide | `epgdb/find {"query":{"from":"com.webos.service.legacybroadcast.programSCH:4", ...}}` | Root. Join on `signalChannelId`. `programPF:4` holds now and next. Filled while Live TV runs, so it may be thin if Live TV has not been opened lately (untested). |
+| Tune | `applicationManager/launch {"id":"com.webos.app.livetv","params":{"channelId":...}}` | Worked from SSH. |
+
+Still unknown: whether the guide data stays filled when Live TV hasn't been used for a while, and the `epgdb` query syntax for one
+channel and a time window (db8 `where` on `signalChannelId` and `startTime` needs an index on those fields; check `getProfile` or try it).
 
 ## Plan (do in order, stop when one works)
 

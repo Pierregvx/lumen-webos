@@ -20,7 +20,8 @@ Every push to a branch other than `main` reaches the TV as a Homebrew Channel up
   Channel (`com.samrenfrew.lumen`, dev channel). LG Input Hook owns the Home button.
 - Built without the TV, waiting to be checked on it: everything in **Verify on the TV** below.
 - Next without the TV: the rest of **No TV needed**.
-- In progress at the TV (2026-10-17): finding the aerial channel list. Pick up from the plan in `docs/live-tv.md`.
+- Live TV spike done (2026-10-17): channel list, guide, logos and tuning all work. Calls in `docs/live-tv.md`; next is building the
+  Freeview tiles (Later item 9).
 
 ---
 
@@ -78,7 +79,8 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [ ] Chrome DevTools on the TV: which method works on webOS 25 (Dev Manager Desktop inspect, `ares-inspect`). Needed for Phase 4 traces.
 - [x] Settings keys: read works for `picture/backlight`, `picture/eyeComfortMode`, `sound/soundOutput` (`docs/spikes.md`). Backlight and Eye Comfort set work. Sound output
       dropped: TV speakers only.
-- [ ] Live TV channel service, for the Freeview tiles idea in Later. In progress: list (188 channels) and guide both readable as root; tuning still to try. Details in `docs/live-tv.md`.
+- [x] Live TV channel service, for the Freeview tiles idea in Later. Yes (2026-10-17): 188 aerial channels with names, PNG logos and the
+      guide, read as root; tuning works by launching Live TV with a channel id. Details in `docs/live-tv.md`.
 - [ ] `backdrop-filter` on the dock only, behind a temporary flag: 60 fps while moving focus and while the video wallpaper plays?
 - [ ] `https://sylvan.apple.com/` videos play directly (then the plain HTTP fallback in `lib/wallpaperVideo.ts` goes).
 - [ ] Immich: endpoint paths against the server's `/api` docs and which permissions a read-only key needs.
@@ -249,7 +251,7 @@ In rough order of value:
 7. Profiles, and a kids mode with a PIN and allowed hours.
 8. Privacy page: LG ad and Live Plus settings, plus hosts-level blocking of LG ad and tracking hosts (check what the Homebrew Channel's own
    telemetry and ad blocking already covers before adding to `hosts-extra`).
-9. Live Freeview channel tiles, if the Phase 2 channel service spike worked.
+9. Live Freeview channel tiles, and a now/next guide. The spike worked (`docs/live-tv.md`).
 
 ## Parked
 

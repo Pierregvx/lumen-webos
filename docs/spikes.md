@@ -31,3 +31,9 @@ Setting `backlight` as root works (80 then back to 100, visibly dimmed, `returnV
 ## Clock after a reboot (2026-10-15)
 `clockfix.sh` moved aside, then `reboot`. After boot `date` gave `Thu Oct 15 21:33:52 BST 2026`: right zone, right time. `clockfix.sh`
 deleted. Only a software reboot was tried, not a power cut at the wall. The boot hook started `watch.sh` on its own.
+
+## Live TV channel list and guide (2026-10-17)
+Yes. As root: `iepg/getChannelList` with `"channelMode":"Terrestrial"` gives the 188 aerial channels with names, numbers and logo paths
+(PNGs under `/tmp/gibbips/logo`); the guide is in `epgdb`, kind `com.webos.service.legacybroadcast.programSCH:4`, joined on
+`signalChannelId`; launching `com.webos.app.livetv` with `{"channelId":...}` tunes. Found by watching `ls-monitor` while
+`com.webos.app.channeledit` loaded. The full trail and the calls are in `docs/live-tv.md`.
