@@ -143,6 +143,10 @@ All commands so far are read-only and run as root over SSH on the TV.
   `com.webos.service.secondscreen.gateway`, at `/usr/palm/services/com.webos.service.secondscreen.gateway` (`run-js-service`), with
   permissions in `/usr/share/luna-service2/{api,client}-permissions.d/` and `roles.d/`, and db8 kinds in `/etc/palm/db/kinds/` (client
   profiles and certificates). Next: grep only that service folder for `openChannel`.
+- **Step 1v (2026-10-17):** `helpers/bus/filtering-uris.js` in the gateway lists both `tv/openChannel` and
+  `com.webos.service.apiadapter/tv/openChannel`; `interfaces/tv.interface` and `interfaces/com.webos.service.apiadapter.interface` also
+  mention it. So SSAP `tv/openChannel` is served by **`luna://com.webos.service.apiadapter/tv/openChannel`**. Next: call that as root
+  with `{"channelId":...}` and Live TV closed.
 
 ## Answer
 
