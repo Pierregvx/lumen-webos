@@ -21,6 +21,14 @@ All commands so far are read-only and run as root over SSH on the TV.
   the second filter (image paths removed) printed nothing. So either Live TV's calls don't go over the bus in a form `ls-monitor` shows,
   or the filter is wrong. Unknown which.
 
+- **Step 1 result (2026-10-17): `ls-monitor` works and found the guide data.** With Live TV in front, `com.webos.service.legacy-broadcast`
+  (shown truncated as `legacy-broadcas.db`) writes programmes into `com.webos.epgdb` with `//put` and removes old ones with `//del`.
+  Kind: `com.webos.service.legacybroadcast.programSCH:4`. Each programme has `programName`, `description`, `genre`, `startTime`/`endTime`
+  (UTC) and `localStartTime`/`localEndTime` as `"2026,10,17,16,40,00"`, `duration` in seconds, `isAD`, `isSubtitle`, CRIDs, and
+  `signalChannelId` like `"16522_18176_9018"`. Guess: that is service id, transport stream id, original network id (9018 is the UK
+  Freeview network id). Programme rows do not carry the channel name or number, so the channel list is still to find, probably another
+  kind in `epgdb` or a method on `legacy-broadcast`. Next: list every `_kind` and service name in the capture, then read `epgdb` directly.
+
 ## Plan (do in order, stop when one works)
 
 1. **Check `ls-monitor` sees anything at all.** Save the raw output and look at it unfiltered:
