@@ -32,6 +32,8 @@ is in `docs/live-tv.md`; this file only keeps what the build needs.
 - The now/next spike: `programPF:4` works, two rows per channel (`isPresent` true for now). `startTime`/`endTime` are UTC
   ("2026,10,17,17,05,00"); Lumen uses those and works out now/next from the times. Rows carry `component`, `rating` and `description`
   blocks (about 1.5 KB each), so `nowNext()` asks for five fields with db8's `select`, and asks again for whole rows if the TV refuses that.
+  Checked on the TV: with `select` and `limit: 500` the reply is 422 rows in one page (no `next`), 104 KB. Channels that are off air
+  carry a placeholder as their current programme ("Programmes start at midnight", `isPresent: true`), shown as is.
   The one-channel filter was skipped: the row and the Guide need every channel anyway.
 - Code: `lib/root.ts` (`channelList`, `nowNext`, `openChannel`), `lib/livetv.ts`, `hooks/useLiveTv.ts`, `components/ChannelTile.tsx`,
   `screens/Guide.tsx`. In the browser (dev) the row and the Guide show made-up channels.
