@@ -66,6 +66,9 @@ All commands so far are read-only and run as root over SSH on the TV.
   `Message status unknown` with `{"channelGroupId":0}`, `{"channelGroupName":"All"}` and a channel id too. Guess: `-n 1` stops luna-send
   at a first status message before the real reply. Next: try the count and `getSortedList`, and the zapping list without `-n 1` for 5 s.
   If that fails, capture with `ls-monitor` while opening Live TV's own channel list (the list button), to copy its exact call.
+- **Step 1h (2026-10-17): `getChannelZappingListCount '{}'` → `{"channelListCount": 330}`.** The aerial list is there. `getSortedList` →
+  `not handled`. luna-send refuses to run without `-n` or `-i`, so the 5 s test did not run. Next: `-i` with a timeout, then paging
+  parameters in case the 330-channel reply is too big for one message.
 
 ## Plan (do in order, stop when one works)
 
