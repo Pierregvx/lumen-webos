@@ -66,7 +66,7 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
       press Down twice from the glass row.
 - [ ] Full guide (Live TV phase 2, `docs/live-tv-build.md`). **(verify)**: open the Guide, press Up to the switcher, Right to Full guide.
       The grid should fill with the schedule, not only now and next. Then `cat /var/lib/homehook/lumen.log` and send the `guide` lines:
-      they say whether the schedule was read by end time or by start time, how many pages, and how long it took.
+      they say how many pages the schedule took and how long the read ran. The grid fills in as the pages arrive.
 
 ### Spikes (yes/no answers, noted in `docs/spikes.md`)
 - [x] Does the clock go wrong after a reboot here? No: right time and BST with the clock fix moved aside. `clockfix.sh` deleted (it is in git

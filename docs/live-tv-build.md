@@ -52,9 +52,10 @@ is in `docs/live-tv.md`; this file only keeps what the build needs.
   two hours across in half-hour columns, six channels down, a line at now. Up/Down keep the time the focus is at; Left/Right move a
   programme at a time and scroll the grid. It goes back as far as the half hour now is in, and on as far as the schedule was read (8 hours).
 - The schedule is read when the Full guide opens (again after 10 minutes), from `programSCH:4` with six fields (`root.ts` `schedule()`).
-  db8 filters only on an indexed field, and we do not know which of `endTime` and `startTime` the kind indexes. So it asks with
-  `endTime > from` first, then `startTime > from - 6 h`, and pages until it passes the window (8 pages at most). If both are refused,
-  the grid shows Now and Next's listings and says so. Each read writes a `guide` line to `lumen.log`. **(verify)** on the TV.
+  Seen on the TV 2026-10-17: the kind has no index on `startTime` or `endTime`, so db8 refuses any time filter ("no index for query",
+  -3965). Lumen reads every page with no filter (about 24 of 500 rows) and keeps what overlaps the next 8 hours. The grid shows Now and
+  Next's listings at first and fills in every 3 pages. Each read writes a `guide` line to `lumen.log` with pages, rows and time.
+  **(verify)** how long the whole read takes on the TV.
 - Not done: the programme description from the mock. Rows carry a description block, but reading it for every row is heavy; reading
   it for the focused programme alone needs a way to ask db8 for one row, which is not tried yet.
 
@@ -102,7 +103,7 @@ white capsule with dark text.
 | Channel list | `luna://com.webos.service.iepg/getChannelList` `{"dataType":0,"sort":0,"channelMode":"Terrestrial","attribute":[{"filterType":"Invisible","value":false}]}` | 188 channels. Fields used: `channelId`, `channelNumber`, `channelName`, `signalChannelId`, `imgUrl`, `Radio`, `Data`, `skipped`, `groupIdList`. Live TV's edit screen passes `"requestField":["channelId"]`; a longer `requestField` list should shrink the reply a lot (untested with several fields). |
 | Logos | read the file at `imgUrl` | PNGs, 2 to 3 KB, under `/tmp/gibbips/logo/`. 176 of 188 channels have one. `/tmp` is cleared on reboot and the TV refetches them, probably when Live TV runs; cache them in Lumen and fall back to a text tile. `readIcons()` in `lib/root.ts` already returns files as base64. |
 | Now and next | `luna://com.webos.epgdb/find` on `com.webos.service.legacybroadcast.programPF:4` | See the spike above. Join to channels on `signalChannelId`. |
-| Full schedule (phase 2) | same, on `com.webos.service.legacybroadcast.programSCH:4` | Read works (`limit:1` returned a programme). Time-window query built (by `endTime`, then `startTime`), not yet run on the TV. |
+| Full schedule (phase 2) | same, on `com.webos.service.legacybroadcast.programSCH:4` | Read works (`limit:1` returned a programme). No index on the times, so no time filter: read every page and keep the window. |
 | Switch channel | `luna://com.webos.service.apiadapter/tv/openChannel` `{"channelId":"1_41_104_104_16522_17664_9018"}` | Opens Live TV on that channel, also from Home. Not tried without root, or with Live TV already open on another channel. |
 
 Don't use: `utp.broadcast/changeChannel` (needs Live TV's broadcast id, which changes every time Live TV starts), launching Live TV with a

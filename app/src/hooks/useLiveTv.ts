@@ -93,7 +93,8 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[
 		if (sch.state !== 'loading' && t - sch.at < SCHEDULE_STALE_MS) return undefined;
 		let gone = false;
 		const from = t - (t % HALF_HOUR);
-		readSchedule(from, from + SCHEDULE_HOURS * 3600000)
+		const part = (listings: Listings) => { if (!gone) setSch({listings, from, at: 0, state: 'loading'}); };
+		readSchedule(from, from + SCHEDULE_HOURS * 3600000, part, () => gone)
 			.then((listings) => ({listings, state: 'ready' as const}), () => ({listings: {}, state: 'pf' as const}))
 			.then((r) => { if (!gone) setSch({...r, from, at: Date.now()}); });
 		return () => { gone = true; };

@@ -179,47 +179,34 @@ export function groupListings (rows: RawProgramme[]): Listings {
 
 // ---------- the full schedule (Full guide) ----------
 
-/** ms as a guide time, UTC: "2026,10,17,17,05,00" */
-export function utcText (ms: number): string {
-	const d = new Date(ms);
-	const two = (n: number) => (n < 10 ? '0' : '') + n;
-	return [d.getUTCFullYear(), two(d.getUTCMonth() + 1), two(d.getUTCDate()), two(d.getUTCHours()), two(d.getUTCMinutes()), two(d.getUTCSeconds())].join(',');
-}
+/** about 11,900 rows a full schedule, 500 a page: more pages than this is a reply gone wrong */
+const MAX_SCH_PAGES = 40;
+/** the grid is drawn again after every this many pages, so it fills while the rest is read */
+const PART_EVERY = 3;
 
-/** the schedule is read this many pages at most (500 rows each); 188 channels over eight hours is about three */
-const MAX_SCH_PAGES = 8;
-/** a programme longer than this is rare: reading by end time stops once rows end this far past the window */
-const LONGEST_MS = 6 * 3600000;
-
-/** Every channel's programmes that overlap `from` to `to`, from the TV's schedule. db8 filters only on an indexed field: this asks by end
- *  time first and by start time if that is refused (which works is not known yet, verify). Rejects when both are refused; the Guide then
- *  shows Now and Next's listings in the grid instead. Each read writes one line to the TV's log, saying which way worked and how long it took. */
-export function readSchedule (from: number, to: number): Promise<Listings> {
+/** Every channel's programmes that overlap `from` to `to`, from the TV's schedule. The kind has no index on the times (seen on the TV
+ *  2026-10-17: "no index for query" for both), so this reads every page and keeps only what overlaps the window. `onPart` gets what is
+ *  kept so far every few pages; `stopped` ends the read early (the Full guide closed). One line goes to the TV's log per read. */
+export function readSchedule (from: number, to: number, onPart?: (l: Listings) => void, stopped?: () => boolean): Promise<Listings> {
 	if (!isWebOS()) return Promise.resolve(import.meta.env.DEV ? mockSchedule(from, to) : {});
 	const began = Date.now();
-	const tryField = (field: 'endTime' | 'startTime'): Promise<Listings> => {
-		const rows: RawProgramme[] = [];
-		const after = utcText(field === 'endTime' ? from : from - LONGEST_MS);
-		const page = (key: string | undefined, n: number): Promise<Listings> => schedule(field, after, key).then((text) => {
-			const reply = JSON.parse(text) as {returnValue?: boolean; results?: RawProgramme[]; next?: string; errorText?: string};
-			if (reply.returnValue === false) throw new Error(`by ${field} refused: ${reply.errorText || ''}`);
-			const got = reply.results || [];
-			rows.push(...got);
-			const last = got[got.length - 1];
-			const lastAt = last ? utcTime(field === 'endTime' ? last.endTime : last.startTime) : NaN;
-			const enough = field === 'endTime' ? lastAt > to + LONGEST_MS : lastAt >= to;
-			if (reply.next && !enough && n + 1 < MAX_SCH_PAGES) return page(reply.next, n + 1);
-			const all = groupListings(rows);
-			for (const k in all) all[k] = all[k].filter((p) => p.end > from && p.start < to);
-			logError('guide', `schedule by ${field}: ${n + 1} pages, ${rows.length} rows, ${Date.now() - began} ms`);
-			return all;
-		});
-		return page(undefined, 0);
-	};
-	return tryField('endTime').catch((e: Error) => {
-		logError('guide', e.message);
-		return tryField('startTime');
-	}).catch((e: Error) => {
+	const kept: RawProgramme[] = [];
+	let seen = 0;
+	const page = (key: string | undefined, n: number): Promise<Listings> => schedule(key).then((text) => {
+		const reply = JSON.parse(text) as {returnValue?: boolean; results?: RawProgramme[]; next?: string; errorText?: string};
+		if (reply.returnValue === false) throw new Error(`schedule refused: ${reply.errorText || ''}`);
+		const got = reply.results || [];
+		seen += got.length;
+		for (const r of got) if (utcTime(r.endTime) > from && utcTime(r.startTime) < to) kept.push(r);
+		const more = !!reply.next && n + 1 < MAX_SCH_PAGES && !(stopped && stopped());
+		if (more) {
+			if (onPart && (n + 1) % PART_EVERY === 0) onPart(groupListings(kept));
+			return page(reply.next, n + 1);
+		}
+		logError('guide', `schedule: ${n + 1} pages, ${seen} rows, ${kept.length} kept, ${Date.now() - began} ms${reply.next ? ', stopped early' : ''}`);
+		return groupListings(kept);
+	});
+	return page(undefined, 0).catch((e: Error) => {
 		logError('guide', e.message);
 		throw e;
 	});
