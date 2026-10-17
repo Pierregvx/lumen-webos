@@ -58,7 +58,13 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[
 			if (done) return;
 			done = true;
 			timers.push(window.setTimeout(() => {
-				if (!started) { setData(cachedLive()); setLogos(cachedLogos()); setStarted(true); bootMark('live-drawn'); }
+				if (!started) {
+					const t = performance.now();
+					const cached = cachedLive();
+					const l = cachedLogos();
+					bootMark('live-cache', `${cached.channels.length}ch ${Object.keys(l).length}logos ${Math.round(performance.now() - t)}ms`);
+					setData(cached); setLogos(l); setStarted(true);
+				}
 				timers.push(window.setTimeout(() => refresh(true), READ_AFTER_MS));
 			}, DRAW_AFTER_MS));
 		};
@@ -67,6 +73,7 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[
 		return () => { done = true; timers.forEach((t) => window.clearTimeout(t)); };
 	}, [enabled]);
 
+	useEffect(() => { if (started) bootMark('live-drawn'); }, [started]);
 	useEffect(() => { if (guideOpen && started) refresh(false); }, [guideOpen]);
 
 	useEffect(() => {

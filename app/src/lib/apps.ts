@@ -139,6 +139,7 @@ function listViaHomebrew (): Promise<AppEntry[]> {
 			const parsed = JSON.parse(out) as {launchPoints?: LaunchPoint[]};
 			const points = (parsed.launchPoints || []).filter((p) => p.id && p.title && HIDDEN_IDS.indexOf(p.id) === -1);
 			if (!points.length) throw new Error('no launch points');
+			bootMark('apps-parsed', `${points.length}`);
 			return loadIcons(points).then((icons) => Promise.all(points.map((p) => {
 				const path = p.largeIcon || p.icon;
 				if (path && icons[p.id]) iconPaths[p.id] = path;
@@ -152,7 +153,7 @@ function listViaHomebrew (): Promise<AppEntry[]> {
 					color: known && known.color,
 					plain: !packIcon(p.id, known ? known.title : p.title) && !!(icons[p.id] || (known && known.icon))
 				} as AppEntry;
-			}).map(withIconColor)));
+			}).map(withIconColor)).then((list) => { bootMark('apps-colours'); return list; }));
 		});
 }
 
@@ -246,6 +247,7 @@ function withIconColor (entry: AppEntry): Promise<AppEntry> {
 	const key = `${entry.id}:${entry.iconUrl.length}`;
 	const cache = readColorCache();
 	if (cache[key]) return Promise.resolve({...entry, color: cache[key]});
+	bootMark('sample', entry.id);
 	return sampleColor(entry.iconUrl).then((color) => {
 		if (color) {
 			const next = readColorCache();

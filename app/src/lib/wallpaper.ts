@@ -100,7 +100,7 @@ function setBlur (shown: string | null): void {
 	if (!light) { style.removeProperty('--wp-blur'); style.removeProperty('--wp-bg'); return; }
 	const load = (name: string, src: string) => {
 		const probe = new Image();
-		probe.onload = () => { style.setProperty(name, `url("${src}")`); saveBoot(); };
+		probe.onload = () => { style.setProperty(name, `url("${src}")`); saveBoot(); bootMark(name.slice(2) + '-set'); };
 		probe.src = src;
 	};
 	if (liveBlur) style.removeProperty('--wp-blur');

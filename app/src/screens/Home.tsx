@@ -114,7 +114,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 	latest.current = {rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide};
 	const [late, setLate] = useState(false);   // the rows below the first are drawn a moment after launch
 	useEffect(() => { if (late) bootMark('grid'); }, [late]);
-	useEffect(() => { const id = window.setTimeout(() => setLate(true), 3500); return () => window.clearTimeout(id); }, []);
+	useEffect(() => { const id = window.setTimeout(() => { bootMark('grid-start'); setLate(true); }, 3500); return () => window.clearTimeout(id); }, []);
 	const [, redraw] = useState(0);
 	const render = () => redraw((n) => n + 1);
 
