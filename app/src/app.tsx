@@ -29,7 +29,7 @@ import {ControlCenter, type CenterAction} from './components/ControlCenter';
 import {CITIES, COUNTRIES} from './config/cities';
 import {AUTO_PLACE, peekWeather, readWeather, type Weather} from './lib/weather';
 import {useLiveTv} from './hooks/useLiveTv';
-import {nowNextAt, rowChannels, type Channel} from './lib/livetv';
+import {channelColor, nowNextAt, rowChannels, type Channel} from './lib/livetv';
 import {openChannel} from './lib/root';
 import {bootMark, navMark} from './lib/log';
 import {isDark, LANGS, nextDark, setClockMode, setLang} from './lib/i18n';
@@ -338,7 +338,7 @@ export function App () {
 		if (config.liveTvRow && live.channels.length) {
 			const tile = (c: Channel): TileModel => {
 				const logo = c.logoPath && live.logos[c.logoPath];
-				return {key: c.id, label: `${c.number} · ${c.name}`, imageUrl: logo || undefined, plain: true, color: '#22262f', wordmark: logo ? undefined : c.name};
+				return {key: c.id, label: `${c.number} · ${c.name}`, imageUrl: logo || undefined, plain: true, color: `linear-gradient(160deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.28) 100%) ${channelColor(c.name) || '#22263a'}`, wordmark: logo ? undefined : c.name};
 			};
 			list.push({id: ROW.channels, label: 'Channels', glyph: 'guide', noun: 'channels', items: live.channels.map(tile), shown: rowChannels(live.channels, config.liveChannels).map(tile)});
 		}
