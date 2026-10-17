@@ -37,7 +37,7 @@ import {isDark, LANGS, nextDark, setClockMode, setLang} from './lib/i18n';
 type Screen = 'home' | 'settings' | 'ambient' | 'guide';
 
 const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock', live: 'livetv', channels: 'channels'} as const;
-/** the Live TV row: its channels' tiles (channel:<channelId>) and the Guide tile at the end */
+/** the Live TV row: the Guide tile first, then its channels' tiles (channel:<channelId>) */
 const LIVE = {prefix: 'channel:', guide: 'livetv:guide'} as const;
 /** the width of a channel tile's now/next block (.chan__info in global.css): the row scrolls on so the focused tile always has this to its right */
 const LIVE_INFO_W = 660;
@@ -305,14 +305,15 @@ export function App () {
 	// the first row (in the glass bar) holds config.firstRow apps; the rest make a grid of rows as wide below it, like the tvOS home screen
 	// (the grid rows are 'dock', 'dock:1', 'dock:2'...)
 	const firstRow = config.firstRow;
-	/** the Live TV row: the channels picked in Settings > Channels (or the first few), each with what is on now, then the Guide tile */
+	/** the Live TV row: the Guide tile, then the channels picked in Settings > Channels (or the first few), each with what is on now */
 	const liveTiles = useMemo((): TileModel[] => {
 		if (!config.liveTvRow || !live.channels.length) return [];
-		return rowChannels(live.channels, config.liveChannels).map((c): TileModel => ({
+		const guide: TileModel = {key: LIVE.guide, label: 'Guide', glyph: 'guide', color: 'rgba(255, 255, 255, 0.16)'};
+		return [guide].concat(rowChannels(live.channels, config.liveChannels).map((c): TileModel => ({
 			key: LIVE.prefix + c.id,
 			label: c.name,
 			live: {number: c.number, name: c.name, logo: c.logoPath && live.logos[c.logoPath], at: live.now, ...nowNextAt(live.listings[c.signal], live.now)}
-		})).concat({key: LIVE.guide, label: 'Guide', glyph: 'guide', color: 'rgba(255, 255, 255, 0.16)'});
+		})));
 	}, [config.liveTvRow, config.liveChannels, live, config.language]);
 	/** the furthest along the row a focused channel may sit with its now/next block still on the row (Row's slot) */
 	const liveSlot = useMemo(() => {

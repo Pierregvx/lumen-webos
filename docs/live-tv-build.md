@@ -26,7 +26,7 @@ is in `docs/live-tv.md`; this file only keeps what the build needs.
 
 **2026-10-17, first version of phase 1 built** (not yet run on the TV):
 - The Live TV row is the **last row, under the app grid** (Sam's call: not between the glass bar and the grid as in the mock). First 5
-  channels by number, radio, data and skipped channels left out, then the Guide tile. Settings > Options > "Live TV row" (on by default).
+  channels by number, radio, data and skipped channels left out, with the Guide tile first (Sam's call, 2026-10-17; the mock has it last). Settings > Options > "Live TV row" (on by default).
 - Channel tiles follow the tvOS suggestions rather than the mock: every logo on the same dark tile, no number on the tile (it is in the
   now/next block), progress as an inset capsule.
 - The now/next spike: `programPF:4` works, two rows per channel (`isPresent` true for now). `startTime`/`endTime` are UTC
