@@ -1163,7 +1163,8 @@ html.reduce-motion .ambient__photo { animation: none; }
 .tile--channel { position: relative; }
 /* a light-to-shade sweep over the brand colour (lib/livetv.ts channelColor), or over the dark default when a channel has none */
 .tile--channel .tile__box { background: linear-gradient(160deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.28) 100%) #22263a; }
-.chan__logo { position: absolute; left: 50%; top: 45%; max-width: 62%; max-height: 52%; transform: translate(-50%, -50%); object-fit: contain; }
+/* a fixed box, not max sizes: the TV's logos are as small as 133 x 100, and max sizes never scale them up. It stops 46px from the bottom, clear of the bar */
+.chan__logo { position: absolute; left: 10%; right: 10%; top: 16px; bottom: 46px; width: 80%; height: calc(100% - 62px); object-fit: contain; }
 .chan__name {
 	position: absolute; left: 8%; right: 8%; top: 0; bottom: 12px; display: flex; align-items: center; justify-content: center; text-align: center;
 	font-size: 30px; font-weight: 700; line-height: 1.1; letter-spacing: -0.015em; color: #fff; overflow: hidden;
