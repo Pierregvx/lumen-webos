@@ -1,0 +1,32 @@
+# Lumen
+
+A tvOS-style launcher for a rooted LG webOS TV. `app/` is the Preact app (a fork of partridgeworks/webos-launcher, never sent upstream). `tools/` holds the build scripts and the TV-side scripts. `README.md` covers build and install.
+
+## The TV
+
+The target TV is an LG 43UT91006LA on webOS 25 (Chromium 120). The repo was first written for a webOS 22 TV, so any rule tuned for that TV is an assumption until it is seen working on this one. `PLAN.md` holds the roadmap and the **Verify on the TV** list; read its "Where things stand" section before starting work.
+
+- Code that needs a TV answer is written defensively (harmless if the answer is no) and marked **(verify)** in `PLAN.md` until Sam has seen it work.
+- The build still targets `chrome79` and a classic script, not a module (`app/vite.config.ts`). Keep it that way unless Sam decides otherwise.
+- The TV's graphics chip is weak. Animate only `transform` and `opacity`; glass is a pre-blurred wallpaper copy, not live blur. The reasons are in `RESEARCH.md` section 4.
+- Every root command goes through `app/src/lib/root.ts`, one fixed command per export, with each value checked against a list or pattern. Add new root commands there, in the same shape.
+
+## Getting a build onto the TV
+
+A push to any branch other than `main` runs `.github/workflows/release.yml`, which publishes a dev build (version `1.0.9xxx`) to the Homebrew Channel's dev feed. That is how Sam tests: he updates in the Channel, tries it, and reports back. A push to `main` builds nothing, so a change for Sam to check goes on a branch. A `v*` tag makes a stable release.
+
+Dev builds write a "boot" timeline line to `/var/lib/homehook/lumen.log` after each launch. `docs/startup-perf.md` explains how to read it.
+
+## Checking work locally
+
+- Type check and build: `npm --prefix app run build`.
+- Preview: the `app` entry in `.claude/launch.json` (Vite on port 5199). There is no test suite; the preview and the TV are the checks.
+- `app/private/` (icons, wallpapers, font) is gitignored and may be absent. The app must still work without it, since the public release is built that way.
+
+## Docs
+
+Feature plans and findings live in `docs/` (`live-tv.md`, `live-tv-build.md`, `settings-redesign.md`, `startup-perf.md`, `immich.md`, `spikes.md`). Read the one for the area you touch before changing it, and update it when a finding changes.
+
+## Commits
+
+Subject lines name the area, then say what changed for the user, in plain words: `Live TV: channel logos fill the tile, clear of the progress bar`. Docs-only commits start with `docs/<file>:`.
