@@ -2,7 +2,7 @@ import {t as tr} from '../lib/i18n';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
-import {clockText, findChannel, nowNextAt, progress, timeLeft, type Channel, type Listings} from '../lib/livetv';
+import {channelColor, clockText, findChannel, nowNextAt, progress, timeLeft, type Channel, type Listings} from '../lib/livetv';
 
 interface Props {
 	channels: Channel[];
@@ -95,6 +95,7 @@ export function Guide ({channels, listings, logos, now, active, onOpen, onClose}
 						const i = from + k;
 						const {now: on, next} = nowNextAt(listings[c.signal], t);
 						const logo = c.logoPath && logos[c.logoPath];
+						const color = channelColor(c.name);
 						return (
 							<div
 								key={c.id}
@@ -104,7 +105,7 @@ export function Guide ({channels, listings, logos, now, active, onOpen, onClose}
 								onClick={() => onOpen(c)}
 							>
 								<div class="guide__num">{c.number}</div>
-								<div class="guide__logo">{logo ? <img src={logo} alt="" decoding="async" /> : <span>{c.name}</span>}</div>
+								<div class="guide__logo" style={color ? {backgroundColor: color} : undefined}>{logo ? <img src={logo} alt="" decoding="async" /> : <span>{c.name}</span>}</div>
 								<div class="guide__now">
 									<div class="guide__prog">{on ? on.title : tr(next ? 'Off air' : 'No guide data')}</div>
 									<div class="guide__meta">

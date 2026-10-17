@@ -1,5 +1,5 @@
 import {t as tr} from '../lib/i18n';
-import {clockText, progress, timeLeft, type NowNext} from '../lib/livetv';
+import {channelColor, clockText, progress, timeLeft, type NowNext} from '../lib/livetv';
 
 /** What a Live TV tile shows (TileModel.live). */
 export interface LiveTile extends NowNext {
@@ -18,13 +18,14 @@ interface Props {
 	onActivate?: () => void;
 }
 
-/** A channel on the Live TV row: its logo on a dark tile and a capsule for how far through the programme is. Focused, the now/next block
+/** A channel on the Live TV row: its logo on its brand colour (or a dark tile) and a capsule for how far through the programme is. Focused, the now/next block
  *  shows under it, where an app tile shows its name. */
 export function ChannelTile ({live, classes, onHover, onActivate}: Props) {
 	const {now, next, at} = live;
+	const color = channelColor(live.name);
 	return (
 		<div class={`${classes} tile--channel`} onMouseEnter={onHover} onClick={onActivate}>
-			<div class="tile__box">
+			<div class="tile__box" style={color ? {backgroundColor: color} : undefined}>
 				{live.logo
 					? <img class="chan__logo" src={live.logo} alt="" decoding="async" />
 					: <div class="chan__name">{live.name}</div>}

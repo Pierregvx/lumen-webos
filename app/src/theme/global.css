@@ -1155,13 +1155,14 @@ html.light .panel--cc .cc__caption { color: #fff; }
 html.reduce-motion .ambient__photo { animation: none; }
 
 /* ---------- Live TV row (components/ChannelTile.tsx, docs/live-tv-build.md) ----------
-   The last row, titled. Each channel's logo sits on the same dark tile, with a capsule along the bottom for how far through the programme
+   The last row, titled. Each channel's logo sits on its brand colour (dark when it has none), with a capsule along the bottom for how far through the programme
    is. The focused tile's now/next block shows under it where an app's name would; the row's viewport reaches far enough down to show it. */
 .rows .row--live .row__viewport { padding-bottom: 250px; margin-bottom: -250px; }
 /* scrolled on, the row runs off both screen edges (as tvOS rows do) rather than being cut 55px in */
 .rows .row--live .row__viewport { padding-left: var(--layout-rows-edge); padding-right: var(--layout-rows-edge); margin-left: calc(-1 * var(--layout-rows-edge)); margin-right: calc(-1 * var(--layout-rows-edge)); }
 .tile--channel { position: relative; }
-.tile--channel .tile__box { background: linear-gradient(160deg, #2c3142 0%, #171a24 100%); }
+/* a light-to-shade sweep over the brand colour (lib/livetv.ts channelColor), or over the dark default when a channel has none */
+.tile--channel .tile__box { background: linear-gradient(160deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.28) 100%) #22263a; }
 .chan__logo { position: absolute; left: 50%; top: 45%; max-width: 62%; max-height: 52%; transform: translate(-50%, -50%); object-fit: contain; }
 .chan__name {
 	position: absolute; left: 8%; right: 8%; top: 0; bottom: 12px; display: flex; align-items: center; justify-content: center; text-align: center;
@@ -1207,7 +1208,7 @@ html.light .chan__meter span { background: #14151b; }
 .guide__num { flex: 0 0 64px; font-size: 30px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
 .guide__logo {
 	flex: 0 0 132px; height: 80px; margin-left: 16px; border-radius: 16px; display: flex; align-items: center; justify-content: center; overflow: hidden;
-	background: linear-gradient(160deg, #2c3142 0%, #171a24 100%); color: #fff; font-size: 19px; font-weight: 700; line-height: 1.1; text-align: center;
+	background: linear-gradient(160deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.28) 100%) #22263a; color: #fff; font-size: 19px; font-weight: 700; line-height: 1.1; text-align: center;
 }
 .guide__logo img { max-width: 80%; max-height: 64%; object-fit: contain; }
 .guide__logo span { padding: 0 8px; }

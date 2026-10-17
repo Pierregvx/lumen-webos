@@ -31,7 +31,7 @@ import {AUTO_PLACE, peekWeather, readWeather, type Weather} from './lib/weather'
 import {useLiveTv} from './hooks/useLiveTv';
 import {nowNextAt, rowChannels, type Channel} from './lib/livetv';
 import {openChannel} from './lib/root';
-import {bootMark} from './lib/log';
+import {bootMark, navMark} from './lib/log';
 import {isDark, LANGS, nextDark, setClockMode, setLang} from './lib/i18n';
 
 type Screen = 'home' | 'settings' | 'ambient' | 'guide';
@@ -247,6 +247,8 @@ export function App () {
 	}, [config.focusStrength]);
 	useEffect(() => { setAmbientFlag(config.ambient !== ''); }, [config.ambient]);
 	useEffect(() => { setVideoPaused(screen !== 'home'); document.documentElement.classList.toggle('in-settings', screen === 'settings' || screen === 'guide'); }, [screen]);
+	const lastScreen = useRef(screen);
+	useEffect(() => { if (lastScreen.current !== screen) navMark(`${lastScreen.current}>${screen}`); lastScreen.current = screen; }, [screen]);
 
 	const updateConfig = (next: UserConfig) => { configRef.current = next; setConfig(next); saveConfig(next); scheduleBackup(next); };
 

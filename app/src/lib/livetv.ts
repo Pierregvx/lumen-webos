@@ -77,6 +77,31 @@ export function parseChannels (text: string): Channel[] {
 	return out.sort((a, b) => num(a) - num(b) || (a.number < b.number ? -1 : a.number > b.number ? 1 : 0));
 }
 
+// ---------- brand colours ----------
+
+/** Each channel's brand colour, behind its white logo on the Live TV row and in the Guide, as tvOS does for apps. The logos are white on
+ *  clear, so there is no colour to sample from them. Keys are lower case, without "HD", "+1" or a region; channels not listed stay dark. */
+const CHANNEL_COLORS: Record<string, string> = {
+	'bbc one': '#b5121b', 'bbc two': '#b8551a', 'bbc three': '#d1006a', 'bbc four': '#2b2e83', 'bbc news': '#a30000',
+	'bbc parliament': '#1b5e3b', 'bbc scotland': '#005eb8', 'bbc alba': '#1f6f8b', 'cbbc': '#4f9d2d', 'cbeebies': '#d97a00',
+	'itv1': '#0b8a8f', 'itv': '#0b8a8f', 'stv': '#0b8a8f', 'itv2': '#c2185b', 'itv3': '#6d2077', 'itv4': '#1d3c78', 'itvbe': '#9e2a8d',
+	'itv quiz': '#e05a00', 'channel 4': '#22348c', 'e4': '#5b2a86', 'e4 extra': '#5b2a86', 'more4': '#1f6f63', 'film4': '#a3162c',
+	'4seven': '#3a3f9e', '5': '#6b2c91', 'channel 5': '#6b2c91', '5usa': '#0b3d91', '5star': '#d1007a', '5action': '#b3261e',
+	'sky arts': '#5b1f6e', 'sky news': '#b0001e', 'quest': '#d35400', 'quest red': '#a5122a', 'dave': '#2f3640', 'yesterday': '#7a4e2d',
+	'drama': '#8e1f3a', 'really': '#c2185b', 'pick': '#2e7d32', 'challenge': '#1565c0', 'gb news': '#0a2a66', 'al jazeera eng': '#b8860b',
+	's4c': '#c8102e', 'great! movies': '#c62828', 'legend': '#4e342e'
+};
+
+/** a channel's brand colour, when the table has it: "BBC ONE Lon HD" and "ITV1 +1" find "bbc one" and "itv1" */
+export function channelColor (name: string): string | undefined {
+	const key = name.toLowerCase().replace(/\(.*?\)/g, ' ').replace(/\bhd\b|\+\s*\d+/g, ' ').replace(/\s+/g, ' ').trim();
+	if (CHANNEL_COLORS[key]) return CHANNEL_COLORS[key];
+	// a regional name ("bbc one lon") finds the longest key it starts with
+	let best = '';
+	for (const k in CHANNEL_COLORS) if (key.startsWith(k + ' ') && k.length > best.length) best = k;
+	return best ? CHANNEL_COLORS[best] : undefined;
+}
+
 /** channels on the Live TV row until some are picked in Settings > Channels */
 export const DEFAULT_ROW_CHANNELS = 5;
 
