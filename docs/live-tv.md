@@ -102,6 +102,8 @@ All commands so far are read-only and run as root over SSH on the TV.
   '{"id":"com.webos.app.livetv","params":{"channelId":"1_41_2_102_16522_17472_9018"}}'` returned `returnValue: true` but the channel did
   **not** change (Live TV was already in front). Next: the same launch with something else in front, so Live TV starts fresh and reads
   the parameter; if not, capture Live TV's own call when a channel number is typed on the remote.
+- **Step 1p (2026-10-17):** same launch with Home in front: Live TV opened, but on the channel it was already on (BBC One), so the
+  `channelId` launch parameter is ignored. Next: `ls-monitor` while typing a channel number on the remote, to copy Live TV's call.
 
 ## Answer
 
