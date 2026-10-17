@@ -60,6 +60,12 @@ All commands so far are read-only and run as root over SSH on the TV.
   channels of one channel, not a list); `getChannelZappingList` → `Message status unknown` plus a cancel error (no reply in time, or it
   wants parameters); `getChannelGroup` → `{"channelGroupId":0,"channelGroupName":"All"}` (the current group). Next: list every `get*`
   method and category (the first introspection was cut at 40 lines), and retry `getChannelZappingList` with a group and a channel id.
+- **Step 1g (2026-10-17):** categories `/`, `/oipfdrmagent`, `/ci`, `/scan`. Full `get*` list saved on the TV in `/tmp/intro.txt`.
+  List-shaped ones worth trying: `getChannelZappingList`, `getChannelZappingListCount`, `getSortedList`,
+  `getChannelListToSolveConflictLcnForLiveTV`, `getLogoImage` (for tiles later). `getChannelZappingList` gives
+  `Message status unknown` with `{"channelGroupId":0}`, `{"channelGroupName":"All"}` and a channel id too. Guess: `-n 1` stops luna-send
+  at a first status message before the real reply. Next: try the count and `getSortedList`, and the zapping list without `-n 1` for 5 s.
+  If that fails, capture with `ls-monitor` while opening Live TV's own channel list (the list button), to copy its exact call.
 
 ## Plan (do in order, stop when one works)
 
