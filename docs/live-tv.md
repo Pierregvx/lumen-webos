@@ -139,6 +139,10 @@ All commands so far are read-only and run as root over SSH on the TV.
     the author gets that id by scraping `ls-monitor` (`grep -m 4 broadcastId`). `getCurrentChannel` takes `{"broadcastId":...}`.
     So nobody there found a clean getter for the id either.
   Next: find which luna call the SSAP gateway maps `tv/openChannel` to (grep its config on the TV). That call needs no broadcast id.
+- **Step 1u (2026-10-17):** a recursive grep over `/etc` and `/usr/share` is too slow on the TV; don't. The SSAP gateway is a JS service,
+  `com.webos.service.secondscreen.gateway`, at `/usr/palm/services/com.webos.service.secondscreen.gateway` (`run-js-service`), with
+  permissions in `/usr/share/luna-service2/{api,client}-permissions.d/` and `roles.d/`, and db8 kinds in `/etc/palm/db/kinds/` (client
+  profiles and certificates). Next: grep only that service folder for `openChannel`.
 
 ## Answer
 
