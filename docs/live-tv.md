@@ -95,6 +95,9 @@ All commands so far are read-only and run as root over SSH on the TV.
   (no extension), `channelLogoSize` like `"H133x100"` or `"H356x200"` (empty for channel 1). Being in `/tmp`, they are probably
   fetched again after each boot (from `channelLogoServerUrl`, LG's `gftsDownload.lge` server), so Lumen should copy them (as root) or
   read them through the root exec rather than keep the paths. Next: check the files exist and what format they are.
+- **Step 1n (2026-10-17): logos are PNGs.** 176 files in `/tmp/gibbips/logo` (for 188 channels, so a few have none), about 2 to 3 KB
+  each, PNG signature. Lumen can read them as base64 through the root exec and cache them. Next: tuning, by launching
+  `com.webos.app.livetv` with `{"params":{"channelId":...}}` (a guess).
 
 ## Plan (do in order, stop when one works)
 
