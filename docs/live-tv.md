@@ -46,6 +46,16 @@ All commands so far are read-only and run as root over SSH on the TV.
   `legacybroadcast.broadcast`). Next: ask each service for its method list (luna-service2 introspection, and the api-permissions
   files). The `changeChannel` grep printed nothing, probably because `[^»]` breaks on the multibyte `«` in busybox grep; use a plain
   grep with `cut` instead.
+- **Step 1e (2026-10-17): method list for `com.webos.service.legacybroadcast.channel`** (introspection `{"type":"flat"}` on
+  `/com/palm/luna/private/introspection`, first 40 shown). Read-only candidates for the list: `getPrimaryChannelList`,
+  `getChannelZappingList`, `getChannelGroup`, `getChannel`, `getCurrentChannelId`, `getLastChannelId`, `getChannelGroupList`,
+  `getChannelTypeList`, `getChannelModeList`, `getDirectTuneChannel`. **Never call** the writing ones: `clearChannelMap`, `deleteChannel`,
+  `saveChannelList`, `updateChannelMap`, `revertChannelMap`, `importChannelMap`, `moveChannel`, `setChannel*`, `changeChannelNumber`,
+  `changeChannelType`, `sortAnalogChannelList`, `*ForAstra`; they can wipe or reorder the tuned channels.
+  Tuning: Live TV calls `luna://com.webos.service.utp.broadcast/changeChannelUp`; `utp.broadcast` then calls
+  `legacybroadcast.broadcast/changeChannel` with `{"broadcastId":..., "channelId":"1_41_102_102_16522_17472_9018",
+  "currentChannelId":..., "sessionId":8}`. The broadcastId and sessionId belong to Live TV's own session, so from Lumen the likely
+  route is launching `com.webos.app.livetv` with a channel id (still a guess).
 
 ## Plan (do in order, stop when one works)
 
