@@ -1,6 +1,7 @@
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {cachedLive, cachedLogos, readChannels, readListings, readLogos, saveLive, type Channel, type Listings, type LiveCache} from '../lib/livetv';
+import {cachedLive, cachedLogos, readChannels, readListings, readLogos, rowChannels, saveLive, type Channel, type Listings, type LiveCache} from '../lib/livetv';
 import {wallpaperShown} from '../lib/wallpaper';
+import {bootMark} from '../lib/log';
 
 export interface LiveTv {
 	channels: Channel[];
@@ -21,17 +22,17 @@ const NONE: LiveCache = {channels: [], listings: {}};
 
 /** The Live TV row's and the Guide's data. Nothing happens until the wallpaper is on screen, so a cold start draws the wallpaper and the
  *  apps first: then the last answer (and its logos) comes out of localStorage, and a moment later the TV is asked again. After that it is asked
- *  whenever the Guide opens, and when a programme on one of the first `watch` channels (the row's) ends. No timer reads the TV:
+ *  whenever the Guide opens, and when a programme on one of the row's channels (`rowIds`, see rowChannels) ends. No timer reads the TV:
  *  the once-a-minute tick only moves the progress bars. */
-export function useLiveTv (enabled: boolean, guideOpen: boolean, watch: number): LiveTv {
+export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[] | null): LiveTv {
 	const [data, setData] = useState(NONE);
 	const [logos, setLogos] = useState<Record<string, string>>({});
 	const [started, setStarted] = useState(false);
 	const [now, setNow] = useState(minute);
 	const readAt = useRef(0);
 	const busy = useRef(false);
-	const latest = useRef({data, watch});
-	latest.current = {data, watch};
+	const latest = useRef({data, rowIds});
+	latest.current = {data, rowIds};
 
 	const refresh = (withChannels: boolean) => {
 		if (busy.current) return;
@@ -45,7 +46,7 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, watch: number):
 				return readLogos(list).then((l) => setLogos((was) => (Object.keys(l).length === Object.keys(was).length ? was : {...l})));
 			}))
 			.catch(() => undefined)
-			.then(() => { busy.current = false; });
+			.then(() => { busy.current = false; bootMark('live-read'); });
 	};
 
 	// wait for the wallpaper, then draw from the cache, then ask the TV
@@ -57,7 +58,7 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, watch: number):
 			if (done) return;
 			done = true;
 			timers.push(window.setTimeout(() => {
-				if (!started) { setData(cachedLive()); setLogos(cachedLogos()); setStarted(true); }
+				if (!started) { setData(cachedLive()); setLogos(cachedLogos()); setStarted(true); bootMark('live-drawn'); }
 				timers.push(window.setTimeout(() => refresh(true), READ_AFTER_MS));
 			}, DRAW_AFTER_MS));
 		};
@@ -74,8 +75,8 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, watch: number):
 			const t = minute();
 			setNow(t);
 			// a programme on a row channel ended since the last read: read the guide again
-			const {data: d, watch: w} = latest.current;
-			const ended = d.channels.slice(0, w).some((c) => (d.listings[c.signal] || []).some((p) => p.end > readAt.current && p.end <= Date.now()));
+			const {data: d, rowIds: ids} = latest.current;
+			const ended = rowChannels(d.channels, ids).some((c) => (d.listings[c.signal] || []).some((p) => p.end > readAt.current && p.end <= Date.now()));
 			if (ended && !document.hidden) refresh(false);
 		}, 15000);
 		return () => window.clearInterval(id);

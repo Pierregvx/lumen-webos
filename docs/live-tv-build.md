@@ -37,7 +37,13 @@ is in `docs/live-tv.md`; this file only keeps what the build needs.
   The one-channel filter was skipped: the row and the Guide need every channel anyway.
 - Code: `lib/root.ts` (`channelList`, `nowNext`, `openChannel`), `lib/livetv.ts`, `hooks/useLiveTv.ts`, `components/ChannelTile.tsx`,
   `screens/Guide.tsx`. In the browser (dev) the row and the Guide show made-up channels.
-- Still open: which channels go in the row and how many (Open questions 1 and 2).
+- Channels: picked in Lumen's Settings > Channels (Sam's call, not the TV's Favourites list), ticked and re-ordered like Apps; until some
+  are picked the row shows the first 5 by number. The row scrolls on so the focused channel's now/next block always fits on its right
+  (Row's `slot`), and runs off the screen edges when scrolled.
+- The Guide takes typed numbers: each digit moves the list (1, then 10, then 101), the digits show at the top and clear 2 s after the last.
+- Start-up: Live TV waits for the wallpaper (no cache read, no row, no TV calls before it). Dev builds write a boot timeline to
+  /var/lib/homehook/lumen.log 20 s after launch: `boot script 40, frame 310, ..., getChannelList 2900-4100, ...` (stage times and every
+  root call's start-end, ms since the page started).
 
 ## Mockups
 

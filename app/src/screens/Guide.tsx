@@ -1,8 +1,8 @@
 import {t as tr} from '../lib/i18n';
-import {useCallback, useState} from 'preact/hooks';
+import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
-import {clockText, nowNextAt, progress, timeLeft, type Channel, type Listings} from '../lib/livetv';
+import {clockText, findChannel, nowNextAt, progress, timeLeft, type Channel, type Listings} from '../lib/livetv';
 
 interface Props {
 	channels: Channel[];
@@ -23,9 +23,16 @@ const IN_VIEW = 6;
 const FOCUS_AT = 2;
 /** rows drawn beyond the view either side, so a scroll never shows a gap */
 const SPARE = 2;
+/** typing a channel number: the digits stay on screen this long after the last one, then the next digit starts a new number */
+const TYPED_MS = 2000;
+const TYPED_MAX = 4;
+
+/** a remote's number key (0-9, either row of a keyboard), or -1 */
+const digitOf = (e: KeyboardEvent) => (e.keyCode >= 48 && e.keyCode <= 57 ? e.keyCode - 48 : e.keyCode >= 96 && e.keyCode <= 105 ? e.keyCode - 96 : -1);
 
 /** The Guide, Now and Next: one row per channel (number, logo, now with its times and progress, next with its start time).
- *  Up/Down move, OK opens Live TV on the channel, Back returns home. Only the rows near the view are drawn.
+ *  Up/Down move, OK opens Live TV on the channel, Back returns home. The number keys type a channel number and the list follows each digit
+ *  (1 goes to 1, then 0 to 10, then 1 to 101); the digits show at the top and clear a moment after the last one. Only the rows near the view are drawn.
  *  Phase 2 adds a Now and Next / Full guide switcher at the top right (.guide__switch); nothing else moves for it. */
 export function Guide ({channels, listings, logos, now, active, onOpen, onClose}: Props) {
 	const [focus, setFocus] = useState(0);
@@ -41,6 +48,30 @@ export function Guide ({channels, listings, logos, now, active, onOpen, onClose}
 	useKeys(handleKey, active);
 	useOkPress({onPress: () => { if (channels[at]) onOpen(channels[at]); }, onLongPress: () => undefined}, active);
 
+	const [typed, setTyped] = useState('');
+	const typedRef = useRef('');
+	const list = useRef(channels);
+	list.current = channels;
+	useEffect(() => {
+		if (!active) return undefined;
+		let timer = 0;
+		const onKey = (e: KeyboardEvent) => {
+			const d = digitOf(e);
+			if (d < 0) return;
+			e.preventDefault();
+			const next = (typedRef.current.length >= TYPED_MAX ? '' : typedRef.current) + d;
+			typedRef.current = next;
+			setTyped(next);
+			const i = findChannel(list.current, next);
+			if (i >= 0) setFocus(i);
+			window.clearTimeout(timer);
+			timer = window.setTimeout(() => { typedRef.current = ''; setTyped(''); }, TYPED_MS);
+		};
+		window.addEventListener('keydown', onKey);
+		return () => { window.clearTimeout(timer); window.removeEventListener('keydown', onKey); };
+	}, [active]);
+	const typedHit = typed !== '' && channels.some((c) => c.number === typed);
+
 	const top = clamp(at - FOCUS_AT, 0, Math.max(0, channels.length - IN_VIEW));
 	const from = Math.max(0, top - SPARE);
 	const to = Math.min(channels.length, top + IN_VIEW + SPARE);
@@ -50,6 +81,7 @@ export function Guide ({channels, listings, logos, now, active, onOpen, onClose}
 		<div class="screen screen--settings screen--guide">
 			<div class="guide__head">
 				<h1 class="guide__title">{tr('Guide')}</h1>
+				{typed && <div class={`guide__typed${typedHit ? '' : ' guide__typed--miss'}`}>{typed}</div>}
 				<div class="guide__switch" />
 			</div>
 			<div class="guide__cols">

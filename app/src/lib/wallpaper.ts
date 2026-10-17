@@ -12,6 +12,7 @@ import {LOCAL_WALLPAPERS, WALLPAPERS, cloudUrl} from '../config/wallpapers';
 import {BOOT_WALLPAPER_KEY, readCache, writeCache, type BootWallpaper} from './boot';
 import {blobToDataUrl, fetchBlob, getPics, keepOnly, putPics, type Pics} from './wpstore';
 import {blurredCopies, cachedServer, loadServer, nextAsset, previewUrl} from './immich';
+import {bootMark} from './log';
 
 const HTML_CLASS = 'wp-image';
 const PROXY = 'https://images.weserv.nl/';       // free image resizer: a 1920-wide copy instead of the multi-MB original
@@ -232,6 +233,7 @@ function paint (el: HTMLElement, src: string): void {
 /** Resolves once the first wallpaper of this launch is on screen (or there is none to show), so heavier work can wait for it. */
 let markShown: () => void = () => undefined;
 export const wallpaperShown: Promise<void> = new Promise((resolve) => { markShown = resolve; });
+wallpaperShown.then(() => bootMark('wallpaper'));
 
 export function setWallpaper (sel: string): void {
 	const el = ensureElement();

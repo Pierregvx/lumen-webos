@@ -3,7 +3,7 @@
 // also lose the record of its own failure: whatever could not be written is kept and tried again on the next flush.
 
 import {setLunaErrorHook} from './luna';
-import {appendLog} from './root';
+import {appendLog, setRootTimer} from './root';
 
 const KEY = 'lumen-log-buffer-v1';
 const MAX_ENTRIES = 100;
@@ -46,8 +46,30 @@ export function loggedFetch (url: string, init?: RequestInit): Promise<Response>
 	});
 }
 
+// ---------- boot timeline (dev builds) ----------
+// One line per launch: when each stage was reached and every root call made in the first BOOT_WINDOW_MS, in ms since the page started
+// ("wallpaper 1840 ... listLaunchPoints 420-1310"). For finding what makes a cold start slow on the TV.
+
+const BOOT_WINDOW_MS = 20000;
+const boot: string[] = [];
+
+/** A stage of the cold start was reached. */
+export function bootMark (label: string): void {
+	if (!__LUMEN_DEV__) return;
+	const t = performance.now();
+	if (t < BOOT_WINDOW_MS) boot.push(`${label} ${Math.round(t)}`);
+}
+
 /** Start recording failed Luna calls, and flush whatever is left over from the last run. */
 export function startLog (): void {
 	setLunaErrorHook((uri, e) => logError(uri, e.message));
+	if (__LUMEN_DEV__) {
+		setRootTimer((tag, start, end) => { if (start < BOOT_WINDOW_MS) boot.push(`${tag} ${Math.round(start)}-${Math.round(end)}`); });
+		window.setTimeout(() => {
+			write(read().concat(`${new Date().toISOString()} boot ${boot.join(', ')}`));
+			window.clearTimeout(timer);
+			timer = window.setTimeout(flush, 100);
+		}, BOOT_WINDOW_MS);
+	}
 	if (read().length) timer = window.setTimeout(flush, FLUSH_DELAY_MS);
 }

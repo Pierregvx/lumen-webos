@@ -17,6 +17,8 @@ export interface TileModel {
 	plain?: boolean;
 	/** a folder: the icons of the apps inside (up to 4 are drawn as a small collage) */
 	children?: (string | undefined)[];
+	/** a name drawn as the tile's picture (a channel without a logo) */
+	wordmark?: string;
 	/** a channel on the Live TV row: drawn by ChannelTile */
 	live?: LiveTile;
 }
@@ -59,6 +61,8 @@ export function Tile ({model, focused, lifted, checked, dimmed, onHover, onActiv
 					? <img class={model.plain ? 'tile__image tile__image--icon' : 'tile__image'} src={model.imageUrl} alt="" decoding="async" />
 					: model.glyphImageUrl
 						? <img class="tile__image tile__image--glyph" src={model.glyphImageUrl} alt="" decoding="async" />
+						: model.wordmark
+							? <div class="chan__name">{model.wordmark}</div>
 						: model.glyph
 							? <Glyph name={model.glyph} />
 							: <div class="tile__monogram">{model.label.charAt(0).toUpperCase()}</div>}

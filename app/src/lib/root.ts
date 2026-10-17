@@ -31,10 +31,23 @@ export type HomehookFile = typeof FILES[number];
 const LOG = `${HOMEHOOK}/lumen.log`;
 const LOG_MAX_BYTES = 64 * 1024;
 
+let timed: ((tag: string, start: number, end: number) => void) | null = null;
+/** lib/log.ts's boot timeline: told when each command started and ended. */
+export function setRootTimer (fn: (tag: string, start: number, end: number) => void): void { timed = fn; }
+
 /** The one place a command is sent. Not exported: callers use the fixed commands below. */
 function run (command: string, timeoutMs = 6000): Promise<string> {
 	if (!isWebOS()) return Promise.reject(new Error('not on a TV'));
-	return lunaCall<{stdoutString?: string}>(LUNA.homebrewExec, {command}, timeoutMs).then((r) => r.stdoutString || '');
+	const start = performance.now();
+	const call = lunaCall<{stdoutString?: string}>(LUNA.homebrewExec, {command}, timeoutMs).then((r) => r.stdoutString || '');
+	if (timed) {
+		// a Luna method's name ("getChannelList"), else the command's first word ("base64", "curl")
+		const m = /luna:\/\/[\w.]+\/(?:[\w]+\/)*(\w+)/.exec(command);
+		const tag = m ? m[1] : (/(curl|base64|touch|rm|mkdir)/.exec(command) || ['shell'])[0];
+		const done = () => { if (timed) timed(tag, start, performance.now()); };
+		call.then(done, done);
+	}
+	return call;
 }
 
 function luna (uri: string, params: object): string {

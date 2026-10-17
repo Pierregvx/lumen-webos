@@ -1273,6 +1273,8 @@ html.reduce-motion .ambient__photo { animation: none; }
    The last row, titled. Each channel's logo sits on the same dark tile, with a capsule along the bottom for how far through the programme
    is. The focused tile's now/next block shows under it where an app's name would; the row's viewport reaches far enough down to show it. */
 .rows .row--live .row__viewport { padding-bottom: 250px; margin-bottom: -250px; }
+/* scrolled on, the row runs off both screen edges (as tvOS rows do) rather than being cut 55px in */
+.rows .row--live .row__viewport { padding-left: var(--layout-rows-edge); padding-right: var(--layout-rows-edge); margin-left: calc(-1 * var(--layout-rows-edge)); margin-right: calc(-1 * var(--layout-rows-edge)); }
 .tile--channel { position: relative; }
 .tile--channel .tile__box { background: linear-gradient(160deg, #2c3142 0%, #171a24 100%); }
 .chan__logo { position: absolute; left: 50%; top: 45%; max-width: 62%; max-height: 52%; transform: translate(-50%, -50%); object-fit: contain; }
@@ -1353,3 +1355,17 @@ html:not(.wp-video) body .screen.screen--settings::before {
 html.light:not(.wp-video) body .screen.screen--settings::before {
 	background-color: rgb(120, 128, 148); background-image: linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10)), var(--wp-bg, none);
 }
+/* Settings grid: a tile far from the focus in a long list keeps its place but draws nothing (components/Grid.tsx) */
+.tile--ghost { visibility: hidden; }
+/* a channel's name in place of its logo, in Settings > Channels */
+.grid__track .chan__name { font-size: 26px; }
+/* the channel number being typed in the Guide: a glass pill at the top, dimmer while no channel has exactly that number */
+.guide__typed {
+	position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); min-width: 150px; height: 84px; box-sizing: border-box; padding: 0 34px;
+	border-radius: 42px; display: flex; align-items: center; justify-content: center; font-size: 52px; font-weight: 650; letter-spacing: 0.04em;
+	font-variant-numeric: tabular-nums; color: #fff; background: rgba(255, 255, 255, 0.16);
+	box-shadow: inset 0 2px 1px -1px rgba(255, 255, 255, 0.6), inset 2px 0 1px -1px rgba(255, 255, 255, 0.3), 0 12px 28px rgba(0, 0, 0, 0.3);
+}
+.guide__typed--miss { color: rgba(255, 255, 255, 0.55); }
+html.light .guide__typed { color: #14151b; background: rgba(255, 255, 255, 0.6); }
+html.light .guide__typed--miss { color: rgba(20, 22, 32, 0.5); }

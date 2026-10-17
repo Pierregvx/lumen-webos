@@ -73,6 +73,8 @@ export interface UserConfig {
 	builtinTiles: boolean;
 	/** a row of aerial channels under the apps, with what is on now (needs the Homebrew Channel) */
 	liveTvRow: boolean;
+	/** the Live TV row's channels (channel ids), in order, picked in Settings > Channels; null = the first five by number */
+	liveChannels: string[] | null;
 }
 
 export const DEFAULT_CONFIG: UserConfig = {
@@ -109,7 +111,8 @@ export const DEFAULT_CONFIG: UserConfig = {
 	fpsCounter: false,
 	seeded: false,
 	builtinTiles: false,
-	liveTvRow: true
+	liveTvRow: true,
+	liveChannels: null
 };
 
 export function loadConfig (): UserConfig {
@@ -163,7 +166,8 @@ export function parseConfig (raw: string): UserConfig {
 		fpsCounter: parsed.fpsCounter === true,
 		seeded: parsed.seeded !== false,
 		builtinTiles: parsed.builtinTiles === true,
-		liveTvRow: parsed.liveTvRow !== false
+		liveTvRow: parsed.liveTvRow !== false,
+		liveChannels: Array.isArray(parsed.liveChannels) ? parsed.liveChannels.filter((x) => typeof x === 'string') : null
 	};
 }
 

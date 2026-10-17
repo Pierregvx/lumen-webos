@@ -77,6 +77,25 @@ export function parseChannels (text: string): Channel[] {
 	return out.sort((a, b) => num(a) - num(b) || (a.number < b.number ? -1 : a.number > b.number ? 1 : 0));
 }
 
+/** channels on the Live TV row until some are picked in Settings > Channels */
+export const DEFAULT_ROW_CHANNELS = 5;
+
+/** The Live TV row's channels: the ones picked (ids, in order, those the TV still has), or the first few by number. */
+export function rowChannels (channels: Channel[], ids: string[] | null): Channel[] {
+	if (!ids) return channels.slice(0, DEFAULT_ROW_CHANNELS);
+	const byId: Record<string, Channel> = {};
+	channels.forEach((c) => { byId[c.id] = c; });
+	return ids.map((id) => byId[id]).filter((c): c is Channel => !!c);
+}
+
+/** Where typing a number lands: the channel with that number, else the first one after it (the list is in number order), else -1. */
+export function findChannel (channels: Channel[], typed: string): number {
+	const exact = channels.findIndex((c) => c.number === typed);
+	if (exact >= 0) return exact;
+	const n = Number(typed);
+	return channels.findIndex((c) => parseFloat(c.number) >= n);
+}
+
 // ---------- now and next ----------
 
 interface RawProgramme {

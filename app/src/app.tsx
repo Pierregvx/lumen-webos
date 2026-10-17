@@ -29,18 +29,17 @@ import {ControlCenter, type CenterAction} from './components/ControlCenter';
 import {CITIES, COUNTRIES} from './config/cities';
 import {AUTO_PLACE, peekWeather, readWeather, type Weather} from './lib/weather';
 import {useLiveTv} from './hooks/useLiveTv';
-import {nowNextAt, type Channel} from './lib/livetv';
+import {nowNextAt, rowChannels, type Channel} from './lib/livetv';
 import {openChannel} from './lib/root';
+import {bootMark} from './lib/log';
 import {isDark, LANGS, nextDark, setClockMode, setLang} from './lib/i18n';
 
 type Screen = 'home' | 'settings' | 'ambient' | 'guide';
 
-const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock', live: 'livetv'} as const;
+const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock', live: 'livetv', channels: 'channels'} as const;
 /** the Live TV row: its channels' tiles (channel:<channelId>) and the Guide tile at the end */
 const LIVE = {prefix: 'channel:', guide: 'livetv:guide'} as const;
-/** channels on the Live TV row, before the Guide tile */
-const LIVE_ROW_CHANNELS = 5;
-/** the widest a channel tile's now/next block gets (.chan__info in global.css); towards the end of the row it narrows to the space left */
+/** the width of a channel tile's now/next block (.chan__info in global.css): the row scrolls on so the focused tile always has this to its right */
 const LIVE_INFO_W = 660;
 /** how much higher the Live TV row sits when focused, so its now/next block fits on screen */
 const LIVE_BELOW = 150;
@@ -103,7 +102,7 @@ export function App () {
 	// a fresh install first looks for the settings backup on the TV (lib/backup.ts); nothing is seeded until that has answered
 	const [restoring, setRestoring] = useState(() => !hasSavedConfig());
 	const [focusRow, setFocusRow] = useState<{id: string; seq: number} | undefined>(undefined);
-	const live = useLiveTv(config.liveTvRow, screen === 'guide', LIVE_ROW_CHANNELS);
+	const live = useLiveTv(config.liveTvRow, screen === 'guide', config.liveChannels);
 
 	const showToast = useCallback((text: string, kind: ToastMessage['kind'] = 'info') => {
 		window.clearTimeout(toastTimer.current);
@@ -160,6 +159,7 @@ export function App () {
 		const showAll = config.showAllApps;
 		const read = () => listApps(useHomebrew, showAll)
 			.then(({apps: list, source}) => {
+				bootMark('apps');
 				if (!sameApps(list, appsShown.current)) setApps(list);
 				saveAppsCache(useHomebrew, showAll, list);
 				if (useHomebrew && source !== 'homebrew') showToast('Homebrew Channel not available, using the built-in app list', 'error');
@@ -301,32 +301,45 @@ export function App () {
 	// the first row (in the glass bar) holds config.firstRow apps; the rest make a grid of rows as wide below it, like the tvOS home screen
 	// (the grid rows are 'dock', 'dock:1', 'dock:2'...)
 	const firstRow = config.firstRow;
-	/** the Live TV row: the first channels, each with what is on now, then the Guide tile */
+	/** the Live TV row: the channels picked in Settings > Channels (or the first few), each with what is on now, then the Guide tile */
 	const liveTiles = useMemo((): TileModel[] => {
 		if (!config.liveTvRow || !live.channels.length) return [];
-		const step = (TILES_FOR[firstRow] || TILES_FOR[6]).size + (TILES_FOR[firstRow] || TILES_FOR[6]).gap;
-		const rowW = firstRow * step - (TILES_FOR[firstRow] || TILES_FOR[6]).gap;
-		return live.channels.slice(0, LIVE_ROW_CHANNELS).map((c, i): TileModel => ({
+		return rowChannels(live.channels, config.liveChannels).map((c): TileModel => ({
 			key: LIVE.prefix + c.id,
 			label: c.name,
-			live: {
-				number: c.number, name: c.name, logo: c.logoPath && live.logos[c.logoPath], at: live.now,
-				infoWidth: Math.min(LIVE_INFO_W, rowW - i * step),
-				...nowNextAt(live.listings[c.signal], live.now)
-			}
+			live: {number: c.number, name: c.name, logo: c.logoPath && live.logos[c.logoPath], at: live.now, ...nowNextAt(live.listings[c.signal], live.now)}
 		})).concat({key: LIVE.guide, label: 'Guide', glyph: 'guide', color: 'rgba(255, 255, 255, 0.16)'});
-	}, [config.liveTvRow, live, firstRow, config.language]);
+	}, [config.liveTvRow, config.liveChannels, live, config.language]);
+	/** the furthest along the row a focused channel may sit with its now/next block still on the row (Row's slot) */
+	const liveSlot = useMemo(() => {
+		const t = TILES_FOR[firstRow] || TILES_FOR[6];
+		return Math.max(0, Math.floor((firstRow * (t.size + t.gap) - t.gap - LIVE_INFO_W) / (t.size + t.gap)));
+	}, [firstRow]);
 	const rows: HomeRow[] = useMemo(() => {
 		const list: HomeRow[] = [{id: ROW.apps, label: 'Apps', items: homeTiles.slice(0, firstRow), emptyText: 'No apps selected — add some in Settings'}];
 		for (let at = firstRow, n = 0; at < homeTiles.length; at += firstRow, n++) list.push({id: n ? `${ROW.dock}:${n}` : ROW.dock, label: 'More apps', items: homeTiles.slice(at, at + firstRow)});
-		if (liveTiles.length) list.push({id: ROW.live, label: 'Live TV', titled: true, className: 'row--live', below: LIVE_BELOW, items: liveTiles});
+		if (liveTiles.length) list.push({id: ROW.live, label: 'Live TV', titled: true, className: 'row--live', below: LIVE_BELOW, slot: liveSlot, items: liveTiles});
 		return list;
-	}, [homeTiles, shownInputs, config.language, firstRow, liveTiles]);
+	}, [homeTiles, shownInputs, config.language, firstRow, liveTiles, liveSlot]);
 
-	const tabs: SettingsTab[] = useMemo(() => [
-		{id: ROW.apps, label: 'Apps', noun: 'apps', items: allApps.map(appTile), shown: shownApps.map(appTile)},
-		{id: ROW.sources, label: 'Sources', noun: 'sources', items: inputs.map(inputTile), shown: shownInputs.map(inputTile)}
-	], [allApps, inputs, shownApps, shownInputs, config.language]);
+	// Settings' tabs are only built while Settings is open
+	const inSettings = screen === 'settings';
+	const tabs: SettingsTab[] = useMemo(() => {
+		if (!inSettings) return [];
+		const list: SettingsTab[] = [
+			{id: ROW.apps, label: 'Apps', noun: 'apps', items: allApps.map(appTile), shown: shownApps.map(appTile)},
+			{id: ROW.sources, label: 'Sources', noun: 'sources', items: inputs.map(inputTile), shown: shownInputs.map(inputTile)}
+		];
+		// the Live TV row's channels: every channel, the row's ticked, in the row's order
+		if (config.liveTvRow && live.channels.length) {
+			const tile = (c: Channel): TileModel => {
+				const logo = c.logoPath && live.logos[c.logoPath];
+				return {key: c.id, label: `${c.number} · ${c.name}`, imageUrl: logo || undefined, plain: true, color: '#22262f', wordmark: logo ? undefined : c.name};
+			};
+			list.push({id: ROW.channels, label: 'Channels', noun: 'channels', items: live.channels.map(tile), shown: rowChannels(live.channels, config.liveChannels).map(tile)});
+		}
+		return list;
+	}, [inSettings, allApps, inputs, shownApps, shownInputs, config.language, config.liveTvRow, config.liveChannels, live.channels, live.logos]);
 
 	/** options that pick from a list: the labels shown in the pop-up list, the stored values, and which one is set now */
 	type Choice = {labels: string[]; values: (string | number)[]; now: string | number};
@@ -512,6 +525,7 @@ export function App () {
 	], [config.liveTvRow, config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur, config.ambient, config.ambientSeconds, immich.ready]);
 
 	const wallpaper: WallpaperTab = useMemo(() => {
+		if (!inSettings) return {categories: [], entries: [], current: '', onPick: () => undefined, onFavorite: () => undefined};
 		const entries: WallpaperEntry[] = [
 			{key: 'shuffle', title: 'Shuffle (a new one each time)', category: 'Defaults'},
 			{key: 'none', title: 'Plain background', category: 'Defaults'}
@@ -549,7 +563,7 @@ export function App () {
 				showToast(has ? 'Removed from Favorites' : 'Added to Favorites');
 			}
 		};
-	}, [config, immich]);
+	}, [config, immich, inSettings]);
 
 	// ----- actions -----
 	const open = (id: string, label: string) => {
@@ -601,13 +615,15 @@ export function App () {
 	}, [allApps]);
 
 	const onToggle = useCallback((tabId: string, key: string) => {
-		if (tabId === ROW.apps) {
+		if (tabId === ROW.channels) {
+			updateConfig({...config, liveChannels: toggleId(rowChannels(live.channels, config.liveChannels).map((c) => c.id), key)});
+		} else if (tabId === ROW.apps) {
 			updateConfig({...config, appIds: toggleId(config.appIds, key)});
 		} else {
 			const current = config.sourceIds || inputs.map((s) => s.appId);
 			updateConfig({...config, sourceIds: toggleId(current, key)});
 		}
-	}, [config, inputs]);
+	}, [config, inputs, live.channels]);
 
 	const onOption = useCallback((optionId: string) => {
 		if (optionId === OPTION.restore) {
@@ -664,6 +680,7 @@ export function App () {
 	/** Replace a row's order with `keys` (the full list of what's shown). */
 	const onReorder = useCallback((tabId: string, keys: string[]) => {
 		if (tabId === ROW.apps) updateConfig({...config, appIds: keys});
+		else if (tabId === ROW.channels) updateConfig({...config, liveChannels: keys});
 		else updateConfig({...config, sourceIds: keys});
 	}, [config]);
 

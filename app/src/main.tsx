@@ -1,9 +1,10 @@
 import {render} from 'preact';
 import {App} from './app';
 import {applyTokens} from './theme/tokens';
-import {startLog} from './lib/log';
+import {bootMark, startLog} from './lib/log';
 import './theme/global.css';
 
+bootMark('script');
 applyTokens();
 startLog();
 // SF Pro, only when the private font file was added to this build (see tools/make_sf_font.py); otherwise nothing happens and Geist is used
@@ -11,6 +12,7 @@ if ('FontFace' in window) {
 	new FontFace('SF Private', `url(${new URL('fonts/sf.woff2', location.href).href})`, {weight: '1 1000'}).load().then((face) => { document.fonts.add(face); }).catch(() => undefined);
 }
 render(<App />, document.getElementById('root')!);
+window.requestAnimationFrame(() => bootMark('frame'));
 
 // Dev preview only (import.meta.env.DEV is false in the real build): the layout is a fixed 1920x1080 "TV screen". Scale it to fit the
 // window, centre it, and keep the wallpaper layers inside it, with black bars where the window is bigger than a 16:9 screen.

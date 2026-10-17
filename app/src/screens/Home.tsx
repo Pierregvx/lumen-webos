@@ -23,6 +23,8 @@ export interface HomeRow {
 	className?: string;
 	/** how much higher the row must sit when focused, to leave room under it (the Live TV row's now/next block) */
 	below?: number;
+	/** see Row's slot */
+	slot?: number;
 }
 
 interface Props {
@@ -451,6 +453,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 						label={tr(row.label)}
 						titled={row.titled}
 						className={row.className}
+						slot={row.slot}
 						tileSize={tiles && tiles.size}
 						tileGap={tiles && tiles.gap}
 						items={i > 1 && !late ? [] : row.items}

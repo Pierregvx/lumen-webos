@@ -13,6 +13,9 @@ interface Props {
 	titled?: boolean;
 	/** extra class on the row (the Live TV row's is row--live) */
 	className?: string;
+	/** the furthest along (in tiles) the focused tile may sit: past it the row scrolls on, even when it fits. The last tile does not scroll it
+	 *  further. The Live TV row uses it so the focused channel's now/next block always has room on its right. */
+	slot?: number;
 	/** tile width and gap, when not the default (they must match --layout-tile-size and --layout-tile-gap) */
 	tileSize?: number;
 	tileGap?: number;
@@ -30,13 +33,14 @@ const VIEWPORT_WIDTH = LAYOUT.screenWidth - 2 * LAYOUT.rowsEdge;
 
 /** Horizontal strip of tiles. Centred when it fits; otherwise a carousel that keeps
  *  the selected tile in the middle (clamped at the ends). */
-export function Row ({label, items, focused, selected, emptyText, compact, titled, className, tileSize, tileGap, hidden, rest, onLeave, onSelect, onActivate}: Props) {
+export function Row ({label, items, focused, selected, emptyText, compact, titled, className, slot, tileSize, tileGap, hidden, rest, onLeave, onSelect, onActivate}: Props) {
 	const size = compact ? LAYOUT.dockTileSize : tileSize || LAYOUT.tileSize;
 	const gap = compact ? LAYOUT.dockTileGap : tileGap || LAYOUT.tileGap;
 	const STEP = size + gap;
 	const total = items.length * STEP - gap;
 	const fits = total <= VIEWPORT_WIDTH;
-	const offset = fits ? 0 : clamp(selected * STEP + size / 2 - VIEWPORT_WIDTH / 2, 0, total - VIEWPORT_WIDTH);
+	const offset = slot !== undefined ? Math.max(0, Math.min(selected, items.length - 2) - slot) * STEP
+		: fits ? 0 : clamp(selected * STEP + size / 2 - VIEWPORT_WIDTH / 2, 0, total - VIEWPORT_WIDTH);
 
 	return (
 		<section class={`row${focused || rest ? ' row--focused' : ''}${compact ? ' row--dock' : ''}${titled ? ' row--titled' : ''}${hidden ? ' row--hidden' : ''}${className ? ' ' + className : ''}`} style={`--row-w:${total}px`} onMouseLeave={onLeave}>
