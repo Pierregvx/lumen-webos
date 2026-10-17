@@ -33,7 +33,8 @@ Setting `backlight` as root works (80 then back to 100, visibly dimmed, `returnV
 deleted. Only a software reboot was tried, not a power cut at the wall. The boot hook started `watch.sh` on its own.
 
 ## Live TV channel list and guide (2026-10-17)
-List, logos and guide: yes. As root: `iepg/getChannelList` with `"channelMode":"Terrestrial"` gives the 188 aerial channels with names, numbers and logo paths
+Yes. As root: `iepg/getChannelList` with `"channelMode":"Terrestrial"` gives the 188 aerial channels with names, numbers and logo paths
 (PNGs under `/tmp/gibbips/logo`); the guide is in `epgdb`, kind `com.webos.service.legacybroadcast.programSCH:4`, joined on
-`signalChannelId`. Tuning not found yet: launching `com.webos.app.livetv` with `{"channelId":...}` returned true but did not change channel. Found by watching `ls-monitor` while
+`signalChannelId`. Tuning: `luna://com.webos.service.apiadapter/tv/openChannel {"channelId":...}` opens Live TV on that channel, even
+from Home (found from the SSAP gateway's `filtering-uris.js`; Home Assistant's `tv/openChannel` ends up there). Found by watching `ls-monitor` while
 `com.webos.app.channeledit` loaded. The full trail and the calls are in `docs/live-tv.md`.

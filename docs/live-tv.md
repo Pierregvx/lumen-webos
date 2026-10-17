@@ -1,4 +1,4 @@
-# Live TV channel list: spike in progress (tuning left)
+# Live TV channel list: spike done
 
 Goal: read the TV's aerial (Freeview, DVB-T, digital only) channel list, so Lumen can show channel tiles and later a guide
 (PLAN.md, Spikes and Later item 9). The TV has been scanned and Live TV shows channels.
@@ -147,6 +147,10 @@ All commands so far are read-only and run as root over SSH on the TV.
   `com.webos.service.apiadapter/tv/openChannel`; `interfaces/tv.interface` and `interfaces/com.webos.service.apiadapter.interface` also
   mention it. So SSAP `tv/openChannel` is served by **`luna://com.webos.service.apiadapter/tv/openChannel`**. Next: call that as root
   with `{"channelId":...}` and Live TV closed.
+- **Step 1w (2026-10-17): tuning solved.** With Live TV closed (Home in front), as root:
+  `luna-send -n 1 luna://com.webos.service.apiadapter/tv/openChannel '{"channelId":"1_41_104_104_16522_17664_9018"}'` opened Live TV on
+  Channel 4 HD (seen on the TV; the reply itself was not posted). No broadcast id or pairing needed. Not tried: from the app without
+  root, and with Live TV already open on another channel (it should behave like Home Assistant's `set_channel`, which does both).
 
 ## Answer
 
@@ -155,9 +159,9 @@ All commands so far are read-only and run as root over SSH on the TV.
 | Channel list | `iepg/getChannelList {"dataType":0,"sort":0,"channelMode":"Terrestrial","attribute":[{"filterType":"Invisible","value":false}]}` | Root. 188 channels. `channelNumber`, `channelName`, `channelId`, `signalChannelId`, `imgUrl`, `Radio`, `HDTV`, `skipped`. |
 | Logos | read the file at `imgUrl` | Root. PNG, 2 to 3 KB, under `/tmp/gibbips/logo`, so cache them. 176 of 188 have one. |
 | Guide | `epgdb/find {"query":{"from":"com.webos.service.legacybroadcast.programSCH:4", ...}}` | Root. Join on `signalChannelId`. `programPF:4` holds now and next. Filled while Live TV runs, so it may be thin if Live TV has not been opened lately (untested). |
-| Tune | `utp.broadcast/changeChannel {"broadcastId":...,"channelId":...,"connection_timeout":500,"fallback":true,"ignorable":false}` | Root, Live TV open. Worked (Step 1s). Launching Live TV with `{"channelId":...}` does not tune (Step 1o). The broadcast id changes each time Live TV starts (Step 1t). |
+| Tune | `apiadapter/tv/openChannel {"channelId":...}` | Root. Opens Live TV on that channel, even from Home (Step 1w). Don't use `utp.broadcast/changeChannel` (needs Live TV's per-session broadcast id, Step 1t) or a launch parameter (ignored, Step 1o). |
 
-Still unknown: how to get Live TV's current broadcast id (or a tune call that needs none); whether the guide data stays filled when Live TV hasn't been used for a while, and the `epgdb` query syntax for one
+Still unknown: whether `openChannel` works without root; whether the guide data stays filled when Live TV hasn't been used for a while, and the `epgdb` query syntax for one
 channel and a time window (db8 `where` on `signalChannelId` and `startTime` needs an index on those fields; check `getProfile` or try it).
 
 ## Plan (do in order, stop when one works)
