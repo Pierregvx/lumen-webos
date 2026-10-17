@@ -72,6 +72,14 @@ All commands so far are read-only and run as root over SSH on the TV.
 - **Step 1i (2026-10-17):** `getChannelZappingList` with `-i` gives no reply at all in 5 s; with `{"startIndex":0,"count":5}` and
   `{"startIndex":1,"endIndex":5}` the same `Message status unknown`. Stop guessing parameters. Next: `ls-monitor` while opening Live TV's
   channel list and the Guide, then copy the exact call (and see whether the reply comes back on the bus at all).
+- **Step 1j (2026-10-17): found the real call.** There is no separate Guide app (`listApps` has `livetv`, `channeledit`,
+  `channelsetting`, `lgchannels`, ...; `com.webos.exampleapp.*.epg` are LG sample apps, not the Guide). Launching
+  `com.webos.app.channeledit` over SSH (`applicationManager/launch`) with `ls-monitor` running showed it asks **`iepg`** after all, so the
+  "iepg is internet channels only" guess was wrong. It just needs `channelMode`:
+  `luna://com.webos.service.iepg/getChannelList {"dataType":0,"sort":0,"channelMode":"Terrestrial","attribute":[{"filterType":"Invisible","value":false}],"requestField":["channelId"]}`
+  (also with `"Cable"`, `"Satellite"` and `["IP"]`), then `iepg/getChannelInfo {"dataType":0,"channelId":"1_41_104_104_16522_17664_9018"}`.
+  It also calls `com.webos.service.utp.channel` `getChannelModeList '{}'` and `getChannelTypeList {"channelModeId":0..2}`.
+  Next: the same `getChannelList` without `requestField`, to see which fields come back per channel.
 
 ## Plan (do in order, stop when one works)
 
