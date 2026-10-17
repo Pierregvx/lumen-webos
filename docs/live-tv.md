@@ -122,6 +122,13 @@ All commands so far are read-only and run as root over SSH on the TV.
   `-106 No resource` (they probably want the broadcast id). `utp.broadcast` `get*` methods: getBroadcastState, getChannelChangeResult,
   getChannelChangeStatus, getChannelState, getCurrentChannel, getPlayState, getSignalStatus, getVideoInfo and others.
   Next: confirm the id survives Live TV closing and opening (launch Live TV over SSH, then change channel).
+- **Step 1t (2026-10-17):** from Home, launch Live TV over SSH, wait 5 s, `changeChannel` to Channel 4 HD with the same broadcast id:
+  Live TV opened on the last channel (BBC Two) and did not switch. The `changeChannel` reply was not captured, so unknown whether the id
+  was refused or Live TV was not ready after 5 s.
+  Lead: Home Assistant's LG webOS integration changes channel by name with Live TV closed. It talks SSAP (the websocket API on port
+  3000/3001): `ssap://tv/getChannelList`, then `ssap://tv/openChannel {"channelId":...}` (from aiowebostv; my understanding, not checked
+  against its source this session). Next: `ls-monitor` while Home Assistant changes channel, to see which luna call the SSAP gateway
+  makes. That call, made as root, is likely the one Lumen should use.
 
 ## Answer
 
