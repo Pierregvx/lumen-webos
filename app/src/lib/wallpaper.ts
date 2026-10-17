@@ -5,10 +5,13 @@
 // Cold start with a cloud picture (a fixed one or a shuffle): the picture the next launch will show is chosen and downloaded while Lumen is
 // idle (lib/wpstore.ts keeps it on the TV), and its strongly blurred copy (a few KB) goes into the boot record, so index.html paints that
 // blur before the script has loaded. The app then draws, and the sharp picture, read from the TV rather than the internet, fades in over it.
+// Immich (immich:<source>): the same, except that the sharp picture comes from the Immich server on the home network and the blurred copies
+// are made on the TV from its thumbnail (lib/immich.ts).
 
 import {LOCAL_WALLPAPERS, WALLPAPERS, cloudUrl} from '../config/wallpapers';
 import {BOOT_WALLPAPER_KEY, readCache, writeCache, type BootWallpaper} from './boot';
 import {blobToDataUrl, fetchBlob, getPics, keepOnly, putPics, type Pics} from './wpstore';
+import {blurredCopies, cachedServer, loadServer, nextAsset, previewUrl} from './immich';
 
 const HTML_CLASS = 'wp-image';
 const PROXY = 'https://images.weserv.nl/';       // free image resizer: a 1920-wide copy instead of the multi-MB original
@@ -83,14 +86,16 @@ export function setLiveBlur (on: boolean): void {
 
 /** Object URLs of the stored copies of the picture on screen (cloud pictures read from the TV), in place of the resizer's URLs. */
 let local: {full: string; light: string; strong: string} | null = null;
-function useLocal (pics: Pics | null): void {
-	if (local) { URL.revokeObjectURL(local.full); URL.revokeObjectURL(local.light); URL.revokeObjectURL(local.strong); }
-	local = pics ? {full: URL.createObjectURL(pics.full), light: URL.createObjectURL(pics.light), strong: URL.createObjectURL(pics.strong)} : null;
+function useLocal (pics: Pics | {full: string; light: string; strong: string} | null): void {
+	if (local) [local.full, local.light, local.strong].forEach((u) => { if (u.indexOf('blob:') === 0) URL.revokeObjectURL(u); });
+	if (!pics) { local = null; return; }
+	const url = (v: Blob | string) => typeof v === 'string' ? v : URL.createObjectURL(v);
+	local = {full: url(pics.full), light: url(pics.light), strong: url(pics.strong)};
 }
 
 function setBlur (shown: string | null): void {
 	const style = document.documentElement.style;
-	const light = shown ? lightFor(shown) : undefined;
+	const light = local ? local.light : shown ? lightFor(shown) : undefined;
 	if (!light) { style.removeProperty('--wp-blur'); style.removeProperty('--wp-bg'); return; }
 	const load = (name: string, src: string) => {
 		const probe = new Image();
@@ -126,6 +131,7 @@ let prepareTimer = 0;
  *  its strongly blurred copy in the boot record for index.html. */
 function prepareNext (sel: string): void {
 	window.clearTimeout(prepareTimer);
+	if (sel.indexOf('immich:') === 0) { prepareTimer = window.setTimeout(() => prepareImmich(sel), PREPARE_DELAY_MS); return; }
 	if (sel.indexOf('cloud:') !== 0 && sel.indexOf('shuffle') !== 0) return;
 	prepareTimer = window.setTimeout(() => {
 		if (sel !== currentSel) return;
@@ -151,6 +157,29 @@ function prepareNext (sel: string): void {
 			})
 			.catch(() => undefined);    // offline or no storage: the next launch uses the network, as before
 	}, PREPARE_DELAY_MS);
+}
+
+/** Immich: the next picture is chosen now and its blurred copies made, so the next launch (or the next auto-change) paints them at once. */
+function prepareImmich (sel: string): void {
+	const server = cachedServer();
+	if (!server || sel !== currentSel) return;
+	nextAsset(server, sel, shownId)
+		.then((id) => id ? blurredCopies(server, id).then((b) => ({id, b})) : null)
+		.then((r) => { if (r && sel === currentSel) writeCache(BOOT_WALLPAPER_KEY, {sel, next: r.id, bg: r.b.strong, blur: r.b.light} as BootWallpaper); })
+		.catch(() => undefined);
+}
+
+/** The Immich picture to show now: the one prepared by the last launch (its blurred copies are in the boot record), else a fresh pick. */
+function immichNow (sel: string): Promise<{id: string; full: string; light: string; strong: string} | null> {
+	const boot = readCache<BootWallpaper>(BOOT_WALLPAPER_KEY);
+	const server = cachedServer();
+	if (server && boot && boot.sel === sel && boot.next && boot.next !== shownId && boot.bg) {
+		return Promise.resolve({id: boot.next, full: previewUrl(server, boot.next), light: boot.blur || boot.bg, strong: boot.bg});
+	}
+	return (server ? Promise.resolve(server) : loadServer()).then((srv) => {
+		if (!srv) return null;
+		return nextAsset(srv, sel, shownId).then((id) => id ? blurredCopies(srv, id).then((b) => ({id, full: previewUrl(srv, id), light: b.light, strong: b.strong})) : null);
+	});
 }
 
 function ensureElement (): HTMLElement {
@@ -218,6 +247,22 @@ export function setWallpaper (sel: string): void {
 		saveBoot();
 		prepareNext(sel);
 	};
+	if (sel.indexOf('immich:') === 0) {
+		// on failure (no server set up, server away, nothing matches) the bundled default is shown, as for a cloud picture that will not load
+		const fallback = () => { if (mine === token) { useLocal(null); tryAt(list.length - 1); } };
+		immichNow(sel).then((pic) => {
+			if (mine !== token) return;
+			if (!pic) { fallback(); return; }
+			const img = new Image();
+			img.onload = () => {
+				const ready = typeof img.decode === 'function' ? img.decode().catch(() => undefined) : Promise.resolve();
+				ready.then(() => { if (mine !== token) return; useLocal(pic); show({src: pic.full, id: pic.id}, img, pic.full); });
+			};
+			img.onerror = fallback;
+			img.src = pic.full;
+		}, fallback);
+		return;
+	}
 	const tryAt = (i: number) => {
 		if (mine !== token) return;                      // a newer choice replaced this one
 		if (i >= list.length) { root.remove(HTML_CLASS); return; }

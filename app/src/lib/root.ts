@@ -26,7 +26,7 @@ const SETTINGS: Record<string, {category: string; values?: string[]}> = {
 };
 
 /** Files under HOMEHOOK that Lumen may write or read. */
-const FILES = ['lumen-config.json', 'recent'] as const;
+const FILES = ['lumen-config.json', 'recent', 'immich.json'] as const;
 export type HomehookFile = typeof FILES[number];
 const LOG = `${HOMEHOOK}/lumen.log`;
 const LOG_MAX_BYTES = 64 * 1024;
@@ -103,6 +103,30 @@ export function setVideoFlag (on: boolean): Promise<void> {
 /** With the Home watcher running, LG Home would bounce straight back to Lumen: this flag lets it open once. */
 export function allowLgHome (): Promise<void> {
 	return run('touch /tmp/allow_lg_home', 4000).then(() => undefined);
+}
+
+/** An Immich server's address (scheme, host and port only) and an API key, as checked before either reaches the shell. */
+const IMMICH_BASE = /^https?:\/\/[A-Za-z0-9.-]+(:\d{1,5})?$/;
+const IMMICH_KEY = /^[A-Za-z0-9_-]{16,128}$/;
+/** The only Immich paths Lumen asks for. */
+const IMMICH_PATHS = [
+	/^\/api\/server\/version$/,
+	/^\/api\/albums$/,
+	/^\/api\/search\/random$/,
+	/^\/api\/memories\?for=\d{4}-\d{2}-\d{2}$/,
+	/^\/api\/assets\/[0-9a-f-]{36}\/thumbnail\?size=thumbnail$/
+];
+
+/** One request to an Immich server, made with curl on the TV: Immich sends no CORS headers outside its dev mode, so the app's own fetch would
+ *  be refused. A JSON body travels as base64. `as: 'base64'` returns the response body base64-encoded (for a thumbnail). */
+export function immichRequest (base: string, key: string, path: string, opts: {body?: object; as?: 'text' | 'base64'} = {}): Promise<string> {
+	if (!IMMICH_BASE.test(base) || !IMMICH_KEY.test(key) || !IMMICH_PATHS.some((re) => re.test(path))) return Promise.reject(new Error('refused: immich request'));
+	const curl = `curl -sf -m 15 -H ${shellQuote('x-api-key: ' + key)} -H 'accept: application/json'`;
+	const url = shellQuote(base + path);
+	const command = opts.body
+		? `echo ${toBase64(JSON.stringify(opts.body))} | base64 -d | ${curl} -H 'content-type: application/json' --data-binary @- ${url}`
+		: `${curl} ${url}`;
+	return run(opts.as === 'base64' ? `${command} | base64 | tr -d '\\n'` : command, 20000);
 }
 
 /** Writes text to one of FILES. The text travels as base64, so nothing in it is ever read by the shell. */

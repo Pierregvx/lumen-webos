@@ -87,7 +87,7 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 	const onOptions = tabIndex === tabs.length + 1;
 	const tab: SettingsTab | undefined = (onOptions || onWallpaper) ? undefined : tabs[tabIndex];
 	const wpName = wallpaper.categories[wpCat];
-	const wpList = wallpaper.entries.filter((e) => (wpName === 'All' ? e.key.indexOf('shuffle:') !== 0 && e.category !== 'Favorites' && e.category !== 'Video' : e.category === wpName));
+	const wpList = wallpaper.entries.filter((e) => (wpName === 'All' ? e.key.indexOf('shuffle:') !== 0 && e.category !== 'Favorites' && e.category !== 'Video' && e.category !== 'Photos' : e.category === wpName));
 	const items = tab ? (reordering ? tab.shown : tab.items) : [];
 	const count = onOptions ? options.length : onWallpaper ? wpList.length : items.length;
 	const cols = LAYOUT.gridColumns;

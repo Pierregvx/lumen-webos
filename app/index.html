@@ -34,10 +34,10 @@
             if (boot.bg) root.style.setProperty('--wp-bg', boot.bg);
             document.getElementById('wpimage').style.backgroundImage = 'url("' + boot.url + '")';
           } else {
-            // a cloud picture: its strong blur (a data: URL) until the sharp one, read from the TV, fades in over it
+            // a cloud or Immich picture: its strong blur (a data: URL) until the sharp one fades in over it
             var bg = 'url("' + boot.bg + '")';
             root.style.setProperty('--wp-bg', bg);
-            root.style.setProperty('--wp-blur', bg);
+            root.style.setProperty('--wp-blur', boot.blur ? 'url("' + boot.blur + '")' : bg);
             document.getElementById('wpimage').style.backgroundImage = bg;
           }
         } catch (e) { /* no stored wallpaper: the app loads it as before */ }

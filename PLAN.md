@@ -217,7 +217,10 @@ Done when: each button does its chosen action on the TV.
 - [ ] Photos are fetched directly from the Immich server on the LAN. Never through images.weserv.nl or any other public proxy.
 - [ ] Glass without live blur: fetch the small thumbnail, blur it once on an `OffscreenCanvas` in a worker, and use that as the glass backdrop.
       No per-frame cost.
-- [ ] Step 1: Immich as a wallpaper source (chosen albums, favourites, shuffle, change every N minutes).
+- [x] Step 1: Immich as a wallpaper source (built 2026-10-17, docs/immich.md): Settings > Wallpaper > Photos with Recent (90 days), On this
+      day, Favourites, All and each album; landscape only; API calls through curl on the TV because Immich sends no CORS headers; blur made
+      on the TV from the thumbnail; next photo prepared for the next cold start. Tested against a fake Immich server only. **(verify)** on
+      the TV with your server, including the auto-change timer.
 - [ ] Step 2: ambient screensaver that replaces LG's screensaver, through the same `watch.sh` hook that launches Lumen Gallery: full-screen
       photos, crossfades, slow zoom (opacity and transform only), clock and weather overlay, "On this day" memories.
 - [ ] Decide the rule for ambient versus video wallpaper. Today, with video wallpaper on and Lumen in front, `watch.sh` ends LG's screensaver as

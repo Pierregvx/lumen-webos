@@ -19,6 +19,7 @@ import {appTile, inputTile, pickInOrder} from './lib/tiles';
 import {TIMING} from './config/constants';
 import {LOCAL_WALLPAPERS, WALLPAPERS, WALLPAPER_CATEGORIES, cloudUrl} from './config/wallpapers';
 import {resized, setFavorites, setLiveBlur, setWallpaper} from './lib/wallpaper';
+import {albums as immichAlbums, cachedServer, IMMICH_SOURCES, loadServer} from './lib/immich';
 import {setVideoChoice, setVideoPaused, setVideoWallpaper, VIDEO_PLACES} from './lib/wallpaperVideo';
 import {setVideoFlag, startScreensaver} from './lib/system';
 import {setFpsCounter} from './lib/fps';
@@ -65,6 +66,15 @@ const MENU_ITEMS: TileModel[] = [
 
 export function App () {
 	const [screen, setScreen] = useState<Screen>(import.meta.env.DEV && /[?&]settings/.test(location.search) ? 'settings' : 'home');
+	// Immich (Settings > Wallpaper > Photos): whether a server is set up on the TV, and its albums; read again each time Settings opens
+	const [immich, setImmich] = useState<{ready: boolean; albums: {id: string; title: string}[]}>({ready: !!cachedServer(), albums: []});
+	useEffect(() => {
+		if (screen !== 'settings') return;
+		loadServer().then((srv) => {
+			if (!srv) { setImmich({ready: false, albums: []}); return; }
+			immichAlbums(srv).then((a) => setImmich({ready: true, albums: a}), () => setImmich({ready: true, albums: []}));
+		});
+	}, [screen]);
 	const [config, setConfig] = useState<UserConfig>(loadConfig);
 	// set before anything renders, so every label below reads the chosen language and clock
 	setLang(config.language);
@@ -450,6 +460,12 @@ export function App () {
 		LOCAL_WALLPAPERS.forEach((w, i) => entries.push({key: `local:${i}`, title: w.title, category: 'Defaults', thumb: w.file}));
 		WALLPAPER_CATEGORIES.forEach((c) => entries.push({key: `shuffle:${c}`, title: `Shuffle ${c}`, category: c}));
 		entries.push({key: 'shuffle:Favorites', title: 'Shuffle my favorites', category: 'Favorites'});
+		if (immich.ready) {
+			IMMICH_SOURCES.forEach((src) => entries.push({key: src.key, title: src.title, category: 'Photos'}));
+			immich.albums.forEach((a) => entries.push({key: `immich:album:${a.id}`, title: a.title, category: 'Photos'}));
+		} else {
+			entries.push({key: 'immich:setup', title: 'Set up Immich', category: 'Photos'});
+		}
 		WALLPAPERS.forEach((w) => {
 			const fav = config.favoriteWallpapers.indexOf(w.id) !== -1;
 			const e = {key: `cloud:${w.id}`, title: w.title, category: w.category, thumb: resized(cloudUrl(w), 360), fav};
@@ -460,10 +476,12 @@ export function App () {
 		entries.push({key: 'video:', title: 'Shuffle all places', category: 'Video', tint: tint(0), on: config.videoWallpaper && config.videoPlaces.length === 0});
 		VIDEO_PLACES.forEach((p, i) => entries.push({key: `video:${p}`, title: p, category: 'Video', tint: tint(i + 1), on: config.videoWallpaper && config.videoPlaces.indexOf(p) >= 0}));
 		return {
-			categories: ['Defaults', 'Favorites', 'Video'].concat(WALLPAPER_CATEGORIES, 'All'),
+			categories: ['Defaults', 'Photos', 'Favorites', 'Video'].concat(WALLPAPER_CATEGORIES, 'All'),
 			entries,
 			current: config.videoWallpaper ? 'video' : config.wallpaper,
-			onPick: (key: string) => updateConfig(key.indexOf('video:') === 0 ? {...config, videoWallpaper: true, videoPlaces: key === 'video:' ? [] : config.videoPlaces.indexOf(key.slice(6)) >= 0 ? config.videoPlaces.filter((x) => x !== key.slice(6)) : config.videoPlaces.concat(key.slice(6))} : {...config, wallpaper: key, videoWallpaper: false}),
+			onPick: (key: string) => key === 'immich:setup'
+				? showToast('Put your Immich address and an API key in /var/lib/homehook/immich.json on the TV (see docs/immich.md), then open Settings again', 'error')
+				: updateConfig(key.indexOf('video:') === 0 ? {...config, videoWallpaper: true, videoPlaces: key === 'video:' ? [] : config.videoPlaces.indexOf(key.slice(6)) >= 0 ? config.videoPlaces.filter((x) => x !== key.slice(6)) : config.videoPlaces.concat(key.slice(6))} : {...config, wallpaper: key, videoWallpaper: false}),
 			onFavorite: (key: string) => {
 				if (key.indexOf('cloud:') !== 0) return;
 				const id = key.slice(6);
@@ -472,7 +490,7 @@ export function App () {
 				showToast(has ? 'Removed from Favorites' : 'Added to Favorites');
 			}
 		};
-	}, [config]);
+	}, [config, immich]);
 
 	// ----- actions -----
 	const open = (id: string, label: string) => {
