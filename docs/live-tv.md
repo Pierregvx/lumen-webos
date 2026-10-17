@@ -1,5 +1,7 @@
 # Live TV channel list: spike done
 
+The build plan that came out of this, with mockups, is `docs/live-tv-build.md`.
+
 Goal: read the TV's aerial (Freeview, DVB-T, digital only) channel list, so Lumen can show channel tiles and later a guide
 (PLAN.md, Spikes and Later item 9). The TV has been scanned and Live TV shows channels.
 

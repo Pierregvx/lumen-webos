@@ -20,8 +20,8 @@ Every push to a branch other than `main` reaches the TV as a Homebrew Channel up
   Channel (`com.samrenfrew.lumen`, dev channel). LG Input Hook owns the Home button.
 - Built without the TV, waiting to be checked on it: everything in **Verify on the TV** below.
 - Next without the TV: the rest of **No TV needed**.
-- Live TV spike done (2026-10-17): channel list, logos, guide and tuning all work as root. Calls in `docs/live-tv.md`. Next: build the
-  Freeview tiles (Later item 9).
+- Live TV spike done (2026-10-17): channel list, logos, guide and tuning all work as root. Next: build the Live TV row and the Now and
+  Next guide from `docs/live-tv-build.md` (plan, calls, mockups).
 
 ---
 
@@ -251,7 +251,8 @@ In rough order of value:
 7. Profiles, and a kids mode with a PIN and allowed hours.
 8. Privacy page: LG ad and Live Plus settings, plus hosts-level blocking of LG ad and tracking hosts (check what the Homebrew Channel's own
    telemetry and ad blocking already covers before adding to `hosts-extra`).
-9. Live Freeview channel tiles, and a now/next guide. The spike worked (`docs/live-tv.md`).
+9. Live TV row under the glass bar and a Now and Next guide (phase 1), full guide grid later (phase 2). Plan and mockups in
+   `docs/live-tv-build.md`.
 
 ## Parked
 

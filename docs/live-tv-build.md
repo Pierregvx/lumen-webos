@@ -1,0 +1,111 @@
+# Live TV row and guide: build plan
+
+Written 2026-10-17 at the end of the Live TV spike, for a fresh session to build from. The spike trail (every call tried, what failed and why)
+is in `docs/live-tv.md`; this file only keeps what the build needs.
+
+## What we are building
+
+**Phase 1**
+1. A **Live TV row** in the view under the dock (press Down from the glass bar): a titled row of channel tiles between the glass bar and the
+   app grid. Each tile shows the channel's logo, its number and a thin bar for how far through the current programme is. The focused tile
+   shows the channel name, what's on now (title, times, time left) and what's next underneath it, like an app tile's label. OK switches the
+   TV to that channel. The row ends with a **Guide** tile.
+2. A **Guide screen, Now and Next**: one row per channel (number, logo, now with times and progress, next with its start time). Up/Down
+   moves, OK switches to the channel, Back returns to Home. Only two listings per channel are needed, not the full schedule.
+
+**Phase 2 (later)**
+3. **Full guide**: a time grid (two hours across, channels down, a line at now) behind a Now and Next / Full guide switcher at the top
+   right of the Guide screen. Not in phase 1; build the Guide screen so the switcher can be added without moving things around.
+
+**Not doing**
+- Anything drawn over Live TV (a channel list overlay, a mini guide on top of the picture). Live TV is a separate app; Lumen is not on
+  screen while it plays.
+- There is no Recent row any more (every app is in the grid), so the Live TV row is the only titled row.
+
+## Mockups
+
+In `docs/mockups/live-tv/` (1920×1080):
+
+| File | What it shows |
+|---|---|
+| `0-current-home.jpg` | The current build's home, rendered 2026-10-17 (big clock, three round buttons, glass bar at the bottom). |
+| `1-current-down.jpg` | The current build after Down: glass bar at the top over the blurred wallpaper, app grid below (in the browser only the Inputs tile shows; on the TV the other apps are there). |
+| `2-live-tv-row.jpg` | Phase 1: the Live TV row between the glass bar and the app grid, BBC TWO focused, now/next under it, Guide tile at the end. |
+| `3-now-and-next.jpg` | Phase 1: the Guide screen, Now and Next. The switcher at the top right is for phase 2; in phase 1 it can be left out. |
+| `4-full-guide.jpg` | Phase 2: the full grid with the switcher on Full guide. |
+
+Editable versions: the private design canvas "Lumen Live TV mocks", https://claude.ai/artifact/NrpUz3chDf7rxs1BdhHaD6 (readable with the
+Artifact tool from the same account). In the mocks the logos are text stand-ins and most programme names are made up; the real build uses
+the logo PNGs and guide data from the TV.
+
+Look in the mocks: same glass, rim lights, focus scale (1.175 on grid tiles) and tile size as the existing rows, Geist, white text on the
+blurred wallpaper. The Guide screen uses the blurred wallpaper with a dark veil (like Settings), rows as faint glass, the focused row as the
+white capsule with dark text.
+
+## Before writing code
+
+1. **Render the current build** and compare it with `0-current-home.jpg` and `1-current-down.jpg`, in case things moved since:
+   `npm --prefix app ci`, then `npx vite --port 5199` in `app/`, then `node tools/screenshots-current.mjs <outdir>` (headless Chromium
+   from `/opt/pw-browsers` in a cloud session; set `CHROME` elsewhere). It saves home, home with the glass bar focused, Down once, Down
+   twice. Look at them before changing the layout.
+2. **One spike at the TV: the now/next query** (read-only). Not tried yet:
+   ```
+   luna-send -n 1 -f luna://com.webos.epgdb/find '{"query":{"from":"com.webos.service.legacybroadcast.programPF:4","limit":4}}'
+   ```
+   Expect the same fields as the schedule kind (`programName`, `signalChannelId`, `startTime`/`endTime` in UTC, `localStartTime`/
+   `localEndTime`, `duration`, `isPresent`; see `docs/live-tv.md` Step 1). Then try filtering to one channel:
+   `{"query":{"from":"...programPF:4","where":[{"prop":"signalChannelId","op":"=","val":"16522_17472_9018"}]}}`. db8 only filters on
+   indexed properties; if that is refused, read all PF rows instead (about two per channel, so about 380 for 188 channels; db8 returns at
+   most 500 per page, with a `next` key for more) and group them by `signalChannelId` in the app.
+3. Ask Sam which channels go in the row (see Open questions) before building the Settings part.
+
+## The calls (all proven on the TV as root, 2026-10-17)
+
+| Need | Call | Notes |
+|---|---|---|
+| Channel list | `luna://com.webos.service.iepg/getChannelList` `{"dataType":0,"sort":0,"channelMode":"Terrestrial","attribute":[{"filterType":"Invisible","value":false}]}` | 188 channels. Fields used: `channelId`, `channelNumber`, `channelName`, `signalChannelId`, `imgUrl`, `Radio`, `Data`, `skipped`, `groupIdList`. Live TV's edit screen passes `"requestField":["channelId"]`; a longer `requestField` list should shrink the reply a lot (untested with several fields). |
+| Logos | read the file at `imgUrl` | PNGs, 2 to 3 KB, under `/tmp/gibbips/logo/`. 176 of 188 channels have one. `/tmp` is cleared on reboot and the TV refetches them, probably when Live TV runs; cache them in Lumen and fall back to a text tile. `readIcons()` in `lib/root.ts` already returns files as base64. |
+| Now and next | `luna://com.webos.epgdb/find` on `com.webos.service.legacybroadcast.programPF:4` | See the spike above. Join to channels on `signalChannelId`. |
+| Full schedule (phase 2) | same, on `com.webos.service.legacybroadcast.programSCH:4` | Read works (`limit:1` returned a programme). Time-window query not tried. |
+| Switch channel | `luna://com.webos.service.apiadapter/tv/openChannel` `{"channelId":"1_41_104_104_16522_17664_9018"}` | Opens Live TV on that channel, also from Home. Not tried without root, or with Live TV already open on another channel. |
+
+Don't use: `utp.broadcast/changeChannel` (needs Live TV's broadcast id, which changes every time Live TV starts), launching Live TV with a
+`channelId` parameter (ignored), `getChannelZappingList` (never answers luna-send).
+
+Ids: `channelId` looks like `1_41_2_102_16522_17472_9018` (seven numbers); `signalChannelId` is the last three (`16522_17472_9018`) and is
+what the guide rows carry.
+
+## How it fits the code
+
+- **Root calls.** `lib/root.ts` is the only place a shell command is built, one fixed command per export, every value checked first. Add
+  `channelList()`, `nowNext()` (and later `schedule(from, to)`), `openChannel(channelId)`. Check `channelId` against
+  `/^\d+(_\d+){6}$/` and `signalChannelId` against `/^\d+_\d+_\d+$/` before they go anywhere near the shell. Logo paths go through
+  `readIcons()` (it already refuses anything that is not a plain absolute path).
+- **New `lib/livetv.ts`.** Parses the list (drop `Radio`, `Data` and `skipped` channels), keeps channels and logos in the same cache as
+  the app list so a cold start draws the row at once (the TV ends Lumen whenever another app opens, see `lib/boot.ts`), then refreshes in
+  the background. Now/next: progress and "min left" are worked out in the app from the times; read the guide again when the focused
+  channel's programme ends or the Guide screen opens, not on a timer.
+- **The row.** `HomeRow` in `screens/Home.tsx` already has `titled` (it was for the Recent row). Add the Live TV row in `app.tsx`'s
+  `rows` (around line 291) right after the glass bar's row, only when the setting is on and there are channels. Channel tiles need their
+  own tile look (logo on a dark tile, number top left, progress bar along the bottom); the focused tile's label becomes the now/next block.
+- **The Guide screen.** A new screen beside `screens/Home.tsx` and `screens/Settings.tsx`, opened by the Guide tile, closed with Back.
+  Reuse the row/focus handling rather than writing new key handling.
+- **Settings.** A "Live TV row" switch, and the channel choice (see Open questions).
+- Keep to the performance rules in `RESEARCH.md` and PLAN.md Phase 4: no new live blur, only `transform` animates, the Guide list draws
+  only the rows near the focused one.
+
+## Verify on the TV (phase 1)
+
+- The row appears under the glass bar with logos, numbers and progress; a channel with no logo shows a text tile.
+- OK on a tile opens Live TV on that channel, from Home. Also try it after a reboot before Live TV has been opened (logos and guide data
+  may be missing then).
+- The focused tile's now/next is right against Live TV's own banner.
+- Guide tile opens Now and Next; Up/Down, OK and Back work; an off-air channel reads sensibly.
+- Cold start: the row draws from cache without waiting for the TV.
+
+## Open questions (for Sam)
+
+1. Which channels go in the row: the TV's own Favourites list (group A in Live TV), a list picked in Lumen's Settings, or the first N by
+   number? The mock shows the first five.
+2. How many channels before the Guide tile (the mock shows five)?
+3. Radio channels: leave them out of the row and the guide (the plan assumes yes)?
