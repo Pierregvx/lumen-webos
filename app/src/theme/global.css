@@ -974,8 +974,6 @@ html.liveblur .row:not(.row--dock)::before, html.liveblur .topcap, html.liveblur
 html.liveblur.light .row:not(.row--dock)::before, html.liveblur.light .topcap, html.liveblur.light .topbar > .pill, html.liveblur.light .panel {
 	background-color: rgba(255, 255, 255, 0.34) !important;
 }
-html.liveblur:not(.wp-video):not(.light) .screen--settings::before { background-image: linear-gradient(rgba(10, 12, 22, 0.46), rgba(10, 12, 22, 0.58)), var(--wp-bg, none); }
-html.liveblur.light:not(.wp-video) .screen--settings::before { background-image: linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10)), var(--wp-bg, none); }
 
 /* the second row sits 60px closer under the glass bar. The margin collapses with the first row's (40px) and its viewport's (-90px), so the
    gap only changes once this goes below -90px: 40 - 150 = -110, against -50 before. */

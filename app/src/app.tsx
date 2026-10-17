@@ -139,6 +139,8 @@ export function App () {
 			if (p.view === 'recent') setFocusRow({id: ROW.dock, seq: ++seq});
 			// watch.sh opens Lumen with {"view":"ambient"} when the TV's screensaver starts (Settings > Screensaver)
 			if (p.view === 'ambient' && configRef.current.ambient) setScreen('ambient');
+			// a plain relaunch is the remote's Home button: back to the home screen from Settings, the Guide, the screensaver or Control Center
+			if (!p.view) { setScreen('home'); setControls(false); }
 		};
 		apply(startParams());
 		return onRelaunch(apply);
