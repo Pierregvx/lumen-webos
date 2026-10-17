@@ -80,6 +80,14 @@ All commands so far are read-only and run as root over SSH on the TV.
   (also with `"Cable"`, `"Satellite"` and `["IP"]`), then `iepg/getChannelInfo {"dataType":0,"channelId":"1_41_104_104_16522_17664_9018"}`.
   It also calls `com.webos.service.utp.channel` `getChannelModeList '{}'` and `getChannelTypeList {"channelModeId":0..2}`.
   Next: the same `getChannelList` without `requestField`, to see which fields come back per channel.
+- **Step 1k (2026-10-17): the aerial list works as root.** `luna-send -n 1 -f luna://com.webos.service.iepg/getChannelList
+  '{"dataType":0,"sort":0,"channelMode":"Terrestrial","attribute":[{"filterType":"Invisible","value":false}]}'` → `channelListCount: 188`.
+  Fields per channel include `channelNumber` ("1"), `channelId` ("1_41_1_101_16522_17546_9018": type, physical 41, major 1, minor 101,
+  then the signal id), `signalChannelId` ("16522_17546_9018", the join key to the guide's programmes), `majorNumber`, `minorNumber`,
+  `physicalNumber`, `HDTV`, `DTV`, `Radio`, `Data`, `ATV`, `skipped`, `PrimaryCh`, `payChan`, `adultFlag`, `isFreeviewPlay`,
+  `groupIdList`, `favoriteIdxA..`, `playerService: "com.webos.service.legacybroadcast"`. Lumen can make this call through
+  `app/src/lib/root.ts` (Homebrew Channel exec). Next: confirm the name and logo fields, then try tuning to a channel from SSH.
+  Spike answer so far: **yes, the channel list and the guide are both readable.**
 
 ## Plan (do in order, stop when one works)
 

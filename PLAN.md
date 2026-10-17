@@ -78,7 +78,7 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [ ] Chrome DevTools on the TV: which method works on webOS 25 (Dev Manager Desktop inspect, `ares-inspect`). Needed for Phase 4 traces.
 - [x] Settings keys: read works for `picture/backlight`, `picture/eyeComfortMode`, `sound/soundOutput` (`docs/spikes.md`). Backlight and Eye Comfort set work. Sound output
       dropped: TV speakers only.
-- [ ] Live TV channel service, for the Freeview tiles idea in Later. In progress: findings and next steps in `docs/live-tv.md`.
+- [ ] Live TV channel service, for the Freeview tiles idea in Later. In progress: list (188 channels) and guide both readable as root; tuning still to try. Details in `docs/live-tv.md`.
 - [ ] `backdrop-filter` on the dock only, behind a temporary flag: 60 fps while moving focus and while the video wallpaper plays?
 - [ ] `https://sylvan.apple.com/` videos play directly (then the plain HTTP fallback in `lib/wallpaperVideo.ts` goes).
 - [ ] Immich: endpoint paths against the server's `/api` docs and which permissions a read-only key needs.
