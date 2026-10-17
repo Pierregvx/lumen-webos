@@ -53,17 +53,22 @@ export function loggedFetch (url: string, init?: RequestInit): Promise<Response>
 const BOOT_WINDOW_MS = 20000;
 const boot: string[] = [];
 
-/** A stage of the cold start was reached. */
-export function bootMark (label: string): void {
+/** A stage of the cold start was reached; `note` adds a detail ("2300KB 140ms"). */
+export function bootMark (label: string, note?: string): void {
 	if (!__LUMEN_DEV__) return;
 	const t = performance.now();
-	if (t < BOOT_WINDOW_MS) boot.push(`${label} ${Math.round(t)}`);
+	if (t < BOOT_WINDOW_MS) boot.push(`${label} ${Math.round(t)}${note ? ' ' + note : ''}`);
 }
 
 /** Start recording failed Luna calls, and flush whatever is left over from the last run. */
 export function startLog (): void {
 	setLunaErrorHook((uri, e) => logError(uri, e.message));
 	if (__LUMEN_DEV__) {
+		// every stretch the page was frozen for more than 50 ms ("long 2410+830"): what holds up the timers and the screen
+		try {
+			new PerformanceObserver((list) => list.getEntries().forEach((e) => { if (e.startTime < BOOT_WINDOW_MS) boot.push(`long ${Math.round(e.startTime)}+${Math.round(e.duration)}`); }))
+				.observe({entryTypes: ['longtask']});
+		} catch { /* no long task timing on this engine */ }
 		setRootTimer((tag, start, end) => { if (start < BOOT_WINDOW_MS) boot.push(`${tag} ${Math.round(start)}-${Math.round(end)}`); });
 		window.setTimeout(() => {
 			write(read().concat(`${new Date().toISOString()} boot ${boot.join(', ')}`));

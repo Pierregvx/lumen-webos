@@ -16,6 +16,7 @@ import {ICON_PACK} from '../config/iconpack';
 import {SYSTEM_APPS} from '../config/systemApps';
 import type {GlyphName} from '../components/Glyph';
 import {readCache, writeCache} from './boot';
+import {bootMark} from './log';
 
 export interface AppEntry {
 	id: string;
@@ -185,8 +186,13 @@ function loadIcons (points: LaunchPoint[]): Promise<Record<string, string>> {
 }
 
 function readIconCache (): Record<string, string> {
-	try { return JSON.parse(localStorage.getItem(ICON_CACHE_KEY) || '{}'); }
-	catch { return {}; }
+	try {
+		const t = performance.now();
+		const raw = localStorage.getItem(ICON_CACHE_KEY) || '{}';
+		const out = JSON.parse(raw) as Record<string, string>;
+		bootMark('iconcache', `${Math.round(raw.length / 1024)}KB ${Math.round(performance.now() - t)}ms`);
+		return out;
+	} catch { return {}; }
 }
 
 function writeIconCache (cache: Record<string, string>): void {

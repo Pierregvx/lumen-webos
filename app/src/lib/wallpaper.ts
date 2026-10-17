@@ -236,6 +236,7 @@ export const wallpaperShown: Promise<void> = new Promise((resolve) => { markShow
 wallpaperShown.then(() => bootMark('wallpaper'));
 
 export function setWallpaper (sel: string): void {
+	bootMark('wp-start');
 	const el = ensureElement();
 	const mine = ++token;
 	currentSel = sel;
