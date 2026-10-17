@@ -88,6 +88,9 @@ All commands so far are read-only and run as root over SSH on the TV.
   `groupIdList`, `favoriteIdxA..`, `playerService: "com.webos.service.legacybroadcast"`. Lumen can make this call through
   `app/src/lib/root.ts` (Homebrew Channel exec). Next: confirm the name and logo fields, then try tuning to a channel from SSH.
   Spike answer so far: **yes, the channel list and the guide are both readable.**
+- **Step 1l (2026-10-17): names confirmed.** `channelName` on all 188 ("BBC ONE Yks HD" on 1, "BBC TWO HD" 2, "ITV1" 3, "Channel 4" 4,
+  "5" 5, ...), plus `channelNameSortKey`. Logo candidates: `imgUrl` and `channelLogoSize` on every channel, `channelLogoServerUrl` once
+  (LG's logo server, seen in Step 0). Next: look at `imgUrl` values, then tuning.
 
 ## Plan (do in order, stop when one works)
 
