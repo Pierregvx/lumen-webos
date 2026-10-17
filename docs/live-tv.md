@@ -104,6 +104,12 @@ All commands so far are read-only and run as root over SSH on the TV.
   the parameter; if not, capture Live TV's own call when a channel number is typed on the remote.
 - **Step 1p (2026-10-17):** same launch with Home in front: Live TV opened, but on the channel it was already on (BBC One), so the
   `channelId` launch parameter is ignored. Next: `ls-monitor` while typing a channel number on the remote, to copy Live TV's call.
+- **Step 1q (2026-10-17):** typing 2 on the remote: `com.webos.app.livetv` calls `luna://com.webos.service.utp.broadcast/changeChannel`
+  (multi-line payload, not seen in full yet), then `utp.broadcast` calls `legacybroadcast.broadcast/changeChannel` with
+  `{"broadcastId":"bE439...","channelId":"1_41_2_102_16522_17472_9018","currentChannelId":"1_41_1_101_...","sessionId":5}`.
+  Also seen: the HbbTV plugin calls `iepg/getChannelList {"channelGroup":["All"],"channelMode":["Tuner"],"dataType":0,"sort":0}`
+  (another working form), and `nlpmanager` calls `iepg/getEventInfo {"channelMode":["Tuner","IP"],"programId":"bbc_two_hd_1/2026-10-1717:05","dataType":0}`.
+  Next: print Live TV's full `changeChannel` payload.
 
 ## Answer
 
