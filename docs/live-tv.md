@@ -123,8 +123,9 @@ All commands so far are read-only and run as root over SSH on the TV.
   getChannelChangeStatus, getChannelState, getCurrentChannel, getPlayState, getSignalStatus, getVideoInfo and others.
   Next: confirm the id survives Live TV closing and opening (launch Live TV over SSH, then change channel).
 - **Step 1t (2026-10-17):** from Home, launch Live TV over SSH, wait 5 s, `changeChannel` to Channel 4 HD with the same broadcast id:
-  Live TV opened on the last channel (BBC Two) and did not switch. The `changeChannel` reply was not captured, so unknown whether the id
-  was refused or Live TV was not ready after 5 s.
+  Live TV opened on the last channel (BBC Two) and did not switch. `changeChannel` and `getCurrentChannel` both answered
+  `-106 No resource: 00000001-559c-...`, so **the broadcast id is per Live TV session**: it changes when Live TV restarts (the Step 1s
+  guess that it is fixed was wrong). Tuning this way needs the current id, which nothing found so far returns.
   Lead: Home Assistant's LG webOS integration changes channel by name with Live TV closed. It talks SSAP (the websocket API on port
   3000/3001): `ssap://tv/getChannelList`, then `ssap://tv/openChannel {"channelId":...}` (from aiowebostv; my understanding, not checked
   against its source this session). Next: `ls-monitor` while Home Assistant changes channel, to see which luna call the SSAP gateway
@@ -137,9 +138,9 @@ All commands so far are read-only and run as root over SSH on the TV.
 | Channel list | `iepg/getChannelList {"dataType":0,"sort":0,"channelMode":"Terrestrial","attribute":[{"filterType":"Invisible","value":false}]}` | Root. 188 channels. `channelNumber`, `channelName`, `channelId`, `signalChannelId`, `imgUrl`, `Radio`, `HDTV`, `skipped`. |
 | Logos | read the file at `imgUrl` | Root. PNG, 2 to 3 KB, under `/tmp/gibbips/logo`, so cache them. 176 of 188 have one. |
 | Guide | `epgdb/find {"query":{"from":"com.webos.service.legacybroadcast.programSCH:4", ...}}` | Root. Join on `signalChannelId`. `programPF:4` holds now and next. Filled while Live TV runs, so it may be thin if Live TV has not been opened lately (untested). |
-| Tune | `utp.broadcast/changeChannel {"broadcastId":...,"channelId":...,"connection_timeout":500,"fallback":true,"ignorable":false}` | Root, Live TV open. Worked (Step 1s). Launching Live TV with `{"channelId":...}` does not tune (Step 1o). Whether the broadcast id is fixed is not confirmed. |
+| Tune | `utp.broadcast/changeChannel {"broadcastId":...,"channelId":...,"connection_timeout":500,"fallback":true,"ignorable":false}` | Root, Live TV open. Worked (Step 1s). Launching Live TV with `{"channelId":...}` does not tune (Step 1o). The broadcast id changes each time Live TV starts (Step 1t). |
 
-Still unknown: whether the broadcast id is fixed or has to be read each time; whether the guide data stays filled when Live TV hasn't been used for a while, and the `epgdb` query syntax for one
+Still unknown: how to get Live TV's current broadcast id (or a tune call that needs none); whether the guide data stays filled when Live TV hasn't been used for a while, and the `epgdb` query syntax for one
 channel and a time window (db8 `where` on `signalChannelId` and `startTime` needs an index on those fields; check `getProfile` or try it).
 
 ## Plan (do in order, stop when one works)
