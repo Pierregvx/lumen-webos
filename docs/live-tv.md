@@ -130,6 +130,15 @@ All commands so far are read-only and run as root over SSH on the TV.
   3000/3001): `ssap://tv/getChannelList`, then `ssap://tv/openChannel {"channelId":...}` (from aiowebostv; my understanding, not checked
   against its source this session). Next: `ls-monitor` while Home Assistant changes channel, to see which luna call the SSAP gateway
   makes. That call, made as root, is likely the one Lumen should use.
+- **Online (2026-10-17):**
+  - aiowebostv (Home Assistant's library): `set_channel` sends `ssap://tv/openChannel` with `{"channelId": channel}`; also
+    `tv/getChannelList`, `tv/getCurrentChannel`, `tv/getChannelProgramInfo`, `tv/channelUp`, `tv/channelDown`
+    (github.com/home-assistant-libs/aiowebostv, `endpoints.py`, `webos_client.py`).
+  - ioBroker forum: `ssap://tv/openChannel {channelNumber: '1'}` also reported to work.
+  - webos-forums.ru topic 6886 (LG 55UP8150, 2021): root tuning is `utp.broadcast/changeChannel` with the *current* broadcast id, and
+    the author gets that id by scraping `ls-monitor` (`grep -m 4 broadcastId`). `getCurrentChannel` takes `{"broadcastId":...}`.
+    So nobody there found a clean getter for the id either.
+  Next: find which luna call the SSAP gateway maps `tv/openChannel` to (grep its config on the TV). That call needs no broadcast id.
 
 ## Answer
 
