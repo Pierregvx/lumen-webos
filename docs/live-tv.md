@@ -56,6 +56,10 @@ All commands so far are read-only and run as root over SSH on the TV.
   `legacybroadcast.broadcast/changeChannel` with `{"broadcastId":..., "channelId":"1_41_102_102_16522_17472_9018",
   "currentChannelId":..., "sessionId":8}`. The broadcastId and sessionId belong to Live TV's own session, so from Lumen the likely
   route is launching `com.webos.app.livetv` with a channel id (still a guess).
+- **Step 1f (2026-10-17)**, each with `'{}'`: `getPrimaryChannelList` → `ERROR_06 invalid param(channelId)` (probably the related
+  channels of one channel, not a list); `getChannelZappingList` → `Message status unknown` plus a cancel error (no reply in time, or it
+  wants parameters); `getChannelGroup` → `{"channelGroupId":0,"channelGroupName":"All"}` (the current group). Next: list every `get*`
+  method and category (the first introspection was cut at 40 lines), and retry `getChannelZappingList` with a group and a channel id.
 
 ## Plan (do in order, stop when one works)
 
