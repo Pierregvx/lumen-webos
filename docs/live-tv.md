@@ -1,0 +1,49 @@
+# Live TV channel list: spike in progress
+
+Goal: read the TV's aerial (Freeview, DVB-T, digital only) channel list, so Lumen can show channel tiles and later a guide
+(PLAN.md, Spikes and Later item 9). The TV has been scanned and Live TV shows channels.
+
+All commands so far are read-only and run as root over SSH on the TV.
+
+## What we know (2026-10-17)
+
+- EPG-related services on the TV include `com.webos.app.universalepg.nav`, `com.webos.epgdb`, `com.webos.service.iepg` and several
+  `com.webos.service.broadcast-*` services (from `ls /usr/share/luna-service2/services.d /usr/share/dbus-1/system-services`).
+- `com.webos.epgdb` is a db8 instance (`find`, `get`, `dump`, `getProfile`, ...). Not queried yet: we don't know its kind names.
+- `luna://com.webos.service.iepg/getChannelGroupList '{}'` works: groups All (0), DTV (1), Radio (2), Favourites A to E (200 to 204).
+- `luna://com.webos.service.iepg/getChannelList` always returns `"channelListCount": 0` and no error, whatever we pass:
+  - no parameters (reply echoes `dataType: 3`, `dataSource: 2`, `ipAntennaSupport: true`, `ipChanInteractiveUrl` on `cdplauncher.lgtvcommon.com`);
+  - `dataSource` 0 to 3 against `dataType` 0 to 4;
+  - `channelGroup`, `channelGroupId`, `channelGroupName`, `groupId` set to All/DTV or 0/1.
+- Working guess, not confirmed: `iepg` is LG's internet channels (LG Channels), not the aerial list. The `ip*Support` fields and the logo
+  server URL point that way.
+- `ls-monitor` while flipping channels in Live TV: the first filter caught only image paths from LG's Always Ready and Gallery apps;
+  the second filter (image paths removed) printed nothing. So either Live TV's calls don't go over the bus in a form `ls-monitor` shows,
+  or the filter is wrong. Unknown which.
+
+## Plan (do in order, stop when one works)
+
+1. **Check `ls-monitor` sees anything at all.** Save the raw output and look at it unfiltered:
+   ```
+   timeout 20 ls-monitor > /tmp/lsmon.txt 2>&1; wc -l /tmp/lsmon.txt; grep -ciE 'channel' /tmp/lsmon.txt; head -40 /tmp/lsmon.txt
+   ```
+   Change channel during the 20 seconds with Live TV in front. If it shows traffic, grep `/tmp/lsmon.txt` for the service names next to
+   the channel change.
+2. **Find which service declares a channel list method.** The bus permission files list every method:
+   ```
+   grep -rlE 'getChannelList|getCurrentChannel|channelList' /usr/share/luna-service2/ /etc/luna-service2/ 2>/dev/null
+   grep -rhoE '"[A-Za-z0-9./_-]*(getChannelList|getCurrentChannel)[A-Za-z0-9_]*"' /usr/share/luna-service2/ 2>/dev/null | sort -u
+   ```
+   Any service other than `iepg` that turns up here is the next candidate. Try it with `'{}'` first, then with a group from the list above.
+3. **Query `epgdb` directly.** Find its kind names, then `find` with a small limit:
+   ```
+   grep -rlis epg /etc/palm/db/kinds /etc/palm/db_kinds /usr/palm/db/kinds 2>/dev/null
+   luna-send -n 1 -f luna://com.webos.epgdb/find '{"query":{"from":"<kind name>","limit":3}}'
+   ```
+4. **Fall back to LG's second-screen API (SSAP).** This is what phone remote apps use, and community libraries (lgtv2, aiowebostv) call
+   `ssap://tv/getChannelList`, `ssap://tv/getCurrentChannel` and `ssap://tv/getChannelProgramInfo` over the websocket on port 3000 (3001
+   for TLS). It needs a one-off pairing prompt on the TV, but no root, so Lumen could call it itself. Untested on webOS 25.
+5. **Write down the answer** in `docs/spikes.md`: which call works, the fields per channel (number, name, id, logo), and how to tune to
+   one from Lumen (launching Live TV with a channel id is a guess until tried). Then tick the Live TV spike in PLAN.md.
+
+If none of these returns the aerial channels, the Freeview tiles idea goes to Not doing in PLAN.md, with the reason.
