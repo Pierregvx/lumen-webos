@@ -69,6 +69,9 @@ All commands so far are read-only and run as root over SSH on the TV.
 - **Step 1h (2026-10-17): `getChannelZappingListCount '{}'` → `{"channelListCount": 330}`.** The aerial list is there. `getSortedList` →
   `not handled`. luna-send refuses to run without `-n` or `-i`, so the 5 s test did not run. Next: `-i` with a timeout, then paging
   parameters in case the 330-channel reply is too big for one message.
+- **Step 1i (2026-10-17):** `getChannelZappingList` with `-i` gives no reply at all in 5 s; with `{"startIndex":0,"count":5}` and
+  `{"startIndex":1,"endIndex":5}` the same `Message status unknown`. Stop guessing parameters. Next: `ls-monitor` while opening Live TV's
+  channel list and the Guide, then copy the exact call (and see whether the reply comes back on the bus at all).
 
 ## Plan (do in order, stop when one works)
 
