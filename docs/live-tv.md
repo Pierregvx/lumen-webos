@@ -114,6 +114,14 @@ All commands so far are read-only and run as root over SSH on the TV.
   `{"broadcastId":"00000001-559c-d46a-2902-723da034b853","channelId":"1_41_2_102_16522_17472_9018","connection_timeout":500,"fallback":true,"ignorable":false}`.
   The `broadcastId` is Live TV's own broadcast session, so another caller needs the current one. Next: send the same call as root with
   that id while Live TV is open, and list `utp.broadcast` methods that could return the current broadcast id.
+- **Step 1s (2026-10-17): tuning works as root.** With Live TV open, `luna-send -n 1 luna://com.webos.service.utp.broadcast/changeChannel
+  '{"broadcastId":"00000001-559c-d46a-2902-723da034b853","channelId":"1_41_2_102_16522_17472_9018","connection_timeout":500,"fallback":true,"ignorable":false}'`
+  → `{"reason":"changeChannel","returnValue":true,"nextChannelId":"1_41_2_..."}` and the TV switched to BBC Two (seen on the TV).
+  The broadcast id captured earlier was still accepted, even though `/tmp/ch.txt` had gone in between (a restart, or `/tmp` cleared).
+  Guess: the id is fixed per tuner (`00000001-...`), not per Live TV session. `getCurrentChannel` and `getBroadcastState` with `'{}'` →
+  `-106 No resource` (they probably want the broadcast id). `utp.broadcast` `get*` methods: getBroadcastState, getChannelChangeResult,
+  getChannelChangeStatus, getChannelState, getCurrentChannel, getPlayState, getSignalStatus, getVideoInfo and others (saved in this
+  repo's history). Next: confirm the id survives Live TV closing and opening (launch Live TV over SSH, then change channel).
 
 ## Answer
 
@@ -122,9 +130,9 @@ All commands so far are read-only and run as root over SSH on the TV.
 | Channel list | `iepg/getChannelList {"dataType":0,"sort":0,"channelMode":"Terrestrial","attribute":[{"filterType":"Invisible","value":false}]}` | Root. 188 channels. `channelNumber`, `channelName`, `channelId`, `signalChannelId`, `imgUrl`, `Radio`, `HDTV`, `skipped`. |
 | Logos | read the file at `imgUrl` | Root. PNG, 2 to 3 KB, under `/tmp/gibbips/logo`, so cache them. 176 of 188 have one. |
 | Guide | `epgdb/find {"query":{"from":"com.webos.service.legacybroadcast.programSCH:4", ...}}` | Root. Join on `signalChannelId`. `programPF:4` holds now and next. Filled while Live TV runs, so it may be thin if Live TV has not been opened lately (untested). |
-| Tune | not found yet | Launching Live TV with `{"channelId":...}` returned true but did not change channel (Step 1o). |
+| Tune | `utp.broadcast/changeChannel {"broadcastId":...,"channelId":...,"connection_timeout":500,"fallback":true,"ignorable":false}` | Root, Live TV open. Worked (Step 1s). Launching Live TV with `{"channelId":...}` does not tune (Step 1o). Whether the broadcast id is fixed is not confirmed. |
 
-Still unknown: how to tune to a channel; whether the guide data stays filled when Live TV hasn't been used for a while, and the `epgdb` query syntax for one
+Still unknown: whether the broadcast id is fixed or has to be read each time; whether the guide data stays filled when Live TV hasn't been used for a while, and the `epgdb` query syntax for one
 channel and a time window (db8 `where` on `signalChannelId` and `startTime` needs an index on those fields; check `getProfile` or try it).
 
 ## Plan (do in order, stop when one works)
