@@ -1201,13 +1201,12 @@ html.light .cc__square--focused svg { stroke: #fff; }
 
 /* ---------- peek and grid spacing, measured from tvOS ----------
    At rest only a sliver of the grid's first row shows under the bar. Down in the grid, the grid rows drop 40px further from the bar
-   (about 70px of space under the glass, as on tvOS) so the focused tile has room. The focused grid tile grows 1.2x, which brings it to about
-   22px from its neighbours, as on tvOS. The bar's tiles grow 1.125x, clearly focused but well clear of the edge of the bar's 40px of glass. */
+   (about 70px of space under the glass, as on tvOS) so the focused tile has room. The focused grid tile grows 1.175x. The bar's tiles grow 1.135x, clearly focused but well clear of the edge of the bar's 40px of glass. */
 .screen--lower .rows > .row:not(:first-child) { transform: translateY(40px); }
-.rows { --motion-focus-scale: 1.2; }
-html.focus-subtle .rows { --motion-focus-scale: 1.12; }
-html.focus-strong .rows { --motion-focus-scale: 1.26; }
-.rows > .row:first-child { --motion-focus-scale: 1.125; }
+.rows { --motion-focus-scale: 1.175; }
+html.focus-subtle .rows { --motion-focus-scale: 1.1; }
+html.focus-strong .rows { --motion-focus-scale: 1.235; }
+.rows > .row:first-child { --motion-focus-scale: 1.135; }
 html.focus-subtle .rows > .row:first-child { --motion-focus-scale: 1.06; }
 html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.15; }
 .rows > .row:not(:first-child) .tile__label { margin-top: 32px; }
