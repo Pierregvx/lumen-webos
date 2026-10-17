@@ -1,5 +1,7 @@
 # Cold start: findings and plan
 
+Status 2026-10-17: the cold start freeze and the pause coming back from Settings are fixed (see Result below).
+
 Written 2026-10-17, handing over from a cloud session to a local one. Sam reported that the first load got slower after the Live TV
 work. This file is what we know so far, what is in the build to find out more, and what to do next.
 
@@ -73,24 +75,37 @@ What that says:
    cached.
 3. Left: the icon sampling, or the wallpaper decoded on the main thread (`img.decode()` may not run off-thread on the TV's Chromium).
 
-## Next step: one run on the next dev build
+## Result: the icon colours were the freeze (fixed, 1.0.9088)
 
-That build caches "no colour" (`none`) for an icon that can't be sampled, and adds marks:
-- `sampled <id> <ok|clear|taint|error|nocanvas> <width>px <ms>`: one icon done, its size, and the time spent drawing and reading it.
-- `wp-loaded <width>px` and `wp-decoded`: the wallpaper image loaded, then its decode finished.
+The first launch on 1.0.9088 sampled the six icons one last time: `sampled com.limelight.webos clear 130px 1029ms` lined up exactly with
+`long 1679+1034`; the other five took 14-162 ms. All six came back `clear` (transparent corners, so no background colour), which is why
+they were never cached. They are now stored as `none`. The wallpaper decoded from 536 to 1496 ms without freezing the page.
 
-Open Lumen twice after updating. The first launch samples the six icons one last time (with `sampled` marks); the second should have no
-`sample` marks. If the freeze is gone on the second launch, sampling was it. If it stays, look at where `wp-loaded` and `wp-decoded` fall
-against it.
+Runs on 1.0.9090, bundled wallpaper, Live TV and live blur on, no frozen stretch over 0.43 s:
+- Warm (`script 202`): `apps 1276`, `wallpaper 1581`, `live-cache 45ms`, `live-drawn 2280`, `grid 3950`. On 1.0.9085 `apps` was 6641.
+- `script 2187`: the same, about 2 s later throughout. The gap is the TV loading the page before any Lumen code runs (202 to 2515 ms
+  across runs), not Lumen's work.
 
-## Fixes ready to make once the logs point at them
+## Settings back to Home (fixed, 1.0.9095)
 
+Dev builds write one line per screen change: `grep ' nav ' /var/lib/homehook/lumen.log | tail -8` (`lib/log.ts`, `navMark`). Each part is
+ms from the switch: `key` (the last key press), `frame` (the first frame), `gap start+length` (no frame for over 50 ms), `long` (a frozen
+stretch).
+
+Home was hidden under Settings and the Guide (`visibility: hidden`), so going back redrew the whole home screen: `gap 125+350`,
+`gap 97+417`, `gap 100+367`, with no frozen stretch, so the graphics chip, not the code. Home now stays drawn under their opaque backdrop
+(only the video wallpaper's see-through backdrop still hides it). Two of three returns then had no gap; the one after a minute in Settings
+still had `gap 110+400`, probably because the TV frees the drawn copy after a while. Sam found Settings no slower.
+
+Opening Settings shows the key press about 200-290 ms before the switch, probably the OK press waiting for release (long press). Not
+looked at.
+
+## Still open
+
+- **Grid:** the lower rows are drawn 3.5 s after launch in one go, followed by a 0.4-1 s frozen stretch. Draw them one row at a time.
 - **Logos:** store each logo under its own localStorage key (or keep the row's logos with the Live TV cache), so drawing the row never
-  parses the whole logo cache. Also remember logo paths that failed to read, so they are not asked for on every launch.
-- **Wallpaper:** apply the two blurred copies in one style change, after the first frame settles; or skip the fade/blur work when the
-  picture is the one index.html already painted.
-- **Grid:** draw the grid rows one at a time over a few frames instead of all at 3.5 s.
-- If Live blur is the cost: make the cheaper blurred copy the default on the TV and keep live blur as an option.
+  parses the whole logo cache (now 45-85 ms, so low priority). Also remember logo paths that failed to read.
+- Not timed on these builds: the Immich wallpaper with Live TV on.
 
 ## Where the Live TV work stands
 
