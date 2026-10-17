@@ -27,7 +27,13 @@ All commands so far are read-only and run as root over SSH on the TV.
   (UTC) and `localStartTime`/`localEndTime` as `"2026,10,17,16,40,00"`, `duration` in seconds, `isAD`, `isSubtitle`, CRIDs, and
   `signalChannelId` like `"16522_18176_9018"`. Guess: that is service id, transport stream id, original network id (9018 is the UK
   Freeview network id). Programme rows do not carry the channel name or number, so the channel list is still to find, probably another
-  kind in `epgdb` or a method on `legacy-broadcast`. Next: list every `_kind` and service name in the capture, then read `epgdb` directly.
+  kind in `epgdb` or a method on `legacy-broadcast`.
+- **Step 1b (2026-10-17): reading `epgdb` as root works.** `luna-send -n 1 -f luna://com.webos.epgdb/find
+  '{"query":{"from":"com.webos.service.legacybroadcast.programSCH:4","limit":1}}'` returns a programme. The capture has only two guide
+  kinds, `programSCH:4` (schedule, about 11,900 writes) and `programPF:4` (present/following, about 290). No channel kind went into
+  `epgdb`. Busiest TV services in the capture: `legacybroadcast.program`, `utp.broadcast`, `app.livetv`, `tvrmclient.tv`,
+  `legacybroadcast.broadcast`. The channel list most likely comes from `utp.broadcast` or `legacybroadcast.broadcast`. Next: list the
+  methods Live TV calls on those two, and look for `channelName`/`channelNumber` in any reply.
 
 ## Plan (do in order, stop when one works)
 
