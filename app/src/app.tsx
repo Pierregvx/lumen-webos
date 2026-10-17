@@ -33,7 +33,7 @@ type Screen = 'home' | 'settings' | 'ambient';
 
 const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock'} as const;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {ambient: 'ambient', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
+const OPTION = {ambient: 'ambient', ambientSeconds: 'ambient-seconds', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 15, 30, 60];
 /** when the video wallpaper plays (Settings > Options > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
 const VIDEO_HOURS: Record<string, [number, number]> = {day: [7, 19], evening: [17, 23], night: [19, 7]};
@@ -315,6 +315,7 @@ export function App () {
 			[OPTION.focus]: {labels: ['Subtle', 'Normal', 'Strong'], values: ['subtle', 'normal', 'strong'], now: config.focusStrength},
 			[OPTION.firstRow]: {labels: ['5', '6', '7'], values: [5, 6, 7], now: config.firstRow},
 			[OPTION.ambient]: {labels: ['LG\'s own'].concat(IMMICH_SOURCES.map((x) => `Photos: ${x.title}`), immich.albums.map((a) => `Photos: ${a.title}`)), values: [''].concat(IMMICH_SOURCES.map((x) => x.key), immich.albums.map((a) => `immich:album:${a.id}`)), now: config.ambient},
+			[OPTION.ambientSeconds]: {labels: ['10 seconds', '20 seconds', '30 seconds', '1 minute', '2 minutes', '5 minutes'], values: [10, 20, 30, 60, 120, 300], now: config.ambientSeconds},
 			[OPTION.videoHours]: {labels: ['Always', 'Daytime (7 am to 7 pm)', 'Evenings (5 pm to 11 pm)', 'Night (7 pm to 7 am)'], values: ['always', 'day', 'evening', 'night'], now: config.videoHours}
 		};
 	}, [config, immich]);
@@ -374,6 +375,13 @@ export function App () {
 			value: config.ambient !== '',
 			...listed(OPTION.ambient)
 		},
+		...(config.ambient ? [{
+			id: OPTION.ambientSeconds,
+			label: 'Time on each photo',
+			description: 'How long each photo stays on the screensaver before the next one fades in.',
+			value: true,
+			...listed(OPTION.ambientSeconds)
+		}] : []),
 		{
 			id: OPTION.videoHours,
 			label: 'Video wallpaper hours',
@@ -466,7 +474,7 @@ export function App () {
 			description: 'Frames drawn in the last second and the longest frame, in the top-left corner. Only in dev builds.',
 			value: config.fpsCounter
 		}] : [])
-	], [config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur, config.ambient, immich.ready]);
+	], [config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur, config.ambient, config.ambientSeconds, immich.ready]);
 
 	const wallpaper: WallpaperTab = useMemo(() => {
 		const entries: WallpaperEntry[] = [
@@ -608,6 +616,7 @@ export function App () {
 		else if (optionId === OPTION.firstRow) updateConfig({...c, firstRow: Number(value)});
 		else if (optionId === OPTION.videoHours) updateConfig({...c, videoHours: v});
 		else if (optionId === OPTION.ambient) updateConfig({...c, ambient: v});
+		else if (optionId === OPTION.ambientSeconds) updateConfig({...c, ambientSeconds: Number(value)});
 	}, [choices]);
 
 	/** Replace a row's order with `keys` (the full list of what's shown). */
@@ -620,7 +629,7 @@ export function App () {
 		<>
 			{/* Home stays mounted under Settings so it keeps its focus position. */}
 			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} menuItems={MENU_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} dockHide={config.dockHide} focusRow={focusRow} />
-			{screen === 'ambient' && <Ambient source={config.ambient} weather={weather} showPeriod={config.showAmPm} onExit={() => setScreen('home')} />}
+			{screen === 'ambient' && <Ambient source={config.ambient} seconds={config.ambientSeconds} weather={weather} showPeriod={config.showAmPm} onExit={() => setScreen('home')} />}
 			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onChoose={onChoose} onClose={() => setScreen('home')} />}
 			{controls && <ControlCenter
 				darkMode={config.darkMode}

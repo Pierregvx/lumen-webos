@@ -57,6 +57,8 @@ export interface UserConfig {
 	liveBlur: boolean;
 	/** Screensaver: '' = LG's own; an Immich source (immich:recent, immich:album:<id>, ...) = Lumen's ambient screen with those photos */
 	ambient: string;
+	/** seconds each photo stays on the ambient screen */
+	ambientSeconds: number;
 	/** how strongly the focused tile stands out: subtle | normal | strong */
 	focusStrength: string;
 	/** apps in the first row (the glass bar): 5, 6 or 7 */
@@ -98,6 +100,7 @@ export const DEFAULT_CONFIG: UserConfig = {
 	hideNames: false,
 	liveBlur: true,
 	ambient: '',
+	ambientSeconds: 30,
 	focusStrength: 'normal',
 	firstRow: 6,
 	videoHours: 'always',
@@ -149,6 +152,7 @@ export function parseConfig (raw: string): UserConfig {
 		reduceMotion: parsed.reduceMotion === true,
 		hideNames: parsed.hideNames === true,
 		liveBlur: parsed.liveBlur !== false,
+		ambientSeconds: [10, 20, 30, 60, 120, 300].indexOf(Number(parsed.ambientSeconds)) !== -1 ? Number(parsed.ambientSeconds) : 30,
 		ambient: typeof parsed.ambient === 'string' && parsed.ambient.indexOf('immich:') === 0 ? parsed.ambient : '',
 		focusStrength: parsed.focusStrength === 'subtle' || parsed.focusStrength === 'strong' ? parsed.focusStrength : 'normal',
 		firstRow: parsed.firstRow === 5 || parsed.firstRow === 7 ? parsed.firstRow : 6,

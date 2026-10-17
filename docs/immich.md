@@ -44,7 +44,7 @@ make in their EXIF, which drops screenshots and saved images. Recently shown pho
 ## Screensaver
 
 Settings > Options > Screensaver: pick a Photos source instead of "LG's own". When the TV's screensaver starts, `watch.sh` opens Lumen on
-its ambient screen instead: your photos full-screen, a 1.6 s crossfade every 30 seconds, each photo zooming in very slowly, and the clock,
+its ambient screen instead: your photos full-screen, a 1.6 s crossfade every 30 seconds (Settings > Options > Time on each photo: 10 s to 5 min), each photo zooming in very slowly, and the clock,
 date and weather bottom left. Any key returns to the home screen.
 
 - Needs the updated `tools/tv/watch.sh` on the TV (it looks for `/var/lib/homehook/ambient-screensaver`, which the setting creates).

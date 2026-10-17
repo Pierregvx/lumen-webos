@@ -4,13 +4,10 @@ import {cachedServer, loadServer, nextAsset, previewUrl, type ImmichServer} from
 import {setAmbientShowing} from '../lib/system';
 import type {Weather} from '../lib/weather';
 
-/** How long each photo stays, and the crossfade between two. */
-const HOLD_MS = 30000;
-
 /** Screensaver with your own photos (Immich). Opened by watch.sh with {"view":"ambient"} when the TV's screensaver starts, instead of LG's.
- *  Two full-screen layers: the next photo is loaded and decoded on the hidden one, then they swap with a crossfade (opacity only); each photo
+ *  Two full-screen layers: the next photo is loaded and decoded on the hidden one, then they swap with a crossfade (opacity only) every `seconds` (Settings > Options > Time on each photo, 30 by default); each photo
  *  zooms in very slowly (transform only). The clock, date and weather sit bottom left. Any key or a click goes back to the home screen. */
-export function Ambient ({source, weather, showPeriod, onExit}: {source: string; weather?: Weather | null; showPeriod?: boolean; onExit: () => void}) {
+export function Ambient ({source, seconds = 30, weather, showPeriod, onExit}: {source: string; seconds?: number; weather?: Weather | null; showPeriod?: boolean; onExit: () => void}) {
 	const [layers, setLayers] = useState<[string, string]>(['', '']);
 	const [front, setFront] = useState(0);
 	const state = useRef({front: 0, shown: '', alive: true, timer: 0});
@@ -41,7 +38,7 @@ export function Ambient ({source, weather, showPeriod, onExit}: {source: string;
 					window.requestAnimationFrame(() => window.requestAnimationFrame(() => { s.front = back; setFront(back); }));
 				})
 				.catch(() => undefined)
-				.then(() => { if (s.alive) s.timer = window.setTimeout(advance, HOLD_MS); });
+				.then(() => { if (s.alive) s.timer = window.setTimeout(advance, seconds * 1000); });
 		};
 		advance();
 		const exit = (e: Event) => { e.preventDefault(); onExit(); };
@@ -54,13 +51,13 @@ export function Ambient ({source, weather, showPeriod, onExit}: {source: string;
 			window.removeEventListener('mousedown', exit, true);
 			setAmbientShowing(false);
 		};
-	}, [source]);
+	}, [source, seconds]);
 
 	return (
 		<div class="ambient">
 			{layers.map((url, i) => (
 				// keyed by URL, so a new photo restarts the slow zoom
-				<div key={i + url} class={`ambient__photo${i === front ? ' ambient__photo--on' : ''}${i === 1 ? ' ambient__photo--alt' : ''}`} style={url ? {backgroundImage: `url("${url}")`} : undefined} />
+				<div key={i + url} class={`ambient__photo${i === front ? ' ambient__photo--on' : ''}${i === 1 ? ' ambient__photo--alt' : ''}`} style={url ? {backgroundImage: `url("${url}")`, animationDuration: `${seconds + 6}s`} : undefined} />
 			))}
 			<div class="ambient__shade" />
 			<div class="screen ambient__status"><Status weather={weather} showPeriod={showPeriod} /></div>
