@@ -1203,11 +1203,11 @@ html.light .cc__square--focused svg { stroke: #fff; }
 /* ---------- peek and grid spacing, measured from tvOS ----------
    At rest only a sliver of the grid's first row shows under the bar. Down in the grid, the grid rows drop 40px further from the bar
    (about 70px of space under the glass, as on tvOS) so the focused tile has room. The focused grid tile grows 1.2x, which brings it to about
-   22px from its neighbours, as on tvOS; the bar's stays at 1.06x so it stays inside the glass. */
+   22px from its neighbours, as on tvOS. The bar's tiles grow by the same amount; at 1.2x a tile gains about 20px a side, inside the bar's 40px of glass. */
 .screen--lower .rows > .row:not(:first-child) { transform: translateY(40px); }
-.rows { --motion-focus-scale: 1.2; }
-html.focus-subtle .rows { --motion-focus-scale: 1.12; }
-html.focus-strong .rows { --motion-focus-scale: 1.26; }
+.rows, .rows > .row:first-child { --motion-focus-scale: 1.2; }
+html.focus-subtle .rows, html.focus-subtle .rows > .row:first-child { --motion-focus-scale: 1.12; }
+html.focus-strong .rows, html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.26; }
 .rows > .row:not(:first-child) .tile__label { margin-top: 32px; }
 
 /* ---------- tiles lit from above, as on tvOS: a soft shadow under each tile, and over its artwork a light from the top left (20 degrees
