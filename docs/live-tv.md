@@ -120,8 +120,8 @@ All commands so far are read-only and run as root over SSH on the TV.
   The broadcast id captured earlier was still accepted, even though `/tmp/ch.txt` had gone in between (a restart, or `/tmp` cleared).
   Guess: the id is fixed per tuner (`00000001-...`), not per Live TV session. `getCurrentChannel` and `getBroadcastState` with `'{}'` →
   `-106 No resource` (they probably want the broadcast id). `utp.broadcast` `get*` methods: getBroadcastState, getChannelChangeResult,
-  getChannelChangeStatus, getChannelState, getCurrentChannel, getPlayState, getSignalStatus, getVideoInfo and others (saved in this
-  repo's history). Next: confirm the id survives Live TV closing and opening (launch Live TV over SSH, then change channel).
+  getChannelChangeStatus, getChannelState, getCurrentChannel, getPlayState, getSignalStatus, getVideoInfo and others.
+  Next: confirm the id survives Live TV closing and opening (launch Live TV over SSH, then change channel).
 
 ## Answer
 
