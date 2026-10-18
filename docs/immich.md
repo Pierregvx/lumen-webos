@@ -52,6 +52,9 @@ Settings > Options > Screensaver: pick a Photos source instead of "LG's own". Wh
 its ambient screen instead: your photos full-screen, a 1.6 s crossfade every 30 seconds (Settings > Options > Time on each photo: 10 s to 5 min), each photo zooming in very slowly, and the clock,
 date and weather bottom left. Any key returns to the home screen.
 
+- Settings > Screensaver > Start on the home screen after (30 seconds to 5 minutes): when the home screen is left alone that long, Lumen
+  opens the photos itself, so LG's screensaver never shows first. Control Center > Art mode does the same at once. The TV's own
+  screensaver timer still covers other apps.
 - Needs the updated `tools/tv/watch.sh` on the TV (it looks for `/var/lib/homehook/ambient-screensaver`, which the setting creates).
 - LG's screensaver keeps starting after its timer while the ambient screen is up (nothing is pressed); `watch.sh` sees
   `/tmp/lumen-ambient-on` and only ends it.

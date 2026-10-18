@@ -48,7 +48,6 @@ interface Props {
 	weather?: Weather | null;
 	/** off | down | idle | both: when the dock slides away */
 	dockHide?: string;
-	dockIdleSeconds?: number;
 	/** put the focus on this row (a launch with {"view":"recent"}); a new seq asks again */
 	focusRow?: {id: string; seq: number};
 	/** tile size on the rows (Settings > Apps in the glass bar: 7 apps need smaller tiles); the first row is `perRow` tiles wide */
@@ -109,10 +108,10 @@ const MENU_KEY = 'menu';
  *  - Up from the first row reaches the top bar (Inputs button, time pill); Down goes back to the same app.
  *  - OK on Inputs opens the inputs panel, OK on the time pill opens the menu; Back closes either.
  *  - The second row stays hidden until the remote goes down to it. */
-export function Home ({rows, topItems, menuItems, inputs, active, onActivate, showPeriod, onEdit, folders, weather, dockHide, dockIdleSeconds = 30, focusRow, tiles, perRow = 6}: Props) {
+export function Home ({rows, topItems, menuItems, inputs, active, onActivate, showPeriod, onEdit, folders, weather, dockHide, focusRow, tiles, perRow = 6}: Props) {
 	const nav = useRef<Nav>({engaged: false, zone: 'rows', rowIndex: 0, columns: {}, topIndex: 0, panelIndex: 0, menuIndex: 0, ctxIndex: 0, moving: null, swallowOk: false, suppressClick: false, folder: '', folderIndex: 0, ctxFrom: 'rows', mode: 'key', dockHidden: false, panelFrom: 'top'});
-	const latest = useRef({rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide, dockIdleSeconds});
-	latest.current = {rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide, dockIdleSeconds};
+	const latest = useRef({rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide});
+	latest.current = {rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide};
 	const [late, setLate] = useState(false);   // the rows below the first are drawn a moment after launch
 	useEffect(() => { if (late) bootMark('grid'); }, [late]);
 	useEffect(() => { const id = window.setTimeout(() => { bootMark('grid-start'); setLate(true); }, 3500); return () => window.clearTimeout(id); }, []);
@@ -160,7 +159,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 		const show = () => { const k = nav.current; if (k.dockHidden) { k.dockHidden = false; armIdle(); render(); } };
 		window.addEventListener('mousemove', show);
 		return () => { window.removeEventListener('mousemove', show); window.clearTimeout(idleTimer.current); };
-	}, [dockHide, dockIdleSeconds]);
+	}, [dockHide]);
 
 	// while an app is being moved, keep the focus on it as it changes places (it may cross from one row to the next)
 	useEffect(() => {
@@ -287,7 +286,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 		idleTimer.current = window.setTimeout(() => {
 			const m = nav.current;
 			if (m.zone === 'rows' && !m.moving && !document.hidden) { m.dockHidden = true; render(); }
-		}, latest.current.dockIdleSeconds * 1000);
+		}, 30000);
 	};
 
 	const handleKey = useCallback((key: NavKey): boolean => {

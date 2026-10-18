@@ -4,8 +4,8 @@
 import {STORAGE_KEY} from '../config/constants';
 import {DEFAULT_APP_IDS} from '../config/catalog';
 
-/** Settings > Hide the dock after: the choices, in seconds. */
-export const DOCK_IDLE_SECONDS = [30, 60, 120, 300];
+/** Settings > Screensaver > Start on the home screen after: the choices, in seconds (0 = never). */
+export const IDLE_SECONDS = [0, 30, 60, 120, 300];
 
 export interface UserConfig {
 	/** ordered app IDs for the Apps row */
@@ -30,14 +30,13 @@ export interface UserConfig {
 	videoPlaces: string[];
 	/** when the dock slides away: off | down | idle | both */
 	dockHide: string;
-	/** seconds without a key press before the dock hides itself (dockHide 'idle' or 'both') */
-	dockIdleSeconds: number;
 	/** dark glass and a dimmer wallpaper */
 	darkMode: string;
 	/** the last apps opened, newest first */
 	recentIds: string[];
 	/** start the screensaver after this many idle minutes; 0 = never */
-	idleMinutes: number;
+	/** seconds on the home screen without a key press before the screensaver starts (0 = never) */
+	idleSeconds: number;
 	/** cloud wallpaper ids marked as favourites (hold OK in the picker) */
 	favoriteWallpapers: string[];
 	/** pick a new wallpaper every N minutes when a shuffle is chosen; 0 = never */
@@ -96,12 +95,11 @@ export const DEFAULT_CONFIG: UserConfig = {
 	language: 'auto',
 	darkMode: 'on',
 	dockHide: 'down',
-	dockIdleSeconds: 30,
 	videoClip: '',
 	videoPlaces: [],
 	clockFormat: 'auto',
 	recentIds: [],
-	idleMinutes: 0,
+	idleSeconds: 0,
 	favoriteWallpapers: [],
 	wpAutoMinutes: 0,
 	nightDim: false,
@@ -152,14 +150,13 @@ export function parseConfig (raw: string): UserConfig {
 		wallpaper: typeof parsed.wallpaper === 'string' ? parsed.wallpaper : DEFAULT_CONFIG.wallpaper,
 		showAmPm: parsed.showAmPm !== false,
 		dockHide: parsed.dockHide === 'off' || parsed.dockHide === 'idle' || parsed.dockHide === 'both' ? parsed.dockHide : 'down',
-		dockIdleSeconds: DOCK_IDLE_SECONDS.indexOf(Number(parsed.dockIdleSeconds)) !== -1 ? Number(parsed.dockIdleSeconds) : 30,
 		darkMode: parsed.darkMode === 'auto' ? 'auto' : parsed.darkMode === 'off' ? 'off' : 'on',
 		videoClip: typeof parsed.videoClip === 'string' ? parsed.videoClip : '',
 		videoPlaces: Array.isArray(parsed.videoPlaces) ? parsed.videoPlaces : typeof parsed.videoClip === 'string' && parsed.videoClip ? [parsed.videoClip] : [],
 		language: typeof parsed.language === 'string' ? parsed.language : 'auto',
 		clockFormat: parsed.clockFormat === '12h' || parsed.clockFormat === '24h' ? parsed.clockFormat : 'auto',
 		recentIds: Array.isArray(parsed.recentIds) ? parsed.recentIds : [],
-		idleMinutes: typeof parsed.idleMinutes === 'number' ? parsed.idleMinutes : 0,
+		idleSeconds: IDLE_SECONDS.indexOf(Number(parsed.idleSeconds)) !== -1 ? Number(parsed.idleSeconds) : 0,
 		favoriteWallpapers: Array.isArray(parsed.favoriteWallpapers) ? parsed.favoriteWallpapers : [],
 		wpAutoMinutes: typeof parsed.wpAutoMinutes === 'number' ? parsed.wpAutoMinutes : 0,
 		nightDim: parsed.nightDim === true,
