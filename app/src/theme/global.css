@@ -914,11 +914,13 @@ html.hide-names .rows .tile__label, html.hide-names .panel--folder .tile__label 
    backdrops (behind the lower rows, behind Settings) stay the pre-blurred copy (--wp-bg): a full-screen live blur made moving between apps lag
    on the TV. The light copy (--wp-blur) is not loaded (lib/wallpaper.ts) and is emptied here. */
 html.liveblur, html.liveblur * { --wp-blur: linear-gradient(transparent, transparent) !important; }
+/* closer to tvOS 26 Liquid Glass: a light blur so the picture still reads through, with extra colour and a thin tint; the rims do the rest */
+html.liveblur { --live-glass: blur(10px) saturate(1.8) brightness(1.06); --live-tint: rgba(30, 36, 50, 0.14); }
 html.liveblur .row:not(.row--dock)::before, html.liveblur .topcap, html.liveblur .topbar > .pill, html.liveblur .panel {
-	-webkit-backdrop-filter: blur(30px) saturate(1.5);
-	backdrop-filter: blur(30px) saturate(1.5);
+	-webkit-backdrop-filter: var(--live-glass);
+	backdrop-filter: var(--live-glass);
 	background-attachment: scroll !important;
-	background-color: rgba(30, 36, 50, 0.24) !important;
+	background-color: var(--live-tint) !important;
 	background-blend-mode: normal !important;
 	opacity: 1;
 }
@@ -1059,8 +1061,8 @@ html.light .cc__mod--focused .cc__inputicon { filter: brightness(0) invert(1); }
 }
 .cc__mod--focused { transform: scale(1.1); background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.20) 55%, rgba(255, 255, 255, 0.34)), var(--wp-blur, var(--glass-fallback)); }
 html.liveblur .cc__mod {
-	-webkit-backdrop-filter: blur(30px) saturate(1.5); backdrop-filter: blur(30px) saturate(1.5);
-	background-attachment: scroll !important; background-color: rgba(30, 36, 50, 0.24) !important; background-blend-mode: normal !important;
+	-webkit-backdrop-filter: var(--live-glass); backdrop-filter: var(--live-glass);
+	background-attachment: scroll !important; background-color: var(--live-tint) !important; background-blend-mode: normal !important;
 }
 .cc__mod svg { position: static; width: 44px; height: 44px; fill: none; stroke: rgba(255, 255, 255, 0.9); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .cc__mod--on svg { stroke: var(--cc-on); }
