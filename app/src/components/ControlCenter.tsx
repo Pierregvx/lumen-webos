@@ -42,15 +42,13 @@ const startOf = (row: number, i: number) => GRID[row].slice(0, i).reduce((n, c) 
 /** Each backlight change is a root command (a luna-send process on the TV), so a run of presses sends only the last level, this long after. */
 const BACKLIGHT_DELAY_MS = 300;
 
-/** Opening a list, copied from the tvOS 26 Control Center frame by frame (30 fps): the tile turns into a dark pill that grows to the list's
- *  size while its text fades and the rest of the grid shrinks toward it and fades; the list fades in inside the pill, then the pill clears.
- *  The pill is darkest while the grid is still under it, so nothing shows through. Closing runs it backwards and lands with a small overshoot. */
+/** Opening a list, timed off the tvOS 26 Control Center frame by frame (30 fps): the tile grows into a glass pill the list's size while its text
+ *  fades and the rest of the grid shrinks toward it and fades; the list fades in inside the pill, then the pill's glass clears. tvOS also
+ *  darkens the pill on the way, which looked jarring here, so this keeps the tile's glass. Closing runs it backwards and lands with a small overshoot. */
 const OPEN_MS = 330;
 const CLOSE_MS = 430;
 /** keyframes per animation; enough that the pill's corners stay round between them */
 const STEPS = 20;
-/** the pill's darkest fill */
-const DARK = 0.85;
 /** how far the rest of the grid shrinks toward the tile */
 const GRID_SHRINK = 0.15;
 /** how far past the tile the pill shrinks when closing, before it settles */
@@ -195,7 +193,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 	/** Every layer's keyframes for one open or close, sampled from the same timeline. */
 	const timeline = (m: Morph) => {
 		const g = m.geo;
-		const pill: Keyframe[] = [], glass: Keyframe[] = [], dark: Keyframe[] = [], text: Keyframe[] = [], list: Keyframe[] = [], grid: Keyframe[] = [];
+		const pill: Keyframe[] = [], glass: Keyframe[] = [], text: Keyframe[] = [], list: Keyframe[] = [], grid: Keyframe[] = [];
 		for (let i = 0; i <= STEPS; i++) {
 			const t = i / STEPS;
 			const open = m.kind === 'open';
@@ -208,8 +206,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			const dx = at.tx + (g.w * at.sx) / 2 - g.w / 2;
 			const dy = at.ty + (g.h * at.sy) / 2 - g.h / 2;
 			text.push({transform: `translate(${dx}px, ${dy}px) scale(1.1)`, opacity: open ? 1 - ramp(t, 0.06, 0.27) : ramp(t, 0.42, 0.6)});
-			glass.push({opacity: open ? 1 - ramp(t, 0, 0.25) : ramp(t, 0.39, 0.62)});
-			dark.push({opacity: DARK * (open ? ramp(t, 0.05, 0.3) - ramp(t, 0.4, 0.65) : ramp(t, 0, 0.23) - ramp(t, 0.39, 0.62))});
+			glass.push({opacity: open ? 1 - ramp(t, 0.35, 0.65) : ramp(t, 0, 0.23)});
 			// the list sits inside the pill at the pill's size, as tvOS's does, scaled evenly to fit and centred across it
 			const pw = g.w * at.sx;
 			const fit = Math.min(1, pw / g.fw, (g.h * at.sy) / g.fh);
@@ -220,12 +217,11 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 				? {opacity: 1 - ramp(t, 0.15, 0.5), transform: `scale(${1 - GRID_SHRINK * easeOut(ramp(t, 0, 0.5))})`}
 				: {opacity: ramp(t, 0.2, 0.42), transform: `scale(${1 - GRID_SHRINK + GRID_SHRINK * easeOut(ramp(t, 0.15, 0.55))})`});
 		}
-		return {pill, glass, dark, text, list, grid};
+		return {pill, glass, text, list, grid};
 	};
 
 	const pillEl = useRef<HTMLDivElement>(null);
 	const glassEl = useRef<HTMLDivElement>(null);
-	const darkEl = useRef<HTMLDivElement>(null);
 	const textEl = useRef<HTMLDivElement>(null);
 	const listEl = useRef<HTMLDivElement>(null);
 	const gridEl = useRef<HTMLDivElement>(null);
@@ -237,7 +233,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 		const k = timeline(morph);
 		const ms = still() ? 0 : morph.kind === 'open' ? OPEN_MS : CLOSE_MS;
 		const opts: KeyframeAnimationOptions = {duration: ms, easing: 'linear', fill: 'both'};
-		const pairs: [HTMLElement | null, Keyframe[]][] = [[pillEl.current, k.pill], [glassEl.current, k.glass], [darkEl.current, k.dark], [textEl.current, k.text], [listEl.current, k.list], [gridEl.current, k.grid]];
+		const pairs: [HTMLElement | null, Keyframe[]][] = [[pillEl.current, k.pill], [glassEl.current, k.glass], [textEl.current, k.text], [listEl.current, k.list], [gridEl.current, k.grid]];
 		running.current = pairs.filter(([el]) => el && el.animate).map(([el, frames]) => (el as HTMLElement).animate(frames, opts));
 		const grid = gridEl.current;
 		if (grid) grid.style.transformOrigin = `${morph.geo.x + morph.geo.w / 2}px ${morph.geo.y + morph.geo.h / 2}px`;
@@ -369,7 +365,6 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 					return [
 						<div key="pill" ref={pillEl} class="cc__morph" style={box}>
 							<div ref={glassEl} class="cc__mod cc__mod--focused" />
-							<div ref={darkEl} class="cc__morph__dark" />
 						</div>,
 						<div key="text" ref={textEl} class={`cc__tile cc__morph__text${i.on ? ' cc__mod--on' : ''}`} style={box}>{tileInside(i)}</div>
 					];

@@ -1081,7 +1081,7 @@ html.liveblur .cc__mod {
 .cc__num { margin-left: auto; font-weight: 500; }
 
 /* A tile's list of choices (Sound, Picture, Theme, Clock), as tvOS's Sleep Timer. ControlCenter.tsx animates every layer with keyframes; these
-   classes hold the states between. The pill stands in for the tile: its focused glass, a dark fill over it, and the tile's text on top. */
+   classes hold the states between. The pill stands in for the tile: its focused glass, with the tile's text on top. */
 .cc__grid--leaving { opacity: 0; pointer-events: none; }
 .cc__mod--gone { opacity: 0; }
 .cc__list { position: absolute; left: 0; top: 0; width: 100%; opacity: 0; transform-origin: 0 0; }
@@ -1089,7 +1089,6 @@ html.liveblur .cc__mod {
 .cc__list:not(.cc__list--shown) { pointer-events: none; }
 .panel--cc .cc__morph { position: absolute; transform-origin: 0 0; pointer-events: none; }
 .panel--cc .cc__morph > * { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border-radius: inherit; transform: none; transition: none; }
-.cc__morph__dark { background: rgb(12, 12, 16); opacity: 0; }
 .panel--cc .cc__morph__text { position: absolute; pointer-events: none; color: #fff; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35); }
 .cc__morph__text svg { position: static; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .cc__morph__text:not(.cc__mod--on) svg { stroke: rgba(255, 255, 255, 0.9); }
