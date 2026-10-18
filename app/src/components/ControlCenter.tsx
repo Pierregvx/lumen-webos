@@ -44,9 +44,10 @@ const BACKLIGHT_DELAY_MS = 300;
 
 /** Opening a list, timed off the tvOS 26 Control Center frame by frame (30 fps): the tile grows into a glass pill the list's size while its text
  *  fades and the rest of the grid shrinks toward it and fades; the list fades in inside the pill, then the pill's glass clears. tvOS also
- *  darkens the pill on the way, which looked jarring here, so this keeps the tile's glass. Closing runs it backwards and lands with a small overshoot. */
+ *  darkens the pill on the way, which looked jarring here, so this keeps the tile's glass. Closing has no pill, since a big pill shrinking
+ *  is heavy on the TV: the list fades out where it is and the grid fades back in, growing back from GRID_SHRINK. */
 const OPEN_MS = 330;
-const CLOSE_MS = 430;
+const CLOSE_MS = 300;
 /** keyframes per animation; enough that the pill's corners stay round between them */
 const STEPS = 20;
 /** how far the rest of the grid shrinks toward the tile */
@@ -56,12 +57,8 @@ const PILL_PAD = 18;
 /** how soon in the open the pill takes the list's shape (its height grows faster than its width), as a share of OPEN_MS */
 const SHAPE_BY = 0.35;
 /** how far past the tile the pill shrinks when closing, before it settles */
-const OVERSHOOT = 1.15;
 /** how far the pill has grown at each video frame (every 33 ms) of tvOS's open, measured off the frames */
 const GROW = [0, 0.12, 0.35, 0.6, 0.8, 0.9, 0.94, 0.97, 0.985, 0.995, 1];
-/** the same for the close, up to the overshoot (the first 62% of CLOSE_MS); it then settles onto the tile */
-const SHRINK = [0, 0.03, 0.1, 0.2, 0.4, 0.65, 0.85, 0.95, 1];
-const SHRINK_END = 0.62;
 /** where the pill is: its offset and scale from the tile's own box, and its corner radius on screen */
 interface End {tx: number; ty: number; sx: number; sy: number; r: number}
 /** 0 before a, 1 after b, a straight line between */
@@ -73,14 +70,13 @@ const track = (points: number[], t: number) => {
 	const i = Math.min(points.length - 2, Math.floor(at));
 	return points[i] + (points[i + 1] - points[i]) * (at - i);
 };
-const mix = (a: End, b: End, e: number): End => ({tx: a.tx + (b.tx - a.tx) * e, ty: a.ty + (b.ty - a.ty) * e, sx: a.sx + (b.sx - a.sx) * e, sy: a.sy + (b.sy - a.sy) * e, r: a.r + (b.r - a.r) * e});
 /** a list choice's height and the gap between choices, as .cc__opt in global.css */
 const OPT_H = 72;
 const OPT_GAP = 12;
 const listHeight = (count: number) => count * OPT_H + (count - 1) * OPT_GAP;
 
 type Phase = 'grid' | 'opening' | 'list' | 'closing';
-interface Morph {kind: 'open' | 'close'; cell: MenuCell; geo: {x: number; y: number; w: number; h: number; fw: number; fh: number; tile: End; over: End; list: End}}
+interface Morph {kind: 'open' | 'close'; cell: MenuCell; geo: {x: number; y: number; w: number; h: number; fw: number; fh: number; tile: End; list: End}}
 
 /** Grows a top-bar panel in from the button that opened it (the top-bar pill with data-top={key}): a short scale and fade, as tvOS does. */
 export function growFrom (panel: HTMLElement | null, key: string): void {
@@ -201,7 +197,6 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 		return {
 			x, y, w, h, fw: full, fh: listHeight(count),
 			tile: grown(1.1), // focused tiles are drawn at 1.1
-			over: grown(1.1 * OVERSHOOT),
 			// the pill ends PILL_PAD bigger than the list all round, with an option's corners
 			list: {tx: -x - PILL_PAD, ty: -y - PILL_PAD, sx: (full + 2 * PILL_PAD) / w, sy: (listHeight(count) + 2 * PILL_PAD) / h, r: OPT_H / 2}
 		};
@@ -230,20 +225,19 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 		for (let i = 0; i <= STEPS; i++) {
 			const t = i / STEPS;
 			const open = m.kind === 'open';
-			const at = open ? opening(g, t)
-				: t < SHRINK_END ? mix(g.list, g.over, track(SHRINK, t / SHRINK_END)) : mix(g.over, g.tile, easeOut(ramp(t, SHRINK_END, 1)));
+			// closing has no pill: the list fades where it is and the grid fades back in round the tile
+			const at = open ? opening(g, t) : g.list;
 			// the corners ease from the tile's round ends to an option's radius as the pill grows
 			const r = at.r;
 			pill.push({transform: `translate(${at.tx}px, ${at.ty}px) scale(${at.sx}, ${at.sy})`, borderRadius: `${r / at.sx}px / ${r / at.sy}px`});
 			// the tile's text follows the pill's centre at its own size
 			const dx = at.tx + (g.w * at.sx) / 2 - g.w / 2;
 			const dy = at.ty + (g.h * at.sy) / 2 - g.h / 2;
-			text.push({transform: `translate(${dx}px, ${dy}px) scale(1.1)`, opacity: open ? 1 - ramp(t, 0.06, 0.27) : ramp(t, 0.42, 0.6)});
+			text.push({transform: `translate(${dx}px, ${dy}px) scale(1.1)`, opacity: 1 - ramp(t, 0.06, 0.27)});
 			// opening: the glass is gone by 167 ms, while the list is still fading in and growing
-			// closing: the glass stays faint while the list fades, and fills in only as the pill nears the tile
-			glass.push({opacity: open ? 1 - ramp(t, 0.2, 0.5) : 0.25 * easeOut(ramp(t, 0.15, 0.5)) + 0.75 * ramp(t, 0.6, 0.85)});
-			// the edge highlight and shadow grow with the pill's scale: opening, they go before it grows; closing, the button forms, so they come back as it nears the tile's size
-			rim.push({opacity: open ? 1 - ramp(t, 0, 0.1) : ramp(t, 0.3, 0.6)});
+			glass.push({opacity: 1 - ramp(t, 0.2, 0.5)});
+			// the edge highlight and shadow grow with the pill's scale, so they go before it grows
+			rim.push({opacity: 1 - ramp(t, 0, 0.1)});
 			// the list sits inside the pill at the pill's size, as tvOS's does: scaled evenly to fit inside its padding, and centred
 			const pw = g.w * at.sx;
 			const ph = g.h * at.sy;
@@ -252,9 +246,9 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			const ly = g.y + at.ty + (ph - fit * g.fh) / 2;
 			// opacity goes on each piece of glass, not the list or grid: a fading parent would cut its live blur off from the wallpaper
 			list.push({transform: `translate(${lx}px, ${ly}px) scale(${fit})`});
-			listFade.push({opacity: open ? easeOut(ramp(t, 0.08, 0.8)) : 1 - ramp(t, 0.05, 0.47)});
-			grid.push({transform: open ? `scale(${1 - GRID_SHRINK * easeOut(ramp(t, 0, 0.4))})` : `scale(${1 - GRID_SHRINK + GRID_SHRINK * easeOut(ramp(t, 0.15, 0.55))})`});
-			gridFade.push({opacity: open ? 1 - ramp(t, 0.08, 0.4) : ramp(t, 0.2, 0.42)});
+			listFade.push({opacity: open ? easeOut(ramp(t, 0.08, 0.8)) : 1 - ramp(t, 0, 0.55)});
+			grid.push({transform: open ? `scale(${1 - GRID_SHRINK * easeOut(ramp(t, 0, 0.4))})` : `scale(${1 - GRID_SHRINK + GRID_SHRINK * easeOut(ramp(t, 0.2, 1))})`});
+			gridFade.push({opacity: open ? 1 - ramp(t, 0.08, 0.4) : ramp(t, 0.25, 0.85)});
 		}
 		return {pill, glass, rim, text, list, listFade, grid, gridFade};
 	};
@@ -351,7 +345,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			<div
 				key={cell}
 				ref={(el) => { tiles.current[cell] = el; }}
-				class={`cc__mod cc__tile${current === cell ? ' cc__mod--focused' : ''}${morph && morph.cell === cell ? ' cc__mod--gone' : ''}${i.on ? ' cc__mod--on' : ''}`}
+				class={`cc__mod cc__tile${current === cell ? ' cc__mod--focused' : ''}${morph && morph.kind === 'open' && morph.cell === cell ? ' cc__mod--gone' : ''}${i.on ? ' cc__mod--on' : ''}`}
 				onMouseEnter={focus(cell)}
 				onClick={() => press(cell)}
 			>
@@ -401,7 +395,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 				</div>
 				<div class="cc__caption">{caption}</div>
 				</div>
-				{morph && (() => {
+				{morph && morph.kind === 'open' && (() => {
 					const box = `left:${morph.geo.x}px;top:${morph.geo.y}px;width:${morph.geo.w}px;height:${morph.geo.h}px`;
 					const i = info(morph.cell);
 					return [
