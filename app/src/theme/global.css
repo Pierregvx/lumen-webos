@@ -698,7 +698,7 @@ html.night:not(.light):not(.wp-video):not(.liveblur) .screen--plainglass .topbar
 
 /* ---------- time top left ---------- */
 .screen > .pill.status { align-items: center; }
-.screen > .pill.status .clock { background: none; box-shadow: none; padding: 0; margin: 0 22px 0 0; border-radius: 0; height: auto; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7); }
+.screen > .pill.status .clock { background: none; box-shadow: none; padding: 0; margin: 0 22px 0 0; border-radius: 0; height: auto; text-shadow: 0 4px 24px rgba(0, 0, 0, 0.28); }
 .screen > .pill.status .clock__time { font-size: 52px; font-weight: 300; line-height: 1; letter-spacing: 0; }
 .screen > .pill.status .clock__period { font-size: 22px; }
 
