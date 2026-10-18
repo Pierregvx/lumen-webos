@@ -806,7 +806,7 @@ html.light .wp__chip, html.light .settings__button { box-shadow: inset 0 0 0 1.5
 html.light .status { background-image: none !important; background-color: transparent !important; box-shadow: none !important; }
 html.light .status, html.light .status * { color: #fff !important; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45); }
 html.light .screen.screen--settings, html.light .wp-image .screen.screen--settings, html.light .wp-video .screen.screen--settings { background: rgba(243, 244, 249, 0.97); }
-html.light .settings__hint { color: rgba(20, 22, 32, 0.62); }
+html.light .settings__hint { color: rgba(255, 255, 255, 0.85); text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5); }
 html.light .wp__chip--focused, html.light .settings__button--focused, html.light .menu__row--focused, html.light .pill--focused, html.light .topcap--focused { background-color: #14151b !important; color: #fff !important; box-shadow: 0 8px 18px rgba(20, 24, 40, 0.30); }
 html.light .panel { background-image: linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10)), var(--wp-blur) !important; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.85), 0 24px 60px rgba(20, 24, 40, 0.28); }
 html.light .menu__row svg, html.light .pill svg, html.light .topcap svg { stroke: rgba(20, 22, 32, 0.72); }
@@ -932,8 +932,10 @@ html.liveblur.light .row:not(.row--dock)::before, html.liveblur.light .topcap, h
 	text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
 }
 .rows .row--titled.row--focused .row__label { color: var(--color-text-primary); }
-html.light .rows .row--titled .row__label { color: rgba(20, 22, 32, 0.72); text-shadow: none; }
-html.light .rows .row--titled.row--focused .row__label { color: #14151b; }
+/* light look: text drawn straight on the wallpaper stays white, as the clock does, since the picture behind may be dark */
+html.light .rows .row__label { color: rgba(255, 255, 255, 0.72); text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45); }
+html.light .rows .row--focused .row__label { color: #fff; }
+html.light .rows .tile__label { color: #fff; }
 
 
 /* ---------- Settings > Appearance > Focus highlight ---------- */
@@ -1070,7 +1072,7 @@ html.liveblur .cc__mod {
 .cc__circle { width: var(--cc-u); display: flex; align-items: center; justify-content: center; }
 
 .cc__slider { width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); overflow: hidden; }
-.cc__fill { position: absolute; left: 0; top: 0; bottom: 0; overflow: hidden; background: rgba(255, 255, 255, 0.7); text-shadow: none; }
+.cc__fill { position: absolute; left: 0; top: 0; bottom: 0; overflow: hidden; background: rgba(255, 255, 255, 0.5); text-shadow: none; }
 .cc__mod--focused .cc__fill { background: #fff; }
 .cc__slidertext { position: absolute; left: 0; top: 0; bottom: 0; width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); display: flex; flex-direction: row; align-items: center; padding: 0 26px 0 22px; box-sizing: border-box; font-size: 21px; font-weight: 600; white-space: nowrap; }
 .cc__slidertext svg { width: 34px; height: 34px; margin-right: 12px; }
@@ -1089,9 +1091,9 @@ html.light .cc__mod--on svg { stroke: rgb(0, 122, 255); }
 html.light body .panel--cc .cc__mod--focused:not(.cc__slider) { background: #14151b !important; color: #fff; box-shadow: 0 8px 18px rgba(20, 24, 40, 0.30); }
 html.light .cc__mod--focused:not(.cc__slider) svg { stroke: #fff; }
 html.light .cc__mod--focused.cc__mod--on svg { stroke: var(--cc-on); }
-html.light .cc__fill { background: rgba(20, 24, 40, 0.20); }
-html.light .cc__fill .cc__slidertext { color: #14151b; }
-html.light .cc__fill .cc__slidertext svg { stroke: #14151b; }
+html.light .cc__fill { background: rgba(20, 21, 27, 0.72); }
+html.light .cc__fill .cc__slidertext { color: #fff; }
+html.light .cc__fill .cc__slidertext svg { stroke: #fff; }
 html.light .cc__mod--focused .cc__fill { background: #14151b; }
 html.light .cc__mod--focused .cc__fill .cc__slidertext { color: #fff; }
 html.light .cc__mod--focused .cc__fill .cc__slidertext svg { stroke: #fff; }
@@ -1315,9 +1317,9 @@ html.focus-strong .slist__row--focused { transform: scale(1.05); }
 .slist__tick { flex: 0 0 auto; width: 30px; height: 30px; margin-right: 18px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; visibility: hidden; }
 .slist__tick--on { visibility: visible; }
 
-html.light .settings__title, html.light .slist__title { color: rgba(20, 22, 32, 0.62); }
+html.light .settings__title, html.light .slist__title { color: rgba(255, 255, 255, 0.85); text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45); }
 html.light .slist__icon { background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.50)); box-shadow: inset 0 0 0 1.5px #fff, 0 24px 50px rgba(20, 24, 40, 0.15); }
-html.light .slist__description { color: rgba(20, 22, 32, 0.62); }
+html.light .slist__description { color: rgba(255, 255, 255, 0.85); text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5); }
 html.light .slist__row { color: #14151b; background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.45)); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.8), 0 4px 12px rgba(20, 24, 40, 0.10); }
 html.light .slist__value { color: rgba(20, 22, 32, 0.55); }
 html.light .slist__chevron { stroke: rgba(20, 22, 32, 0.45); }
