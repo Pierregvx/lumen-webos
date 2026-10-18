@@ -30,6 +30,7 @@ Every push to a branch other than `main` reaches the TV as a Homebrew Channel up
 ### Verify on the TV (built, not yet seen working)
 
 Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or later).
+- [ ] Sharper channel logos (verify): on the Live TV row and in the Guide, logos have crisp edges, focused too. The first launch reads every logo from the TV again, once. If thin strokes look jagged or a soft logo looks harsh, widen the alpha range in `crispLogo` (lib/livetv.ts).
 - [ ] Wallpaper settings redesign (verify): Settings > Wallpaper has Wallpaper type (Pictures, Video, Immich photos, Plain), New picture on startup, and Change wallpaper automatically. Your old choice carried over once: a shuffle became its category picked, a fixed picture became the only pick, video stayed video, Immich stayed Immich. Choose wallpaper shows only the current type: for Pictures, categories with a Select all tile first and a tick on each picked picture; for Immich, the sources and albums, several at once. Art pictures get the Print look on the home screen.
 - [ ] Darker live glass (verify): 2px blur, 30% black tint, sheen and rims at half strength; the glass bar's sheen only near its ends. Focused buttons and the brightness slider are softer too.
 - [ ] Settings > Appearance > Liquid glass dock (verify): the glass bar bends the picture at its rim; goes plain while the rows are down; survives a restart. Over a video it only tints.

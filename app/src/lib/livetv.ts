@@ -340,7 +340,42 @@ export function timeLeft (p: Programme, t: number): string {
 // ---------- logos ----------
 
 /** Logos as data: URIs, by their path on the TV. Kept apart from the channel list, so a full localStorage loses only the logos. */
-const LOGO_CACHE_KEY = 'lumen-livetv-logos-v1';
+const LOGO_CACHE_KEY = 'lumen-livetv-logos-v2';
+
+/** How far a logo is scaled up once, on load: the TV's are as small as 133 x 100, and a focused tile shows them larger than that. */
+const LOGO_SCALE = 3;
+
+/** Draws a logo three times larger and pushes its soft edge pixels towards solid or clear, so a stretched logo stays crisp. The logos are
+ *  white shapes on a clear ground, so the outline is all there is to sharpen. Done once per logo, before it is cached; any failure keeps
+ *  the original. */
+function crispLogo (src: string): Promise<string> {
+	return new Promise((resolve) => {
+		const img = new Image();
+		img.onload = () => {
+			try {
+				const w = img.naturalWidth * LOGO_SCALE, h = img.naturalHeight * LOGO_SCALE;
+				const canvas = document.createElement('canvas');
+				canvas.width = w; canvas.height = h;
+				const ctx = canvas.getContext('2d');
+				if (!ctx || !w || !h) return resolve(src);
+				ctx.imageSmoothingEnabled = true;
+				ctx.imageSmoothingQuality = 'high';
+				ctx.drawImage(img, 0, 0, w, h);
+				const data = ctx.getImageData(0, 0, w, h);
+				const px = data.data;
+				for (let i = 3; i < px.length; i += 4) {
+					// a smoothstep over alpha 48..208: the blurred edge narrows to about a pixel, with a little softness left so it does not jag
+					const t = Math.min(1, Math.max(0, (px[i] - 48) / 160));
+					px[i] = Math.round(t * t * (3 - 2 * t) * 255);
+				}
+				ctx.putImageData(data, 0, 0);
+				resolve(canvas.toDataURL('image/png'));
+			} catch { resolve(src); }
+		};
+		img.onerror = () => resolve(src);
+		img.src = src;
+	});
+}
 
 export function cachedLogos (): Record<string, string> {
 	return readCache<Record<string, string>>(LOGO_CACHE_KEY) || {};
@@ -353,13 +388,17 @@ export function readLogos (channels: Channel[]): Promise<Record<string, string>>
 	const missing = channels.map((c) => c.logoPath).filter((p, i, all): p is string => !!p && !cache[p] && all.indexOf(p) === i);
 	if (!missing.length || !isWebOS()) return Promise.resolve(cache);
 	return readIcons(missing).then((out) => {
+		const jobs: Promise<void>[] = [];
 		for (const line of out.split('\n')) {
 			const m = /^(\d+) ([A-Za-z0-9+\/=]+)$/.exec(line);
 			const path = m && missing[Number(m[1])];
-			if (m && path) cache[path] = `data:image/png;base64,${m[2]}`;
+			if (m && path) jobs.push(crispLogo(`data:image/png;base64,${m[2]}`).then((uri) => { cache[path] = uri; }));
 		}
-		writeCache(LOGO_CACHE_KEY, cache);
-		return cache;
+		return Promise.all(jobs).then(() => {
+			try { localStorage.removeItem('lumen-livetv-logos-v1'); } catch { /* the unsharpened logos only take space */ }
+			writeCache(LOGO_CACHE_KEY, cache);
+			return cache;
+		});
 	});
 }
 
