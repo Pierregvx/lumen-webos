@@ -1080,6 +1080,25 @@ html.liveblur .cc__mod {
 .cc__fill .cc__slidertext svg { stroke: #111; }
 .cc__num { margin-left: auto; font-weight: 500; }
 
+/* A tile's list of choices (Sound, Picture, Theme, Clock), as tvOS's Sleep Timer: the tile's text and the rest of the grid fade, a copy of the
+   tile grows to the list's size and fades, and the list fades in under it. Timings match TEXT_MS and GROW_MS in ControlCenter.tsx. */
+.cc__grid .cc__mod { transition: transform var(--motion-focus-ms) ease-out, opacity 150ms ease-out; }
+.cc__grid .cc__tile > *, .cc__caption { transition: opacity 80ms ease-out; }
+.cc__grid--leaving { pointer-events: none; }
+.cc__grid--leaving .cc__mod:not(.cc__mod--source), .cc__grid--leaving .cc__caption, .cc__mod--source > * { opacity: 0; }
+/* the copy and the tile swap in one frame, so the tile's glass shows and hides at once */
+.cc__grid .cc__mod--source { transition: transform var(--motion-focus-ms) ease-out, opacity 0s; }
+.cc__mod--gone { opacity: 0; }
+.panel--cc .cc__morph { position: absolute; transform-origin: 0 0; pointer-events: none; transition: none; }
+.panel--cc .cc__morph--grow { transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 110ms ease-in 90ms; }
+.panel--cc .cc__morph--shrink { transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 100ms ease-out; }
+.cc__list { position: absolute; left: 0; top: 0; width: 100%; opacity: 0; transition: opacity 100ms ease-out; }
+.cc__list--shown { opacity: 1; transition: opacity 150ms ease-out 50ms; }
+/* height and gap match OPT_H and OPT_GAP in ControlCenter.tsx */
+.panel--cc .cc__opt { width: 100%; height: 72px; border-radius: 36px; margin-bottom: 12px; }
+.panel--cc .cc__opt.cc__mod--focused { transform: scale(1.05); }
+.cc__opt .cc__icon svg { width: 34px; height: 34px; }
+
 .cc__caption { height: 30px; line-height: 30px; text-align: center; font-size: 20px; font-weight: 600; color: #fff; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); }
 
 /* light look: the top buttons' light glass, and focus turns dark as theirs does */

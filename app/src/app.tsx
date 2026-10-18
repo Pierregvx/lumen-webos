@@ -33,7 +33,7 @@ import {useLiveTv} from './hooks/useLiveTv';
 import {channelColor, nowNextAt, rowChannels, type Channel} from './lib/livetv';
 import {openChannel} from './lib/root';
 import {bootMark, navMark} from './lib/log';
-import {isDark, LANGS, nextDark, setClockMode, setLang} from './lib/i18n';
+import {isDark, LANGS, setClockMode, setLang} from './lib/i18n';
 
 type Screen = 'home' | 'settings' | 'ambient' | 'guide';
 
@@ -771,8 +771,8 @@ export function App () {
 			{controls && <ControlCenter
 				darkMode={config.darkMode}
 				clockFormat={config.clockFormat}
-				onDarkMode={() => updateConfig({...configRef.current, darkMode: nextDark(configRef.current.darkMode)})}
-				onClockFormat={() => { const modes = ['auto', '12h', '24h']; const c = configRef.current; updateConfig({...c, clockFormat: modes[(modes.indexOf(c.clockFormat) + 1) % modes.length]}); }}
+				onDarkMode={(darkMode) => updateConfig({...configRef.current, darkMode})}
+				onClockFormat={(clockFormat) => updateConfig({...configRef.current, clockFormat})}
 				onClose={() => setControls(false)}
 				onError={(text) => showToast(text, 'error')}
 				onAction={(a: CenterAction) => { setControls(false); if (a === 'art') showScreensaver(true); else onActivate('menu', {key: MISC.lgHome, label: 'LG Home'}); }}

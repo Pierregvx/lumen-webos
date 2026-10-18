@@ -674,8 +674,6 @@ export function setLang (pref: string): void {
 export function langLocale (): string {
 	return LANGS.filter((l) => l.code === current)[0].locale;
 }
-const NEXT_DARK: Record<string, string> = {off: 'on', on: 'auto', auto: 'off'};
-export function nextDark (mode: string): string { return NEXT_DARK[mode] || 'off'; }
 export function isDark (mode: string, now = new Date()): boolean {
 	const h = now.getHours();
 	return mode === 'on' || (mode === 'auto' && (h >= 19 || h < 6));
