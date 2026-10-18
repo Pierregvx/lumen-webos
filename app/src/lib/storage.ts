@@ -59,8 +59,10 @@ export interface UserConfig {
 	hideNames: boolean;
 	/** test: glass blurs what is behind it live (backdrop-filter) instead of showing a pre-blurred copy of the wallpaper */
 	liveBlur: boolean;
-	/** Screensaver: '' = LG's own; an Immich source (immich:recent, immich:album:<id>, ...) = Lumen's ambient screen with those photos */
+	/** the Immich source the ambient screen shows (immich:recent, immich:album:<id>, ...) */
 	ambient: string;
+	/** your photos replace LG's screensaver (Art mode in Control Center shows them either way) */
+	ambientOn: boolean;
 	/** seconds each photo stays on the ambient screen */
 	ambientSeconds: number;
 	/** how far the screensaver lowers the TV's backlight while it shows: tv (not at all) | dim | low */
@@ -111,7 +113,8 @@ export const DEFAULT_CONFIG: UserConfig = {
 	reduceMotion: false,
 	hideNames: false,
 	liveBlur: true,
-	ambient: '',
+	ambient: 'immich:recent',
+	ambientOn: false,
 	ambientSeconds: 30,
 	ambientBrightness: 'dim',
 	focusStrength: 'normal',
@@ -170,7 +173,9 @@ export function parseConfig (raw: string): UserConfig {
 		liveBlur: parsed.liveBlur !== false,
 		ambientSeconds: [10, 20, 30, 60, 120, 300].indexOf(Number(parsed.ambientSeconds)) !== -1 ? Number(parsed.ambientSeconds) : 30,
 		ambientBrightness: parsed.ambientBrightness === 'tv' || parsed.ambientBrightness === 'low' ? parsed.ambientBrightness : 'dim',
-		ambient: typeof parsed.ambient === 'string' && parsed.ambient.indexOf('immich:') === 0 ? parsed.ambient : '',
+		ambient: typeof parsed.ambient === 'string' && parsed.ambient.indexOf('immich:') === 0 ? parsed.ambient : 'immich:recent',
+		// before ambientOn, an empty source meant LG's screensaver
+		ambientOn: typeof parsed.ambientOn === 'boolean' ? parsed.ambientOn : typeof parsed.ambient === 'string' && parsed.ambient.indexOf('immich:') === 0,
 		focusStrength: parsed.focusStrength === 'subtle' || parsed.focusStrength === 'strong' ? parsed.focusStrength : 'normal',
 		firstRow: parsed.firstRow === 5 || parsed.firstRow === 7 ? parsed.firstRow : 6,
 		videoHours: parsed.videoHours === 'day' || parsed.videoHours === 'evening' || parsed.videoHours === 'night' ? parsed.videoHours : 'always',

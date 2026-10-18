@@ -45,7 +45,7 @@ const LIVE_INFO_W = 660;
 /** how much higher the Live TV row sits when focused, so its now/next block fits on screen */
 const LIVE_BELOW = 150;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
+const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 0.5, 1, 5, 15, 30, 60];   // minutes
 /** when the video wallpaper plays (Settings > Wallpaper > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
 const VIDEO_HOURS: Record<string, [number, number]> = {day: [7, 19], evening: [17, 23], night: [19, 7]};
@@ -140,7 +140,7 @@ export function App () {
 		const apply = (p: LaunchParams) => {
 			if (p.view === 'recent') setFocusRow({id: ROW.dock, seq: ++seq});
 			// watch.sh opens Lumen with {"view":"ambient"} when the TV's screensaver starts (Settings > Screensaver)
-			if (p.view === 'ambient' && configRef.current.ambient) setScreen('ambient');
+			if (p.view === 'ambient' && configRef.current.ambientOn) setScreen('ambient');
 			// a plain relaunch is the remote's Home button: back to the home screen from Settings, the Guide, the screensaver or Control Center
 			if (!p.view) { setScreen('home'); setControls(false); }
 		};
@@ -250,7 +250,7 @@ export function App () {
 		root.toggle('focus-subtle', config.focusStrength === 'subtle');
 		root.toggle('focus-strong', config.focusStrength === 'strong');
 	}, [config.focusStrength]);
-	useEffect(() => { setAmbientFlag(config.ambient !== ''); }, [config.ambient]);
+	useEffect(() => { setAmbientFlag(config.ambientOn); }, [config.ambientOn]);
 	useEffect(() => { setVideoPaused(screen !== 'home'); document.documentElement.classList.toggle('in-settings', screen === 'settings' || screen === 'guide'); }, [screen]);
 	const lastScreen = useRef(screen);
 	useEffect(() => { if (lastScreen.current !== screen) navMark(`${lastScreen.current}>${screen}`); lastScreen.current = screen; }, [screen]);
@@ -268,9 +268,10 @@ export function App () {
 	}, [apps, restoring]);
 	const allApps = useMemo(() => withBuiltins(apps), [apps]);
 
-	/** Your photos (Settings > Screensaver) straight away, without LG's screensaver showing first; else LG's own. */
-	const showScreensaver = () => {
-		if (configRef.current.ambient) { setScreen('ambient'); return; }
+	/** Your photos straight away, without LG's screensaver showing first; LG's own when the photos are not turned on (unless forced, for Art mode). */
+	const showScreensaver = (photos = configRef.current.ambientOn) => {
+		if (photos && cachedServer()) { setScreen('ambient'); return; }
+		if (photos) { showToast('Set up Immich first (Settings > Wallpaper > Choose wallpaper > Photos)', 'error'); return; }
 		startScreensaver().catch(() => showToast("Couldn't start the screensaver (it needs the Homebrew Channel)", 'error'));
 	};
 
@@ -373,7 +374,7 @@ export function App () {
 			[OPTION.clock]: {labels: ['Auto', '12-hour', '24-hour'], values: ['auto', '12h', '24h'], now: config.clockFormat},
 			[OPTION.focus]: {labels: ['Subtle', 'Normal', 'Strong'], values: ['subtle', 'normal', 'strong'], now: config.focusStrength},
 			[OPTION.firstRow]: {labels: ['5', '6', '7'], values: [5, 6, 7], now: config.firstRow},
-			[OPTION.ambient]: {labels: ['LG\'s own'].concat(IMMICH_SOURCES.map((x) => `Photos: ${x.title}`), immich.albums.map((a) => `Photos: ${a.title}`)), values: [''].concat(IMMICH_SOURCES.map((x) => x.key), immich.albums.map((a) => `immich:album:${a.id}`)), now: config.ambient},
+			[OPTION.ambient]: {labels: IMMICH_SOURCES.map((x) => x.title).concat(immich.albums.map((a) => a.title)), values: IMMICH_SOURCES.map((x) => x.key).concat(immich.albums.map((a) => `immich:album:${a.id}`)), now: config.ambient},
 			[OPTION.ambientSeconds]: {labels: ['10 seconds', '20 seconds', '30 seconds', '1 minute', '2 minutes', '5 minutes'], values: [10, 20, 30, 60, 120, 300], now: config.ambientSeconds},
 			[OPTION.ambientBrightness]: {labels: ['As the TV is set', 'Dim', 'Very dim'], values: ['tv', 'dim', 'low'], now: config.ambientBrightness},
 			[OPTION.videoHours]: {labels: ['Always', 'Daytime (7 am to 7 pm)', 'Evenings (5 pm to 11 pm)', 'Night (7 pm to 7 am)'], values: ['always', 'day', 'evening', 'night'], now: config.videoHours}
@@ -440,15 +441,22 @@ export function App () {
 			...listed(OPTION.wpAuto)
 		},
 		{
+			id: OPTION.ambientOn,
+			group: 'screensaver' as const,
+			label: 'Use my photos',
+			description: immich.ready
+				? 'When the TV\'s screensaver starts, show your photos from Immich instead of LG\'s: a slow crossfade, with the clock. Any key returns to the home screen. Art mode in Control Center shows them either way.'
+				: 'Your photos from Immich instead of LG\'s screensaver. Set up Immich first (Settings > Wallpaper > Choose wallpaper > Photos).',
+			value: config.ambientOn
+		},
+		...(immich.ready ? [{
 			id: OPTION.ambient,
 			group: 'screensaver' as const,
-			label: 'Screensaver',
-			description: immich.ready
-				? 'When the TV\'s screensaver starts, show your photos from Immich instead: a slow crossfade every 30 seconds, with the clock. Any key returns to the home screen.'
-				: 'Your photos from Immich instead of LG\'s screensaver. Set up Immich first (Settings > Wallpaper > Choose wallpaper > Photos).',
-			value: config.ambient !== '',
+			label: 'Photos',
+			description: 'Which photos the screensaver and Art mode show.',
+			value: true,
 			...listed(OPTION.ambient)
-		},
+		}] : []),
 		{
 			id: OPTION.idle,
 			group: 'screensaver' as const,
@@ -457,7 +465,7 @@ export function App () {
 			value: config.idleSeconds > 0,
 			...listed(OPTION.idle)
 		},
-		...(config.ambient ? [{
+		...(immich.ready ? [{
 			id: OPTION.ambientSeconds,
 			group: 'screensaver' as const,
 			label: 'Time on each photo',
@@ -578,7 +586,7 @@ export function App () {
 			description: 'Frames drawn in the last second and the longest frame, in the top-left corner. Only in dev builds.',
 			value: config.fpsCounter
 		}] : [])
-	], [config.liveTvRow, config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleSeconds, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur, config.ambient, config.ambientSeconds, config.ambientBrightness, immich.ready]);
+	], [config.liveTvRow, config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleSeconds, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur, config.ambient, config.ambientOn, config.ambientSeconds, config.ambientBrightness, immich.ready]);
 
 	const wallpaper: WallpaperTab = useMemo(() => {
 		if (!inSettings) return {categories: [], entries: [], current: '', onPick: () => undefined, onFavorite: () => undefined};
@@ -704,6 +712,7 @@ export function App () {
 		else if (optionId === OPTION.reduceMotion) updateConfig({...config, reduceMotion: !config.reduceMotion});
 		else if (optionId === OPTION.liveBlur) updateConfig({...config, liveBlur: !config.liveBlur});
 		else if (optionId === OPTION.nightDim) updateConfig({...config, nightDim: !config.nightDim});
+		else if (optionId === OPTION.ambientOn) updateConfig({...config, ambientOn: !config.ambientOn});
 	}, [config]);
 
 	/** a value picked from an option's pop-up list */
@@ -755,7 +764,7 @@ export function App () {
 				onClockFormat={() => { const modes = ['auto', '12h', '24h']; const c = configRef.current; updateConfig({...c, clockFormat: modes[(modes.indexOf(c.clockFormat) + 1) % modes.length]}); }}
 				onClose={() => setControls(false)}
 				onError={(text) => showToast(text, 'error')}
-				onAction={(a: CenterAction) => { setControls(false); if (a === 'art') showScreensaver(); else onActivate('menu', a === 'lg-home' ? {key: MISC.lgHome, label: 'LG Home'} : {key: 'screensaver', label: 'Screensaver'}); }}
+				onAction={(a: CenterAction) => { setControls(false); if (a === 'art') showScreensaver(true); else onActivate('menu', a === 'lg-home' ? {key: MISC.lgHome, label: 'LG Home'} : {key: 'screensaver', label: 'Screensaver'}); }}
 			/>}
 			<Toast message={toast} />
 		</>
