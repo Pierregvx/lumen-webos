@@ -51,13 +51,18 @@ interface Asset {
 	type?: string;
 	width?: number | null;
 	height?: number | null;
-	/** the people Immich found in the picture, named or not; present only when asked for with withPeople */
-	people?: unknown[] | null;
+	/** the people Immich found in the picture, named or not, with where their faces are; present only when asked for with withPeople */
+	people?: {faces?: Face[] | null}[] | null;
+	/** faces Immich found but has not put with a person */
+	unassignedFaces?: Face[] | null;
 	/** when it was taken, in the place it was taken */
 	localDateTime?: string | null;
 	fileCreatedAt?: string | null;
 	exifInfo?: {exifImageWidth?: number | null; exifImageHeight?: number | null; orientation?: string | null; make?: string | null} | null;
 }
+
+/** A face box, in the pixels of the picture Immich measured it on (imageWidth x imageHeight). */
+interface Face { boundingBoxX1?: number; boundingBoxY1?: number; boundingBoxX2?: number; boundingBoxY2?: number; imageWidth?: number; imageHeight?: number }
 
 /** Width over height as the picture is seen, or 0 when Immich does not know. */
 function ratio (a: Asset): number {
@@ -66,6 +71,85 @@ function ratio (a: Asset): number {
 	const o = a.exifInfo && a.exifInfo.orientation;
 	if (!a.width && (o === '6' || o === '8' || o === '5' || o === '7')) { const t = w; w = h; h = t; }   // rotated by EXIF
 	return w && h ? w / h : 0;
+}
+
+/** The middle of the box round all of a photo's faces, as fractions of its width and height, or null when there are none. */
+function faceCentre (faces: Face[]): [number, number] | null {
+	let x1 = 1, y1 = 1, x2 = 0, y2 = 0;
+	faces.forEach((f) => {
+		const w = f.imageWidth || 0, h = f.imageHeight || 0;
+		if (!w || !h || f.boundingBoxX1 == null || f.boundingBoxY1 == null || f.boundingBoxX2 == null || f.boundingBoxY2 == null) return;
+		x1 = Math.min(x1, f.boundingBoxX1 / w); y1 = Math.min(y1, f.boundingBoxY1 / h);
+		x2 = Math.max(x2, f.boundingBoxX2 / w); y2 = Math.max(y2, f.boundingBoxY2 / h);
+	});
+	return x2 > x1 && y2 > y1 ? [(x1 + x2) / 2, (y1 + y2) / 2] : null;
+}
+
+/** Each photo's shape and face centre ([ratio, x, y]; x and y are -1 with no faces, -2 when it has people whose faces are not read yet), by id. Kept apart from the pool so the photo the
+ *  next launch opens on keeps its entry whatever the screensaver picks meanwhile; only the newest FRAMES_MAX are kept. */
+const FRAMES_KEY = 'lumen-immich-frames-v1';
+const FRAMES_MAX = 300;
+type Frame = [number, number, number];
+
+function readFrames (): Record<string, Frame> { return readCache<Record<string, Frame>>(FRAMES_KEY) || {}; }
+
+function writeFrames (frames: Record<string, Frame>): void {
+	const ids = Object.keys(frames);
+	ids.slice(0, Math.max(0, ids.length - FRAMES_MAX)).forEach((id) => { delete frames[id]; });
+	writeCache(FRAMES_KEY, frames);
+}
+
+function saveFrames (list: Asset[]): void {
+	const frames = readFrames();
+	list.forEach((a) => {
+		const known = frames[a.id];
+		delete frames[a.id];
+		// faces read on an earlier pick are kept; the search itself only says whether there are people
+		frames[a.id] = known && known[1] >= 0 ? known : [Math.round(ratio(a) * 1000) / 1000, a.people && a.people.length ? -2 : -1, -1];
+	});
+	writeFrames(frames);
+}
+
+/** Reads where the faces are in a picked photo that has people, one small request each. It needs the API key to have face.read; without it
+ *  (or on any failure) the photo is simply placed as one with no faces. */
+function readFaces (server: ImmichServer, pic: string): Promise<void> {
+	const frames = readFrames();
+	const todo = pictureIds(pic).filter((id) => frames[id] && frames[id][1] === -2);
+	return Promise.all(todo.map((id) => immichRequest(server.url, server.key, `/api/faces?id=${id}`).then((text) => {
+		const list = JSON.parse(text) as Face[];
+		return Array.isArray(list) ? faceCentre(list) : null;
+	}).catch(() => null))).then((found) => {
+		const now = readFrames();
+		todo.forEach((id, i) => {
+			const c = found[i];
+			if (now[id]) now[id] = [now[id][0], c ? Math.round(c[0] * 1000) / 1000 : -1, c ? Math.round(c[1] * 1000) / 1000 : -1];
+		});
+		if (todo.length) writeFrames(now);
+	});
+}
+
+/** Where to place one photo in a box `box` wide and 1 high, scaled to cover it, as background-position fractions: faces sit a little
+ *  above the middle; with none, more of the top is kept than the bottom, since heads and subjects tend to sit high. */
+function place (f: Frame | undefined, box: number): [number, number] {
+	if (!f || !f[0]) return [0.5, 0.4];
+	const k = Math.max(box / f[0], 1);
+	const w = f[0] * k, h = k;
+	const clamp = (n: number) => Math.min(1, Math.max(0, n));
+	const x = f[1] >= 0 && w > box + 0.001 ? clamp((box * 0.5 - f[1] * w) / (box - w)) : 0.5;
+	const y = h <= 1.001 ? 0.5 : f[2] >= 0 ? clamp((0.42 - f[2] * h) / (1 - h)) : 0.3;
+	return [x, y];
+}
+
+const pct = (n: number) => `${Math.round(n * 1000) / 10}%`;
+
+/** The background-position for an Immich picture on a 16:9 screen: one photo, or a portrait pair side by side (each half the width less
+ *  the 4px seam, as global.css lays them out). */
+export function picturePosition (pic: string): string {
+	const frames = readFrames();
+	const ids = pictureIds(pic);
+	if (ids.length > 1) return ids.map((id, i) => `${i ? 'right' : 'left'} ${pct(place(frames[id], (960 - 4) / 1080)[1])}`).join(', ');
+	const p = place(frames[ids[0]], 16 / 9);
+	return `${pct(p[0])} ${pct(p[1])}`;
 }
 
 /** Joins the two portrait photos shown side by side as one picture ('<id>+<id>'). Immich ids are UUIDs, so never hold it. */
@@ -82,6 +166,7 @@ interface Batch { ids: string[]; days: Record<string, string> }
 /** Landscape photos as they are (unknown sizes too), portrait ones in pairs taken on different days so a pair is never two shots of one
  *  moment. Square-ish ones are left out: cropped to the screen or to half of it, they lose too much. */
 function arrange (list: Asset[]): Batch {
+	saveFrames(list);
 	const out: string[] = [];
 	const days: Record<string, string> = {};
 	const tall: Asset[] = [];
@@ -116,7 +201,7 @@ function search (server: ImmichServer, sel: string): Promise<Batch> {
 	if (parts.length > 1) return search(server, parts[Math.floor(Math.random() * parts.length)]);
 	const keep = (list: Asset[], broad: boolean) => arrange(list.filter((a) => (!a.type || a.type === 'IMAGE') && (!broad || camera(a))));
 	const random = (body: object, broad: boolean) =>
-		immichRequest(server.url, server.key, '/api/search/random', {body: {type: 'IMAGE', withExif: true, size: 40, ...body}})
+		immichRequest(server.url, server.key, '/api/search/random', {body: {type: 'IMAGE', withExif: true, withPeople: true, size: 40, ...body}})
 			.then((text) => keep(JSON.parse(text) as Asset[], broad));
 	if (sel === 'immich:memories') {
 		return immichRequest(server.url, server.key, `/api/memories?for=${today()}`).then((text) => {
@@ -168,14 +253,15 @@ export function nextAsset (server: ImmichServer, sel: string, avoid: string): Pr
 		writeCache(POOL_KEY, pool);
 		return id;
 	};
+	const located = (id: string | null) => id ? readFaces(server, id).then(() => id) : null;
 	const first = take(true);
-	if (first) return Promise.resolve(done(first));
+	if (first) return located(done(first)) || Promise.resolve(null);
 	return search(server, sel).then((batch) => {
 		Object.keys(batch.days).forEach((k) => { days[k] = batch.days[k]; });
 		pool.ids = batch.ids.concat(pool.ids.filter((x) => batch.ids.indexOf(x) === -1));
 		let id = take(true) || take(false);
 		if (!id && batch.ids.length > 0) { pool.shown = []; pool.ids = batch.ids.slice(); id = take(true) || take(false); }   // everything seen: start over
-		return done(id);
+		return located(done(id));
 	});
 }
 

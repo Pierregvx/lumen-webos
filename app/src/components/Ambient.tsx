@@ -1,9 +1,12 @@
 import {useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import {Status} from './Status';
-import {cachedServer, loadServer, nextAsset, previewUrls, type ImmichServer} from '../lib/immich';
+import {cachedServer, loadServer, nextAsset, picturePosition, previewUrls, type ImmichServer} from '../lib/immich';
 import {setAmbientShowing} from '../lib/system';
 import {dimForScreensaver, restoreBacklight} from '../lib/tvcontrols';
 import type {Weather} from '../lib/weather';
+
+interface Layer { urls: string[]; pos: string }
+const NO_LAYER: Layer = {urls: [], pos: ''};
 
 /** how long the wallpaper the home screen showed stays before the first new photo starts loading */
 const WARM_DELAY_MS = 3000;
@@ -14,8 +17,8 @@ const WARM_DELAY_MS = 3000;
  *  Started from the home screen (Art mode, or the idle timer), it opens on the wallpaper already there (`opening`): the home screen fades away, the clock
  *  slides from its place top left to bottom left, and the first new photo loads only after that, so nothing heavy runs while the screen changes. */
 export function Ambient ({source, seconds = 30, backlight, weather, showPeriod, print, opening, onExit}: {source: string; seconds?: number; backlight?: number; weather?: Weather | null; showPeriod?: boolean; print?: boolean; opening?: {urls: string[]; id: string} | null; onExit: () => void}) {
-	// each layer holds one photo's URL, or two for a portrait pair shown side by side
-	const [layers, setLayers] = useState<[string[], string[]]>([opening ? opening.urls : [], []]);
+	// each layer holds one photo's URL, or two for a portrait pair shown side by side, and where they sit (placed on their faces)
+	const [layers, setLayers] = useState<[Layer, Layer]>([opening ? {urls: opening.urls, pos: opening.id ? picturePosition(opening.id) : ''} : NO_LAYER, NO_LAYER]);
 	const [front, setFront] = useState(0);
 	const state = useRef({front: 0, shown: opening ? opening.id : '', alive: true, timer: 0});
 	const warm = useRef(!!opening).current;
@@ -66,7 +69,7 @@ export function Ambient ({source, seconds = 30, backlight, weather, showPeriod, 
 					if (!pic || !s.alive) return;
 					s.shown = pic.id;
 					const back = 1 - s.front;
-					setLayers((l) => { const n: [string[], string[]] = [l[0], l[1]]; n[back] = pic.urls; return n; });
+					setLayers((l) => { const n: [Layer, Layer] = [l[0], l[1]]; n[back] = {urls: pic.urls, pos: picturePosition(pic.id)}; return n; });
 					// two frames so the hidden layer has its picture before it becomes the visible one
 					window.requestAnimationFrame(() => window.requestAnimationFrame(() => { s.front = back; setFront(back); }));
 				})
@@ -89,9 +92,9 @@ export function Ambient ({source, seconds = 30, backlight, weather, showPeriod, 
 
 	return (
 		<div class={warm ? 'ambient ambient--warm' : 'ambient'}>
-			{layers.map((urls, i) => (
+			{layers.map(({urls, pos}, i) => (
 				// keyed by URL, so a new photo restarts the slow zoom
-				<div key={i + urls.join(' ')} class={`ambient__photo${i === front ? ' ambient__photo--on' : ''}${i === 1 ? ' ambient__photo--alt' : ''}${urls.length > 1 ? ' ambient__photo--pair' : ''}`} style={urls.length > 0 ? {backgroundImage: urls.map((u) => `url("${u}")`).join(', '), animationDuration: `${seconds + 6}s`} : undefined} />
+				<div key={i + urls.join(' ')} class={`ambient__photo${i === front ? ' ambient__photo--on' : ''}${i === 1 ? ' ambient__photo--alt' : ''}${urls.length > 1 ? ' ambient__photo--pair' : ''}`} style={urls.length > 0 ? {backgroundImage: urls.map((u) => `url("${u}")`).join(', '), backgroundPosition: pos || undefined, animationDuration: `${seconds + 6}s`} : undefined} />
 			))}
 			{print && <div class="ambient__print" />}
 			<div class="ambient__night" />

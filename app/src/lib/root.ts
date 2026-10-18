@@ -196,7 +196,8 @@ const IMMICH_PATHS = [
 	/^\/api\/albums$/,
 	/^\/api\/search\/random$/,
 	/^\/api\/memories\?for=\d{4}-\d{2}-\d{2}$/,
-	/^\/api\/assets\/[0-9a-f-]{36}\/thumbnail\?size=thumbnail$/
+	/^\/api\/assets\/[0-9a-f-]{36}\/thumbnail\?size=thumbnail$/,
+	/^\/api\/faces\?id=[0-9a-f-]{36}$/
 ];
 
 /** One request to an Immich server, made with curl on the TV: Immich sends no CORS headers outside its dev mode, so the app's own fetch would

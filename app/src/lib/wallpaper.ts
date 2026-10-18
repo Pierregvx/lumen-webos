@@ -12,7 +12,7 @@
 import {LOCAL_WALLPAPERS, WALLPAPERS, cloudUrl} from '../config/wallpapers';
 import {BOOT_WALLPAPER_KEY, readCache, writeCache, type BootWallpaper} from './boot';
 import {blobToDataUrl, fetchBlob, getPics, keepOnly, putPics, type Pics} from './wpstore';
-import {blurredCopies, cachedServer, loadServer, nextAsset, previewUrls} from './immich';
+import {blurredCopies, cachedServer, loadServer, nextAsset, picturePosition, previewUrls} from './immich';
 import {bootMark} from './log';
 
 const HTML_CLASS = 'wp-image';
@@ -241,21 +241,22 @@ function ensureElement (): HTMLElement {
 
 /** Shows a picture: a hard cut when nothing is there yet, otherwise it fades in over what is (the blur index.html painted, or the last picture). */
 let fadeTimer = 0;
-function paint (el: HTMLElement, src: string): void {
+function paint (el: HTMLElement, src: string, pos: string): void {
 	const before = el.style.backgroundImage;
 	window.clearTimeout(fadeTimer);
 	const old = el.querySelector('.wpfade');
 	if (old) old.remove();
 	const next = cssImage(src);
 	const pair = isPair(src);
-	if (!before || before === 'none' || before === next || document.documentElement.classList.contains('reduce-motion')) { el.style.backgroundImage = next; el.classList.toggle('wp-pair', pair); return; }
+	if (!before || before === 'none' || before === next || document.documentElement.classList.contains('reduce-motion')) { el.style.backgroundImage = next; el.style.backgroundPosition = pos; el.classList.toggle('wp-pair', pair); return; }
 	// the new picture on a layer inside #wpimage (so night dimming covers it), faded with opacity only, then moved onto #wpimage itself
 	const layer = document.createElement('div');
 	layer.className = pair ? 'wpfade wp-pair' : 'wpfade';
 	layer.style.backgroundImage = next;
+	layer.style.backgroundPosition = pos;
 	el.appendChild(layer);
 	window.requestAnimationFrame(() => window.requestAnimationFrame(() => { layer.style.opacity = '1'; }));
-	fadeTimer = window.setTimeout(() => { el.style.backgroundImage = next; el.classList.toggle('wp-pair', pair); layer.remove(); }, FADE_MS + 60);
+	fadeTimer = window.setTimeout(() => { el.style.backgroundImage = next; el.style.backgroundPosition = pos; el.classList.toggle('wp-pair', pair); layer.remove(); }, FADE_MS + 60);
 }
 
 /** The sharp picture on screen now (one URL, or two for a portrait pair) and its Immich id, or null when none is painted. */
@@ -286,7 +287,8 @@ export function setWallpaper (sel: string): void {
 		root.toggle('wp-art', isArt(shownKey));
 		decoded.imgs = imgs;
 		released = false;
-		paint(el, src);
+		// an Immich photo is placed on its faces (lib/immich.ts); anything else keeps global.css's centre
+		paint(el, src, c.id && currentSel.indexOf('immich:') === 0 ? picturePosition(c.id) : '');
 		root.add(HTML_CLASS);
 		setBlur(c.src);
 		saveBoot();

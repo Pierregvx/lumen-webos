@@ -5,7 +5,8 @@ Settings > Wallpaper > Photos shows your own photos from an Immich server on the
 ## Set up (once, over ssh to the TV)
 
 1. In Immich: Account Settings > API Keys > New API Key. Give it only these permissions: `album.read`, `asset.read`, `asset.view`,
-   `memory.read`. It can then read photos and nothing else.
+   `memory.read`, `face.read`. It can then read photos and nothing else. Without `face.read` everything still works, but photos are
+   not placed on their faces (see below).
 2. On the TV:
 
    ```sh
@@ -33,10 +34,18 @@ their EXIF, which drops screenshots and saved images. The next picture comes fro
 for a pair), so two pictures in a row are not from the same day. Lumen searches again for one before it gives this up. Recently shown photos (the last 40) are not repeated, counted per photo, so a
 portrait does not come back soon in a new pair.
 
+A photo is cropped to fill the screen, or its half of it for a pair, so part of it is always cut off. Lumen moves the crop so the faces
+in it stay in view, a little above the middle. A photo with no faces keeps more of its top than its bottom, since heads and subjects tend
+to sit high. A 9:16 phone portrait in a pair loses about 300 px top and bottom together, so this matters most there.
+
 ## How it works
 
 - Immich sends no CORS headers outside its dev mode, so a TV web app cannot call its API directly. Every API call goes through curl on the
-  TV (`immichRequest` in `app/src/lib/root.ts`, which only accepts a plain address, a plain key and five fixed paths).
+  TV (`immichRequest` in `app/src/lib/root.ts`, which only accepts a plain address, a plain key and six fixed paths).
+- Face positions: the search says only which photos have people, not where their faces are (checked on Immich 3.3). So when a photo with
+  people is picked, Lumen asks `/api/faces?id=<id>` for its face boxes, one small request per photo. Each photo's shape and face centre
+  are kept in localStorage (`lumen-immich-frames-v1`, the newest 300), and `picturePosition` in `lib/immich.ts` turns them into a
+  `background-position` for the wallpaper and the screensaver.
 - The photo itself is loaded as an ordinary image from `/api/assets/<id>/thumbnail?size=preview&apiKey=...` (about 1440 px on the long
   side), which needs no CORS. It is never sent through images.weserv.nl or anywhere else off the home network.
 - The blurred copies the glass and the lower rows show are made on the TV from Immich's small thumbnail, once per photo. For a pair, both
