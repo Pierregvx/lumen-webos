@@ -856,6 +856,10 @@ html:not(.wp-video) .videocap { display: none; }
 .clock__time { display: inline-flex; align-items: center; letter-spacing: 0 !important; font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1, 'case' 1; }
 .clock__colon { display: inline-block; width: 0.34em; text-align: center; opacity: 0.78; margin: 0; padding: 0; position: relative; top: -0.04em; }
 .clock__period { align-self: center; }
+/* SF's 'case' colon is already centred, so no nudge; proportional digits, as on Apple's clocks, so a 1 leaves no gap */
+.sf .clock__time { align-items: baseline; font-variant-numeric: normal; font-feature-settings: 'case' 1; }
+.sf .clock__colon { top: 0; width: auto; padding: 0 0.02em; }
+.sf .clock__period { align-self: baseline; }
 
 /* video wallpaper: the lower-rows backdrop is a see-through veil, not an opaque panel; none at all while the dock is away */
 html.wp-video .screen--lower::before { background-color: transparent; background-image: linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42)); }
@@ -1004,14 +1008,14 @@ html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.1; }
 
 /* ---------- peek and grid spacing, measured from tvOS ----------
    At rest only a sliver of the grid's first row shows under the bar. Down in the grid, the grid rows drop 40px further from the bar
-   (about 70px of space under the glass, as on tvOS) so the focused tile has room. The focused grid tile grows 1.175x. The bar's tiles grow 1.135x, clearly focused but well clear of the edge of the bar's 40px of glass. */
+   (about 70px of space under the glass, as on tvOS) so the focused tile has room. The focused grid tile grows 1.175x. The bar's tiles grow 1.155x, clearly focused but well clear of the edge of the bar's 40px of glass. */
 .screen--lower .rows > .row:not(:first-child) { transform: translateY(40px); }
 .rows { --motion-focus-scale: 1.175; }
 html.focus-subtle .rows { --motion-focus-scale: 1.1; }
 html.focus-strong .rows { --motion-focus-scale: 1.235; }
-.rows > .row:first-child { --motion-focus-scale: 1.135; }
-html.focus-subtle .rows > .row:first-child { --motion-focus-scale: 1.06; }
-html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.15; }
+.rows > .row:first-child { --motion-focus-scale: 1.155; }
+html.focus-subtle .rows > .row:first-child { --motion-focus-scale: 1.08; }
+html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.17; }
 .rows > .row:not(:first-child) .tile__label { margin-top: 32px; }
 
 /* ---------- tiles lit from above, as on tvOS: a soft shadow under each tile, and over its artwork a light from the top left (20 degrees
@@ -1071,12 +1075,15 @@ html.liveblur .cc__mod {
 .cc__circle { width: var(--cc-u); display: flex; align-items: center; justify-content: center; }
 
 .cc__slider { width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); overflow: hidden; }
-.cc__fill { position: absolute; left: 0; top: 0; bottom: 0; overflow: hidden; background: rgba(255, 255, 255, 0.5); text-shadow: none; }
-.cc__mod--focused .cc__fill { background: #fff; }
+/* the fill is a second sheet of frost on the slider's glass: a brighter tint and its own rim, no second blur (the slider's glass already blurs) */
+.cc__fill {
+	position: absolute; left: 0; top: 0; bottom: 0; overflow: hidden;
+	background: linear-gradient(135deg, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0.14) 45%, rgba(255, 255, 255, 0.24) 100%);
+	box-shadow: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.95), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.5), inset 0 0 16px rgba(255, 255, 255, 0.16), 4px 0 14px rgba(0, 0, 0, 0.18);
+}
+.cc__mod--focused .cc__fill { background: linear-gradient(135deg, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.26) 45%, rgba(255, 255, 255, 0.40) 100%); }
 .cc__slidertext { position: absolute; left: 0; top: 0; bottom: 0; width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); display: flex; flex-direction: row; align-items: center; padding: 0 26px 0 22px; box-sizing: border-box; font-size: 21px; font-weight: 600; white-space: nowrap; }
 .cc__slidertext svg { width: 34px; height: 34px; margin-right: 12px; }
-.cc__fill .cc__slidertext { color: #111; }
-.cc__fill .cc__slidertext svg { stroke: #111; }
 .cc__num { margin-left: auto; font-weight: 500; }
 
 /* A tile's list of choices (Sound, Picture, Theme, Clock), as tvOS's Sleep Timer. ControlCenter.tsx animates every layer with keyframes; these

@@ -11,7 +11,7 @@ startLog();
 // SF Pro from the app's folder: put there by a private build, or copied in from the TV's copy (tools/push_sf_font.sh); neither means Geist
 if ('FontFace' in window) {
 	const url = new URL('fonts/sf.woff2', location.href).href;
-	const sf = () => new FontFace('SF Private', `url(${url})`, {weight: '1 1000'}).load().then((face) => { document.fonts.add(face); });
+	const sf = () => new FontFace('SF Private', `url(${url})`, {weight: '1 1000'}).load().then((face) => { document.fonts.add(face); document.documentElement.classList.add('sf'); });
 	// the app can't read outside its own folder, so the copy waits for root; 5s keeps it clear of the startup commands
 	sf().catch(() => { setTimeout(() => { copyFontIn(decodeURIComponent(location.pathname).replace(/\/[^/]*$/, '')).then((ok) => ok ? sf() : undefined).catch(() => undefined); }, 5000); });
 }

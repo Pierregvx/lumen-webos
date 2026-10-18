@@ -114,6 +114,8 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [ ] SF font from the TV: `npm run push-font` (once), then update and relaunch. The first launch after each update copies the font into
       the app's folder about 5 seconds in, so the text turns from Geist to SF then; later launches start in SF. Reading straight from
       `/var/lib/homehook/` was tried on 2026-10-18 and webOS 25 refuses it: the app can only read its own folder. (verify)
+- [ ] SF clock: with SF loaded, every clock (home, screensaver, Settings) has its colon centred between the digits and even spacing.
+      Seen right on the screensaver clock on 2026-10-18 (injected live); the others not yet. (verify)
 - [ ] Guide button: rebind it with Input Hook to run `luna-send -n 1 luna://com.webos.applicationManager/launch '{"id":"com.samrenfrew.lumen","params":{"view":"guide"}}'`.
       With Lumen closed and with it in front, it should open the Guide (or the Full guide, by Settings). Needs the Live TV row on. (verify)
 - [ ] Colour buttons: which does this remote have, and which key codes reach the app?
