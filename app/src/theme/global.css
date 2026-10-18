@@ -1028,13 +1028,14 @@ html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.15; }
    One grid, four squares wide: circles are one square, tiles two, the backlight bar three. Every control is the same height, fully rounded,
    18px apart. The glass and the focus are the top buttons' own (.pill), live blur included, so the colours match. A control that is on
    shows a blue icon, as on tvOS. */
-html body .panel.panel--cc {
+/* :root lifts this above html.liveblur.light .panel, which would paint a light panel behind the controls */
+html:root body .panel.panel--cc {
 	--cc-u: 90px; --cc-gap: 18px; --cc-on: rgb(64, 196, 255);
 	background: none !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
 	width: calc(4 * var(--cc-u) + 3 * var(--cc-gap)); padding: 0; top: 150px; border-radius: 0;
 }
 /* Inputs: the same glass, one wide pill per input (three grid squares) */
-html body .panel.panel--inputs { width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); }
+html:root body .panel.panel--inputs { width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); }
 .panel--inputs .cc__tile { width: 100%; margin-bottom: var(--cc-gap); }
 /* LG's input pictures fill only part of their square: at 50px in the 40px icon space they draw about 28px across, like the other icons */
 .cc__inputicon { width: 50px; height: 50px; margin: -5px; object-fit: contain; filter: brightness(0) invert(1) opacity(0.9); }
