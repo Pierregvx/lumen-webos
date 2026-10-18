@@ -13,6 +13,7 @@ export interface ImmichServer { url: string; key: string }
 /** The choices offered in Settings > Wallpaper > Choose wallpaper > Photos. */
 export const IMMICH_SOURCES: {key: string; title: string}[] = [
 	{key: 'immich:recent', title: 'Recent (last 90 days)'},
+	{key: 'immich:recent-people', title: 'Recent, with people'},
 	{key: 'immich:memories', title: 'On this day'},
 	{key: 'immich:favorites', title: 'Favourites'},
 	{key: 'immich:all', title: 'All my photos'}
@@ -50,6 +51,8 @@ interface Asset {
 	type?: string;
 	width?: number | null;
 	height?: number | null;
+	/** the people Immich found in the picture, named or not; present only when asked for with withPeople */
+	people?: unknown[] | null;
 	exifInfo?: {exifImageWidth?: number | null; exifImageHeight?: number | null; orientation?: string | null; make?: string | null} | null;
 }
 
@@ -85,6 +88,15 @@ function search (server: ImmichServer, sel: string): Promise<string[]> {
 	}
 	if (sel === 'immich:favorites') return random({isFavorite: true}, false);
 	if (sel === 'immich:recent') return random({takenAfter: new Date(Date.now() - RECENT_DAYS * 864e5).toISOString()}, true);
+	if (sel === 'immich:recent-people') {
+		// a bigger batch, since only some have people in them; if none do (or the server leaves people out) it falls back to plain Recent
+		const body = {type: 'IMAGE', withExif: true, withPeople: true, size: 120, takenAfter: new Date(Date.now() - RECENT_DAYS * 864e5).toISOString()};
+		return immichRequest(server.url, server.key, '/api/search/random', {body}).then((text) => {
+			const list = (JSON.parse(text) as Asset[]).filter((a) => !!a.people && a.people.length > 0);
+			const ids = keep(list, true);
+			return ids.length > 0 ? ids : search(server, 'immich:recent');
+		});
+	}
 	if (sel.indexOf('immich:album:') === 0) return random({albumIds: [sel.slice(13)]}, false);
 	return random({}, true);
 }

@@ -2,15 +2,24 @@ import {useEffect, useRef, useState} from 'preact/hooks';
 import {Status} from './Status';
 import {cachedServer, loadServer, nextAsset, previewUrl, type ImmichServer} from '../lib/immich';
 import {setAmbientShowing} from '../lib/system';
+import {dimForScreensaver, restoreBacklight} from '../lib/tvcontrols';
 import type {Weather} from '../lib/weather';
 
 /** Screensaver with your own photos (Immich). Opened by watch.sh with {"view":"ambient"} when the TV's screensaver starts, instead of LG's.
  *  Two full-screen layers: the next photo is loaded and decoded on the hidden one, then they swap with a crossfade (opacity only) every `seconds` (Settings > Screensaver > Time on each photo, 30 by default); each photo
  *  zooms in very slowly (transform only). The clock, date and weather sit bottom left. Any key or a click goes back to the home screen. */
-export function Ambient ({source, seconds = 30, weather, showPeriod, onExit}: {source: string; seconds?: number; weather?: Weather | null; showPeriod?: boolean; onExit: () => void}) {
+export function Ambient ({source, seconds = 30, backlight, weather, showPeriod, onExit}: {source: string; seconds?: number; backlight?: number; weather?: Weather | null; showPeriod?: boolean; onExit: () => void}) {
 	const [layers, setLayers] = useState<[string, string]>(['', '']);
 	const [front, setFront] = useState(0);
 	const state = useRef({front: 0, shown: '', alive: true, timer: 0});
+
+	// the TV's backlight goes down while the screensaver shows (Settings > Screensaver > Brightness) and back up when it ends
+	useEffect(() => {
+		if (backlight === undefined) return;
+		let on = true;
+		dimForScreensaver(backlight, () => on);
+		return () => { on = false; restoreBacklight(); };
+	}, [backlight]);
 
 	useEffect(() => {
 		const s = state.current;
@@ -59,6 +68,7 @@ export function Ambient ({source, seconds = 30, weather, showPeriod, onExit}: {s
 				// keyed by URL, so a new photo restarts the slow zoom
 				<div key={i + url} class={`ambient__photo${i === front ? ' ambient__photo--on' : ''}${i === 1 ? ' ambient__photo--alt' : ''}`} style={url ? {backgroundImage: `url("${url}")`, animationDuration: `${seconds + 6}s`} : undefined} />
 			))}
+			<div class="ambient__night" />
 			<div class="ambient__shade" />
 			<div class="screen ambient__status"><Status weather={weather} showPeriod={showPeriod} /></div>
 		</div>

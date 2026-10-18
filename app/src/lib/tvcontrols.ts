@@ -3,6 +3,7 @@
 
 import {isWebOS, lunaCall} from './luna';
 import * as root from './root';
+import {readCache, writeCache} from './boot';
 
 const AUDIO = 'luna://com.webos.audio/';
 
@@ -82,6 +83,32 @@ export function setBacklight (level: number): Promise<void> {
 	if (!isWebOS()) return Promise.resolve();
 	if (!Number.isInteger(level) || level < 0 || level > 100) return Promise.reject(new Error('bad backlight level'));
 	return root.setSetting('backlight', String(level));
+}
+
+/** The backlight before the screensaver lowered it, kept until it is put back, so a launch after a crash can still put it back. */
+const SAVED_BACKLIGHT_KEY = 'lumen-screensaver-backlight-v1';
+let dimmedHere = false;
+
+/** Lowers the backlight to `level` for the screensaver (never raises it), keeping the old value to put back. */
+export function dimForScreensaver (level: number, stillWanted: () => boolean): void {
+	readBacklight().then((before) => {
+		if (before === null || before <= level || !stillWanted()) return;
+		if (readCache<number>(SAVED_BACKLIGHT_KEY) === null) writeCache(SAVED_BACKLIGHT_KEY, before);
+		dimmedHere = true;
+		return setBacklight(level);
+	}).catch(() => undefined);
+}
+
+/** Puts back the backlight the screensaver lowered, if it did. Safe to call at any time. */
+export function restoreBacklight (): void {
+	const before = readCache<number>(SAVED_BACKLIGHT_KEY);
+	if (before === null) return;
+	setBacklight(before).then(() => { writeCache(SAVED_BACKLIGHT_KEY, null); dimmedHere = false; }).catch(() => undefined);
+}
+
+/** At start-up: a backlight left low by a screensaver that never ended (Lumen closed or crashed) is put back, unless this launch dimmed it. */
+export function restoreLeftoverBacklight (): void {
+	if (!dimmedHere) restoreBacklight();
 }
 
 export function setEyeComfort (on: boolean): Promise<void> {

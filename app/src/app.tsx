@@ -20,6 +20,7 @@ import {appTile, inputTile, pickInOrder} from './lib/tiles';
 import {TIMING} from './config/constants';
 import {LOCAL_WALLPAPERS, WALLPAPERS, WALLPAPER_CATEGORIES, cloudUrl} from './config/wallpapers';
 import {resized, setFavorites, setLiveBlur, setWallpaper} from './lib/wallpaper';
+import {restoreLeftoverBacklight} from './lib/tvcontrols';
 import {albums as immichAlbums, cachedServer, IMMICH_SOURCES, loadServer} from './lib/immich';
 import {Ambient} from './components/Ambient';
 import {setVideoChoice, setVideoPaused, setVideoWallpaper, VIDEO_PLACES} from './lib/wallpaperVideo';
@@ -44,8 +45,8 @@ const LIVE_INFO_W = 660;
 /** how much higher the Live TV row sits when focused, so its now/next block fits on screen */
 const LIVE_BELOW = 150;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientSeconds: 'ambient-seconds', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
-const WP_AUTO_CHOICES = [0, 15, 30, 60];
+const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
+const WP_AUTO_CHOICES = [0, 1, 5, 15, 30, 60];
 /** when the video wallpaper plays (Settings > Wallpaper > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
 const VIDEO_HOURS: Record<string, [number, number]> = {day: [7, 19], evening: [17, 23], night: [19, 7]};
 function inVideoHours (mode: string, now = new Date()): boolean {
@@ -57,6 +58,8 @@ function inVideoHours (mode: string, now = new Date()): boolean {
 /** tile sizes for 5, 6 or 7 apps a row: always about 1670px wide, with 40px of glass round them (the bar about 91% of the screen), still 5:3 */
 const TILES_FOR: Record<number, {size: number; height: number; gap: number}> = {5: {size: 288, height: 173, gap: 58}, 6: {size: 240, height: 144, gap: 46}, 7: {size: 206, height: 124, gap: 38}};
 const IDLE_CHOICES = [0, 5, 10, 20, 30];
+/** the backlight the screensaver lowers the TV to, by Settings > Screensaver > Brightness */
+const AMBIENT_BACKLIGHT: Record<string, number> = {dim: 30, low: 10};
 const RECENT_MAX = 8;
 /** what the last launch showed, drawn at once on a cold start (lib/boot.ts) */
 const INPUTS_CACHE_KEY = 'lumen-boot-inputs-v1';
@@ -205,12 +208,15 @@ export function App () {
 		return () => { cancel(); window.clearInterval(id); };
 	}, [config.showWeather, config.weatherCity]);
 
-	// a new wallpaper every N minutes (only when a shuffle is chosen)
+	// a new wallpaper every N minutes (only for a shuffle or Immich photos: a fixed picture has nothing to change to)
 	useEffect(() => {
-		if (!config.wpAutoMinutes || config.wallpaper.indexOf('shuffle') !== 0) return;
+		if (!config.wpAutoMinutes || (config.wallpaper.indexOf('shuffle') !== 0 && config.wallpaper.indexOf('immich:') !== 0)) return;
 		const id = window.setInterval(() => { if (!document.hidden) setWallpaper(config.wallpaper); }, config.wpAutoMinutes * 60000);
 		return () => window.clearInterval(id);
 	}, [config.wpAutoMinutes, config.wallpaper]);
+
+	// a backlight left low by a screensaver that never ended goes back up
+	useEffect(() => afterFirstFrame(restoreLeftoverBacklight, 3000), []);
 
 	// night: a dimmer wallpaper between 19:00 and 06:00
 	useEffect(() => {
@@ -354,7 +360,7 @@ export function App () {
 		return {
 			[OPTION.country]: {labels: ['Any'].concat(COUNTRIES.map((c) => c.name)), values: [''].concat(COUNTRIES.map((c) => c.code)), now: config.weatherCountry},
 			[OPTION.city]: {labels: ['Not set', 'Auto'].concat(cities), values: ['', AUTO_PLACE].concat(cities), now: config.weatherCity},
-			[OPTION.wpAuto]: {labels: ['Off', '15 min', '30 min', '60 min'], values: WP_AUTO_CHOICES, now: config.wpAutoMinutes},
+			[OPTION.wpAuto]: {labels: ['Off', '1 min', '5 min', '15 min', '30 min', '60 min'], values: WP_AUTO_CHOICES, now: config.wpAutoMinutes},
 			[OPTION.dockHide]: {labels: ['Off', 'Down arrow', 'After idle', 'Both'], values: ['off', 'down', 'idle', 'both'], now: config.dockHide},
 			[OPTION.darkMode]: {labels: ['Light', 'Dark', 'Auto'], values: ['off', 'on', 'auto'], now: config.darkMode},
 			[OPTION.language]: {labels: ['Auto'].concat(LANGS.map((l) => l.name)), values: ['auto'].concat(LANGS.map((l) => l.code)), now: config.language},
@@ -363,6 +369,7 @@ export function App () {
 			[OPTION.firstRow]: {labels: ['5', '6', '7'], values: [5, 6, 7], now: config.firstRow},
 			[OPTION.ambient]: {labels: ['LG\'s own'].concat(IMMICH_SOURCES.map((x) => `Photos: ${x.title}`), immich.albums.map((a) => `Photos: ${a.title}`)), values: [''].concat(IMMICH_SOURCES.map((x) => x.key), immich.albums.map((a) => `immich:album:${a.id}`)), now: config.ambient},
 			[OPTION.ambientSeconds]: {labels: ['10 seconds', '20 seconds', '30 seconds', '1 minute', '2 minutes', '5 minutes'], values: [10, 20, 30, 60, 120, 300], now: config.ambientSeconds},
+			[OPTION.ambientBrightness]: {labels: ['As the TV is set', 'Dim', 'Very dim'], values: ['tv', 'dim', 'low'], now: config.ambientBrightness},
 			[OPTION.videoHours]: {labels: ['Always', 'Daytime (7 am to 7 pm)', 'Evenings (5 pm to 11 pm)', 'Night (7 pm to 7 am)'], values: ['always', 'day', 'evening', 'night'], now: config.videoHours}
 		};
 	}, [config, immich]);
@@ -422,7 +429,7 @@ export function App () {
 			id: OPTION.wpAuto,
 			group: 'wallpaper' as const,
 			label: 'Change wallpaper automatically',
-			description: 'With a Shuffle wallpaper chosen, pick a new picture every 15, 30 or 60 minutes.',
+			description: 'With a Shuffle or Photos wallpaper chosen, show a new picture every 1 to 60 minutes.',
 			value: config.wpAutoMinutes > 0,
 			...listed(OPTION.wpAuto)
 		},
@@ -443,6 +450,13 @@ export function App () {
 			description: 'How long each photo stays on the screensaver before the next one fades in.',
 			value: true,
 			...listed(OPTION.ambientSeconds)
+		}, {
+			id: OPTION.ambientBrightness,
+			group: 'screensaver' as const,
+			label: 'Brightness',
+			description: 'Turns the TV\'s backlight down while your photos show, and back up when you press a key.',
+			value: config.ambientBrightness !== 'tv',
+			...listed(OPTION.ambientBrightness)
 		}] : []),
 		{
 			id: OPTION.videoHours,
@@ -550,7 +564,7 @@ export function App () {
 			description: 'Frames drawn in the last second and the longest frame, in the top-left corner. Only in dev builds.',
 			value: config.fpsCounter
 		}] : [])
-	], [config.liveTvRow, config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur, config.ambient, config.ambientSeconds, immich.ready]);
+	], [config.liveTvRow, config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur, config.ambient, config.ambientSeconds, config.ambientBrightness, immich.ready]);
 
 	const wallpaper: WallpaperTab = useMemo(() => {
 		if (!inSettings) return {categories: [], entries: [], current: '', onPick: () => undefined, onFavorite: () => undefined};
@@ -703,6 +717,7 @@ export function App () {
 		else if (optionId === OPTION.videoHours) updateConfig({...c, videoHours: v});
 		else if (optionId === OPTION.ambient) updateConfig({...c, ambient: v});
 		else if (optionId === OPTION.ambientSeconds) updateConfig({...c, ambientSeconds: Number(value)});
+		else if (optionId === OPTION.ambientBrightness) updateConfig({...c, ambientBrightness: v});
 	}, [choices]);
 
 	/** Replace a row's order with `keys` (the full list of what's shown). */
@@ -716,7 +731,7 @@ export function App () {
 		<>
 			{/* Home stays mounted under Settings so it keeps its focus position. */}
 			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} menuItems={MENU_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} dockHide={config.dockHide} focusRow={focusRow} />
-			{screen === 'ambient' && <Ambient source={config.ambient} seconds={config.ambientSeconds} weather={weather} showPeriod={config.showAmPm} onExit={() => setScreen('home')} />}
+			{screen === 'ambient' && <Ambient source={config.ambient} seconds={config.ambientSeconds} backlight={AMBIENT_BACKLIGHT[config.ambientBrightness]} weather={weather} showPeriod={config.showAmPm} onExit={() => setScreen('home')} />}
 			{screen === 'guide' && <Guide channels={live.channels} listings={live.listings} logos={live.logos} now={live.now} schedule={live.schedule} full={config.guideFull} onMode={(full) => { if (configRef.current.guideFull !== full) updateConfig({...configRef.current, guideFull: full}); }} active={!controls} onOpen={watchChannel} onClose={() => setScreen('home')} />}
 			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onChoose={onChoose} onClose={() => setScreen('home')} />}
 			{controls && <ControlCenter

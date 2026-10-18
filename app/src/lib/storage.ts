@@ -59,6 +59,8 @@ export interface UserConfig {
 	ambient: string;
 	/** seconds each photo stays on the ambient screen */
 	ambientSeconds: number;
+	/** how far the screensaver lowers the TV's backlight while it shows: tv (not at all) | dim | low */
+	ambientBrightness: string;
 	/** how strongly the focused tile stands out: subtle | normal | strong */
 	focusStrength: string;
 	/** apps in the first row (the glass bar): 5, 6 or 7 */
@@ -107,6 +109,7 @@ export const DEFAULT_CONFIG: UserConfig = {
 	liveBlur: true,
 	ambient: '',
 	ambientSeconds: 30,
+	ambientBrightness: 'dim',
 	focusStrength: 'normal',
 	firstRow: 6,
 	videoHours: 'always',
@@ -162,6 +165,7 @@ export function parseConfig (raw: string): UserConfig {
 		hideNames: parsed.hideNames === true,
 		liveBlur: parsed.liveBlur !== false,
 		ambientSeconds: [10, 20, 30, 60, 120, 300].indexOf(Number(parsed.ambientSeconds)) !== -1 ? Number(parsed.ambientSeconds) : 30,
+		ambientBrightness: parsed.ambientBrightness === 'tv' || parsed.ambientBrightness === 'low' ? parsed.ambientBrightness : 'dim',
 		ambient: typeof parsed.ambient === 'string' && parsed.ambient.indexOf('immich:') === 0 ? parsed.ambient : '',
 		focusStrength: parsed.focusStrength === 'subtle' || parsed.focusStrength === 'strong' ? parsed.focusStrength : 'normal',
 		firstRow: parsed.firstRow === 5 || parsed.firstRow === 7 ? parsed.firstRow : 6,

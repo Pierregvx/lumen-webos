@@ -29,6 +29,14 @@ Every push to a branch other than `main` reaches the TV as a Homebrew Channel up
 
 ### Verify on the TV (built, not yet seen working)
 Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or later).
+- [ ] Screensaver brightness (verify): with Brightness at Dim, the backlight drops to 30 while the photos show and goes back to its old
+      value on any key. Lumen closed mid-screensaver: the next launch puts the old value back after about 3 s.
+- [ ] Night dim on the screensaver: after 7 pm with Dim the wallpaper at night on, the photos are darker too.
+- [ ] Immich wallpaper night dim: after 7 pm the Photos wallpaper shows at 55%, like a cloud one. The code path is the same; Sam saw it not dim.
+- [ ] Photos: Recent, with people (verify): only pictures with faces. If Immich leaves out `people` on /api/search/random, it falls back to Recent.
+- [ ] Guide after switch-on (verify): the row and Guide fill within a minute or two of the TV's table filling. `grep guide /var/lib/homehook/lumen.log`
+      shows one "now and next" line per change: how many channels are listed and how many have something on now.
+- [ ] Change wallpaper automatically at 1 min with a Photos wallpaper: a new Immich picture each minute.
 - [ ] Settings backup: change something in Lumen, wait 5 s, then `cat /var/lib/homehook/lumen-config.json` over ssh. Then uninstall and
       reinstall (or install the other id): the settings should come back with a "Settings restored from the TV" message.
 - [ ] Error log: `cat /var/lib/homehook/lumen.log`. It should exist after anything has failed (for example turning on Live app list with the
