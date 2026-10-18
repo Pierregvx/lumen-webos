@@ -1036,10 +1036,10 @@ html body .panel.panel--cc {
 /* Inputs: the same glass, one wide pill per input (three grid squares) */
 html body .panel.panel--inputs { width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); }
 .panel--inputs .cc__tile { width: 100%; margin-bottom: var(--cc-gap); }
-/* LG's input pictures fill only half their square, so they are drawn at 72px in the 40px icon space to look the size of the other icons */
-.cc__inputicon { width: 72px; height: 72px; margin: -16px; object-fit: contain; filter: brightness(2.4); }
-html.light .cc__inputicon { filter: brightness(0.4); }
-html.light .cc__mod--focused .cc__inputicon { filter: brightness(2.4); }
+/* LG's input pictures fill only part of their square: at 50px in the 40px icon space they draw about 28px across, like the other icons */
+.cc__inputicon { width: 50px; height: 50px; margin: -5px; object-fit: contain; filter: brightness(0) invert(1) opacity(0.9); }
+html.light .cc__inputicon { filter: brightness(0) opacity(0.72); }
+html.light .cc__mod--focused .cc__inputicon { filter: brightness(0) invert(1); }
 .cc__row { display: flex; flex-direction: row; margin-bottom: var(--cc-gap); }
 .cc__row > * + * { margin-left: var(--cc-gap); }
 .cc__mod {
