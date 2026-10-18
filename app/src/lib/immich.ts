@@ -76,13 +76,18 @@ export function pictureIds (pic: string): string[] { return pic.split(PAIR); }
 
 function day (a: Asset): string { return (a.localDateTime || a.fileCreatedAt || '').slice(0, 10); }
 
+/** Candidate pictures, and the day each photo in them was taken (by photo id, for the photos Immich gave a date). */
+interface Batch { ids: string[]; days: Record<string, string> }
+
 /** Landscape photos as they are (unknown sizes too), portrait ones in pairs taken on different days so a pair is never two shots of one
  *  moment. Square-ish ones are left out: cropped to the screen or to half of it, they lose too much. */
-function arrange (list: Asset[]): string[] {
+function arrange (list: Asset[]): Batch {
 	const out: string[] = [];
+	const days: Record<string, string> = {};
 	const tall: Asset[] = [];
 	list.forEach((a) => {
 		const r = ratio(a);
+		if (day(a)) days[a.id] = day(a);
 		if (!r || r >= 1.2) out.push(a.id);
 		else if (r <= 1 / 1.2) tall.push(a);
 	});
@@ -93,7 +98,7 @@ function arrange (list: Asset[]): string[] {
 		if (i !== -1) out.push(a.id + PAIR + tall.splice(i, 1)[0].id);
 	}
 	for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = out[i]; out[i] = out[j]; out[j] = t; }
-	return out;
+	return {ids: out, days};
 }
 
 /** Looks like a camera photo: screenshots and saved images carry no camera make. Only applied to the broad sources (Recent, All). */
@@ -105,7 +110,7 @@ function today (): string {
 }
 
 /** A batch of candidate pictures for a source, already filtered. */
-function search (server: ImmichServer, sel: string): Promise<string[]> {
+function search (server: ImmichServer, sel: string): Promise<Batch> {
 	const keep = (list: Asset[], broad: boolean) => arrange(list.filter((a) => (!a.type || a.type === 'IMAGE') && (!broad || camera(a))));
 	const random = (body: object, broad: boolean) =>
 		immichRequest(server.url, server.key, '/api/search/random', {body: {type: 'IMAGE', withExif: true, size: 40, ...body}})
@@ -113,8 +118,8 @@ function search (server: ImmichServer, sel: string): Promise<string[]> {
 	if (sel === 'immich:memories') {
 		return immichRequest(server.url, server.key, `/api/memories?for=${today()}`).then((text) => {
 			const memories = JSON.parse(text) as {assets?: Asset[]}[];
-			const ids = keep(memories.reduce((all, m) => all.concat(m.assets || []), [] as Asset[]), false);
-			return ids.length > 0 ? ids : random({takenAfter: new Date(Date.now() - RECENT_DAYS * 864e5).toISOString()}, true);   // no memories today
+			const batch = keep(memories.reduce((all, m) => all.concat(m.assets || []), [] as Asset[]), false);
+			return batch.ids.length > 0 ? batch : random({takenAfter: new Date(Date.now() - RECENT_DAYS * 864e5).toISOString()}, true);   // no memories today
 		});
 	}
 	if (sel === 'immich:favorites') return random({isFavorite: true}, false);
@@ -124,41 +129,49 @@ function search (server: ImmichServer, sel: string): Promise<string[]> {
 		const body = {type: 'IMAGE', withExif: true, withPeople: true, size: 120, takenAfter: new Date(Date.now() - RECENT_DAYS * 864e5).toISOString()};
 		return immichRequest(server.url, server.key, '/api/search/random', {body}).then((text) => {
 			const list = (JSON.parse(text) as Asset[]).filter((a) => !!a.people && a.people.length > 0);
-			const ids = keep(list, true);
-			return ids.length > 0 ? ids : search(server, 'immich:recent');
+			const batch = keep(list, true);
+			return batch.ids.length > 0 ? batch : search(server, 'immich:recent');
 		});
 	}
 	if (sel.indexOf('immich:album:') === 0) return random({albumIds: [sel.slice(13)]}, false);
 	return random({}, true);
 }
 
-interface Pool { sel: string; ids: string[]; shown: string[] }
+/** last: the days of the picture picked last time, which the next pick keeps away from */
+interface Pool { sel: string; ids: string[]; shown: string[]; days?: Record<string, string>; last?: string[] }
 
-/** The next picture for a source: from the pool left by the last search, searching again when it runs dry. Skips recently shown ones. */
+/** The next picture for a source: from the pool left by the last search, searching again when it runs dry. Skips recently shown ones, and
+ *  prefers one taken on other days than the last picture, searching again for one before giving that up. */
 export function nextAsset (server: ImmichServer, sel: string, avoid: string): Promise<string | null> {
 	const saved = readCache<Pool>(POOL_KEY);
 	const pool: Pool = saved && saved.sel === sel ? saved : {sel, ids: [], shown: []};
+	const days = pool.days || {};
+	const last = pool.last || [];
 	// shown and avoid are kept per photo, since the same portrait can turn up in a different pair after the next search
 	const avoided = pictureIds(avoid);
 	const fresh = (pic: string, seen: string[]) => !pictureIds(pic).some((x) => avoided.indexOf(x) !== -1 || seen.indexOf(x) !== -1);
-	const take = (): string | null => {
-		while (pool.ids.length > 0) {
-			const id = pool.ids.shift() as string;
-			if (fresh(id, pool.shown)) return id;
-		}
-		return null;
+	const daysOf = (pic: string) => pictureIds(pic).map((x) => days[x]).filter((d) => !!d);
+	const take = (strict: boolean): string | null => {
+		pool.ids = pool.ids.filter((x) => fresh(x, pool.shown));
+		const i = strict ? pool.ids.findIndex((x) => !daysOf(x).some((d) => last.indexOf(d) !== -1)) : (pool.ids.length > 0 ? 0 : -1);
+		return i === -1 ? null : pool.ids.splice(i, 1)[0];
 	};
 	const done = (id: string | null) => {
-		if (id) pool.shown = pictureIds(id).concat(pool.shown).slice(0, SHOWN_MAX);
+		if (id) { pool.shown = pictureIds(id).concat(pool.shown).slice(0, SHOWN_MAX); pool.last = daysOf(id); }
+		// only the days of photos still in the pool are kept, so the record does not grow
+		const keep: Record<string, string> = {};
+		pool.ids.concat(id ? [id] : []).forEach((x) => pictureIds(x).forEach((y) => { if (days[y]) keep[y] = days[y]; }));
+		pool.days = keep;
 		writeCache(POOL_KEY, pool);
 		return id;
 	};
-	const first = take();
+	const first = take(true);
 	if (first) return Promise.resolve(done(first));
-	return search(server, sel).then((ids) => {
-		pool.ids = ids.slice();
-		let id = take();
-		if (!id && ids.length > 0) { pool.shown = []; pool.ids = ids.filter((x) => fresh(x, [])); id = take(); }   // everything seen: start over
+	return search(server, sel).then((batch) => {
+		Object.keys(batch.days).forEach((k) => { days[k] = batch.days[k]; });
+		pool.ids = batch.ids.concat(pool.ids.filter((x) => batch.ids.indexOf(x) === -1));
+		let id = take(true) || take(false);
+		if (!id && batch.ids.length > 0) { pool.shown = []; pool.ids = batch.ids.slice(); id = take(true) || take(false); }   // everything seen: start over
 		return done(id);
 	});
 }

@@ -13,7 +13,7 @@ import {listInputs, MOCK_INPUTS, type InputSource} from './lib/inputs';
 import {launchApp, launchLgHome} from './lib/launch';
 import {isWebOS} from './lib/luna';
 import {hidePointerOnForeground} from './lib/pointer';
-import {DEFAULT_CONFIG, hasSavedConfig, loadConfig, saveConfig, toggleId, type UserConfig} from './lib/storage';
+import {DEFAULT_CONFIG, DOCK_IDLE_SECONDS, hasSavedConfig, loadConfig, saveConfig, toggleId, type UserConfig} from './lib/storage';
 import {readBackup, scheduleBackup} from './lib/backup';
 import {onRelaunch, startParams, type LaunchParams} from './lib/launchParams';
 import {appTile, inputTile, pickInOrder} from './lib/tiles';
@@ -45,7 +45,7 @@ const LIVE_INFO_W = 660;
 /** how much higher the Live TV row sits when focused, so its now/next block fits on screen */
 const LIVE_BELOW = 150;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
+const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', dockIdle: 'dock-idle', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 0.5, 1, 5, 15, 30, 60];   // minutes
 /** when the video wallpaper plays (Settings > Wallpaper > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
 const VIDEO_HOURS: Record<string, [number, number]> = {day: [7, 19], evening: [17, 23], night: [19, 7]};
@@ -362,6 +362,7 @@ export function App () {
 			[OPTION.city]: {labels: ['Not set', 'Auto'].concat(cities), values: ['', AUTO_PLACE].concat(cities), now: config.weatherCity},
 			[OPTION.wpAuto]: {labels: ['Off', '30 sec', '1 min', '5 min', '15 min', '30 min', '60 min'], values: WP_AUTO_CHOICES, now: config.wpAutoMinutes},
 			[OPTION.dockHide]: {labels: ['Off', 'Down arrow', 'After idle', 'Both'], values: ['off', 'down', 'idle', 'both'], now: config.dockHide},
+			[OPTION.dockIdle]: {labels: ['30 seconds', '1 minute', '2 minutes', '5 minutes'], values: DOCK_IDLE_SECONDS, now: config.dockIdleSeconds},
 			[OPTION.darkMode]: {labels: ['Light', 'Dark', 'Auto'], values: ['off', 'on', 'auto'], now: config.darkMode},
 			[OPTION.language]: {labels: ['Auto'].concat(LANGS.map((l) => l.name)), values: ['auto'].concat(LANGS.map((l) => l.code)), now: config.language},
 			[OPTION.clock]: {labels: ['Auto', '12-hour', '24-hour'], values: ['auto', '12h', '24h'], now: config.clockFormat},
@@ -477,10 +478,18 @@ export function App () {
 			id: OPTION.dockHide,
 			group: 'home' as const,
 			label: 'Hide the dock',
-			description: 'Down arrow: Down on the last row slides the dock away. After idle: it hides itself after 8 seconds without a key press. Any key brings it back.',
+			description: 'Down arrow: Down on the last row slides the dock away. After idle: it hides itself when no key has been pressed for a while. Any key brings it back.',
 			value: config.dockHide !== 'off',
 			...listed(OPTION.dockHide)
 		},
+		...(config.dockHide === 'idle' || config.dockHide === 'both' ? [{
+			id: OPTION.dockIdle,
+			group: 'home' as const,
+			label: 'Hide the dock after',
+			description: 'How long the home screen waits with no key pressed before the dock slides away.',
+			value: true,
+			...listed(OPTION.dockIdle)
+		}] : []),
 		{
 			id: OPTION.firstRow,
 			group: 'home' as const,
@@ -564,7 +573,7 @@ export function App () {
 			description: 'Frames drawn in the last second and the longest frame, in the top-left corner. Only in dev builds.',
 			value: config.fpsCounter
 		}] : [])
-	], [config.liveTvRow, config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur, config.ambient, config.ambientSeconds, config.ambientBrightness, immich.ready]);
+	], [config.liveTvRow, config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.dockIdleSeconds, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleMinutes, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur, config.ambient, config.ambientSeconds, config.ambientBrightness, immich.ready]);
 
 	const wallpaper: WallpaperTab = useMemo(() => {
 		if (!inSettings) return {categories: [], entries: [], current: '', onPick: () => undefined, onFavorite: () => undefined};
@@ -709,6 +718,7 @@ export function App () {
 		}
 		else if (optionId === OPTION.wpAuto) updateConfig({...c, wpAutoMinutes: Number(value)});
 		else if (optionId === OPTION.dockHide) updateConfig({...c, dockHide: v});
+		else if (optionId === OPTION.dockIdle) updateConfig({...c, dockIdleSeconds: Number(value)});
 		else if (optionId === OPTION.darkMode) updateConfig({...c, darkMode: v});
 		else if (optionId === OPTION.language) updateConfig({...c, language: v});
 		else if (optionId === OPTION.clock) updateConfig({...c, clockFormat: v});
@@ -730,7 +740,7 @@ export function App () {
 	return (
 		<>
 			{/* Home stays mounted under Settings so it keeps its focus position. */}
-			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} menuItems={MENU_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} dockHide={config.dockHide} focusRow={focusRow} />
+			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} menuItems={MENU_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} dockHide={config.dockHide} dockIdleSeconds={config.dockIdleSeconds} focusRow={focusRow} />
 			{screen === 'ambient' && <Ambient source={config.ambient} seconds={config.ambientSeconds} backlight={AMBIENT_BACKLIGHT[config.ambientBrightness]} weather={weather} showPeriod={config.showAmPm} onExit={() => setScreen('home')} />}
 			{screen === 'guide' && <Guide channels={live.channels} listings={live.listings} logos={live.logos} now={live.now} schedule={live.schedule} full={config.guideFull} onMode={(full) => { if (configRef.current.guideFull !== full) updateConfig({...configRef.current, guideFull: full}); }} active={!controls} onOpen={watchChannel} onClose={() => setScreen('home')} />}
 			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onChoose={onChoose} onClose={() => setScreen('home')} />}

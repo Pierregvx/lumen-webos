@@ -4,6 +4,9 @@
 import {STORAGE_KEY} from '../config/constants';
 import {DEFAULT_APP_IDS} from '../config/catalog';
 
+/** Settings > Hide the dock after: the choices, in seconds. */
+export const DOCK_IDLE_SECONDS = [30, 60, 120, 300];
+
 export interface UserConfig {
 	/** ordered app IDs for the Apps row */
 	appIds: string[];
@@ -27,6 +30,8 @@ export interface UserConfig {
 	videoPlaces: string[];
 	/** when the dock slides away: off | down | idle | both */
 	dockHide: string;
+	/** seconds without a key press before the dock hides itself (dockHide 'idle' or 'both') */
+	dockIdleSeconds: number;
 	/** dark glass and a dimmer wallpaper */
 	darkMode: string;
 	/** the last apps opened, newest first */
@@ -91,6 +96,7 @@ export const DEFAULT_CONFIG: UserConfig = {
 	language: 'auto',
 	darkMode: 'on',
 	dockHide: 'down',
+	dockIdleSeconds: 30,
 	videoClip: '',
 	videoPlaces: [],
 	clockFormat: 'auto',
@@ -146,6 +152,7 @@ export function parseConfig (raw: string): UserConfig {
 		wallpaper: typeof parsed.wallpaper === 'string' ? parsed.wallpaper : DEFAULT_CONFIG.wallpaper,
 		showAmPm: parsed.showAmPm !== false,
 		dockHide: parsed.dockHide === 'off' || parsed.dockHide === 'idle' || parsed.dockHide === 'both' ? parsed.dockHide : 'down',
+		dockIdleSeconds: DOCK_IDLE_SECONDS.indexOf(Number(parsed.dockIdleSeconds)) !== -1 ? Number(parsed.dockIdleSeconds) : 30,
 		darkMode: parsed.darkMode === 'auto' ? 'auto' : parsed.darkMode === 'off' ? 'off' : 'on',
 		videoClip: typeof parsed.videoClip === 'string' ? parsed.videoClip : '',
 		videoPlaces: Array.isArray(parsed.videoPlaces) ? parsed.videoPlaces : typeof parsed.videoClip === 'string' && parsed.videoClip ? [parsed.videoClip] : [],

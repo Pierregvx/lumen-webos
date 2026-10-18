@@ -29,7 +29,8 @@ Settings > Wallpaper > Photos shows your own photos from an Immich server on the
 Landscape photos fill the screen. Portrait photos show in pairs, side by side, so they are not cropped to a strip. The two photos in a pair
 come from different days, so a pair is not two shots of the same moment. A portrait with no partner from another day in the batch is
 skipped. Square photos are skipped, since they lose too much in either layout. Recent and All also skip pictures with no camera make in
-their EXIF, which drops screenshots and saved images. Recently shown photos (the last 40) are not repeated, counted per photo, so a
+their EXIF, which drops screenshots and saved images. The next picture comes from other days than the one before it (both days,
+for a pair), so two pictures in a row are not from the same day. Lumen searches again for one before it gives this up. Recently shown photos (the last 40) are not repeated, counted per photo, so a
 portrait does not come back soon in a new pair.
 
 ## How it works
