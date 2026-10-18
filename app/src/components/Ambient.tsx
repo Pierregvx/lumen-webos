@@ -1,6 +1,6 @@
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {Status} from './Status';
-import {cachedServer, loadServer, nextAsset, previewUrl, type ImmichServer} from '../lib/immich';
+import {cachedServer, loadServer, nextAsset, previewUrls, type ImmichServer} from '../lib/immich';
 import {setAmbientShowing} from '../lib/system';
 import {dimForScreensaver, restoreBacklight} from '../lib/tvcontrols';
 import type {Weather} from '../lib/weather';
@@ -9,7 +9,8 @@ import type {Weather} from '../lib/weather';
  *  Two full-screen layers: the next photo is loaded and decoded on the hidden one, then they swap with a crossfade (opacity only) every `seconds` (Settings > Screensaver > Time on each photo, 30 by default); each photo
  *  zooms in very slowly (transform only). The clock, date and weather sit bottom left. Any key or a click goes back to the home screen. */
 export function Ambient ({source, seconds = 30, backlight, weather, showPeriod, onExit}: {source: string; seconds?: number; backlight?: number; weather?: Weather | null; showPeriod?: boolean; onExit: () => void}) {
-	const [layers, setLayers] = useState<[string, string]>(['', '']);
+	// each layer holds one photo's URL, or two for a portrait pair shown side by side
+	const [layers, setLayers] = useState<[string[], string[]]>([[], []]);
 	const [front, setFront] = useState(0);
 	const state = useRef({front: 0, shown: '', alive: true, timer: 0});
 
@@ -33,16 +34,18 @@ export function Ambient ({source, seconds = 30, backlight, weather, showPeriod, 
 				.then((srv) => { server = srv; return srv ? nextAsset(srv, source, s.shown) : null; })
 				.then((id) => {
 					if (!id || !server || !s.alive) return null;
-					const url = previewUrl(server, id);
-					const img = new Image();
-					img.src = url;
-					return (typeof img.decode === 'function' ? img.decode() : Promise.resolve()).then(() => ({id, url}));
+					const urls = previewUrls(server, id);
+					return Promise.all(urls.map((url) => {
+						const img = new Image();
+						img.src = url;
+						return typeof img.decode === 'function' ? img.decode() : Promise.resolve();
+					})).then(() => ({id, urls}));
 				})
 				.then((pic) => {
 					if (!pic || !s.alive) return;
 					s.shown = pic.id;
 					const back = 1 - s.front;
-					setLayers((l) => { const n: [string, string] = [l[0], l[1]]; n[back] = pic.url; return n; });
+					setLayers((l) => { const n: [string[], string[]] = [l[0], l[1]]; n[back] = pic.urls; return n; });
 					// two frames so the hidden layer has its picture before it becomes the visible one
 					window.requestAnimationFrame(() => window.requestAnimationFrame(() => { s.front = back; setFront(back); }));
 				})
@@ -64,9 +67,9 @@ export function Ambient ({source, seconds = 30, backlight, weather, showPeriod, 
 
 	return (
 		<div class="ambient">
-			{layers.map((url, i) => (
+			{layers.map((urls, i) => (
 				// keyed by URL, so a new photo restarts the slow zoom
-				<div key={i + url} class={`ambient__photo${i === front ? ' ambient__photo--on' : ''}${i === 1 ? ' ambient__photo--alt' : ''}`} style={url ? {backgroundImage: `url("${url}")`, animationDuration: `${seconds + 6}s`} : undefined} />
+				<div key={i + urls.join(' ')} class={`ambient__photo${i === front ? ' ambient__photo--on' : ''}${i === 1 ? ' ambient__photo--alt' : ''}${urls.length > 1 ? ' ambient__photo--pair' : ''}`} style={urls.length > 0 ? {backgroundImage: urls.map((u) => `url("${u}")`).join(', '), animationDuration: `${seconds + 6}s`} : undefined} />
 			))}
 			<div class="ambient__night" />
 			<div class="ambient__shade" />

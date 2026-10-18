@@ -367,6 +367,9 @@ html, body {
 	z-index: 0;
 }
 #wpimage { background: center / cover no-repeat; }
+/* two portrait photos side by side (lib/wallpaper.ts, and the screensaver below), each as wide as half the screen with a thin black seam; a portrait is always taller
+   than its half, so fitting the width covers it */
+#wpimage.wp-pair, #wpimage .wpfade.wp-pair { background-color: #000; background-size: calc(50% - 4px) auto; background-position: left center, right center; }
 #bgvideo { object-fit: cover; background: #000; }
 #root { position: relative; z-index: 1; }
 /* with a picture or video behind, the screen keeps only a dark fade for legibility */
@@ -1149,6 +1152,7 @@ html.light .panel--cc .cc__caption { color: #fff; }
 }
 .ambient__photo--alt { transform-origin: 62% 44%; }
 .ambient__photo--on { opacity: 1; }
+.ambient__photo.ambient__photo--pair { background-size: calc(50% - 4px) auto; background-position: left center, right center; }
 @keyframes ambient-zoom { from { transform: scale(1); } to { transform: scale(1.07); } }
 /* Dim the wallpaper at night covers the screensaver too */
 .ambient__night { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: #000; opacity: 0; pointer-events: none; }

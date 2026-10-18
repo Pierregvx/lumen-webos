@@ -34,6 +34,7 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [ ] Night dim on the screensaver: after 7 pm with Dim the wallpaper at night on, the photos are darker too.
 - [ ] Immich wallpaper night dim: after 7 pm the Photos wallpaper shows at 55%, like a cloud one. The code path is the same; Sam saw it not dim.
 - [ ] Photos: Recent, with people (verify): only pictures with faces. If Immich leaves out `people` on /api/search/random, it falls back to Recent.
+- [ ] Photos portrait pairs (verify): two portrait photos from different days show side by side, on the wallpaper and the screensaver, with the glass blur matching both halves. Check that Immich sends `localDateTime` on /api/search/random (without it any two portraits pair), and that loading two previews does not slow the wallpaper's first paint (`wp-loaded` in the boot line).
 - [x] Guide after switch-on (seen 2026-10-18): the row and Guide fill once Live TV has been opened. The TV's table stays empty until then (docs/live-tv.md Step 2a). `grep guide /var/lib/homehook/lumen.log`
       shows one "now and next" line per change: how many channels are listed and how many have something on now.
 - [ ] Full guide from the guide service (verify): it opens with the seven rows in view filled almost at once, the rest follow, and a jump

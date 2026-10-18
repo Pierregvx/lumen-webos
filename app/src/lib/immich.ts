@@ -53,16 +53,47 @@ interface Asset {
 	height?: number | null;
 	/** the people Immich found in the picture, named or not; present only when asked for with withPeople */
 	people?: unknown[] | null;
+	/** when it was taken, in the place it was taken */
+	localDateTime?: string | null;
+	fileCreatedAt?: string | null;
 	exifInfo?: {exifImageWidth?: number | null; exifImageHeight?: number | null; orientation?: string | null; make?: string | null} | null;
 }
 
-/** Landscape enough for a TV (a portrait phone photo would be cropped to a strip). Unknown sizes are let through. */
-function landscape (a: Asset): boolean {
+/** Width over height as the picture is seen, or 0 when Immich does not know. */
+function ratio (a: Asset): number {
 	let w = a.width || (a.exifInfo && a.exifInfo.exifImageWidth) || 0;
 	let h = a.height || (a.exifInfo && a.exifInfo.exifImageHeight) || 0;
 	const o = a.exifInfo && a.exifInfo.orientation;
 	if (!a.width && (o === '6' || o === '8' || o === '5' || o === '7')) { const t = w; w = h; h = t; }   // rotated by EXIF
-	return !w || !h || w / h >= 1.2;
+	return w && h ? w / h : 0;
+}
+
+/** Joins the two portrait photos shown side by side as one picture ('<id>+<id>'). Immich ids are UUIDs, so never hold it. */
+const PAIR = '+';
+
+/** The Immich photos in a picture: one, or two for a portrait pair. */
+export function pictureIds (pic: string): string[] { return pic.split(PAIR); }
+
+function day (a: Asset): string { return (a.localDateTime || a.fileCreatedAt || '').slice(0, 10); }
+
+/** Landscape photos as they are (unknown sizes too), portrait ones in pairs taken on different days so a pair is never two shots of one
+ *  moment. Square-ish ones are left out: cropped to the screen or to half of it, they lose too much. */
+function arrange (list: Asset[]): string[] {
+	const out: string[] = [];
+	const tall: Asset[] = [];
+	list.forEach((a) => {
+		const r = ratio(a);
+		if (!r || r >= 1.2) out.push(a.id);
+		else if (r <= 1 / 1.2) tall.push(a);
+	});
+	while (tall.length > 1) {
+		const a = tall.shift() as Asset;
+		const d = day(a);
+		const i = tall.findIndex((b) => !d || day(b) !== d);
+		if (i !== -1) out.push(a.id + PAIR + tall.splice(i, 1)[0].id);
+	}
+	for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = out[i]; out[i] = out[j]; out[j] = t; }
+	return out;
 }
 
 /** Looks like a camera photo: screenshots and saved images carry no camera make. Only applied to the broad sources (Recent, All). */
@@ -75,7 +106,7 @@ function today (): string {
 
 /** A batch of candidate pictures for a source, already filtered. */
 function search (server: ImmichServer, sel: string): Promise<string[]> {
-	const keep = (list: Asset[], broad: boolean) => list.filter((a) => (!a.type || a.type === 'IMAGE') && landscape(a) && (!broad || camera(a))).map((a) => a.id);
+	const keep = (list: Asset[], broad: boolean) => arrange(list.filter((a) => (!a.type || a.type === 'IMAGE') && (!broad || camera(a))));
 	const random = (body: object, broad: boolean) =>
 		immichRequest(server.url, server.key, '/api/search/random', {body: {type: 'IMAGE', withExif: true, size: 40, ...body}})
 			.then((text) => keep(JSON.parse(text) as Asset[], broad));
@@ -107,15 +138,18 @@ interface Pool { sel: string; ids: string[]; shown: string[] }
 export function nextAsset (server: ImmichServer, sel: string, avoid: string): Promise<string | null> {
 	const saved = readCache<Pool>(POOL_KEY);
 	const pool: Pool = saved && saved.sel === sel ? saved : {sel, ids: [], shown: []};
+	// shown and avoid are kept per photo, since the same portrait can turn up in a different pair after the next search
+	const avoided = pictureIds(avoid);
+	const fresh = (pic: string, seen: string[]) => !pictureIds(pic).some((x) => avoided.indexOf(x) !== -1 || seen.indexOf(x) !== -1);
 	const take = (): string | null => {
 		while (pool.ids.length > 0) {
 			const id = pool.ids.shift() as string;
-			if (id !== avoid && pool.shown.indexOf(id) === -1) return id;
+			if (fresh(id, pool.shown)) return id;
 		}
 		return null;
 	};
 	const done = (id: string | null) => {
-		if (id) pool.shown = [id].concat(pool.shown).slice(0, SHOWN_MAX);
+		if (id) pool.shown = pictureIds(id).concat(pool.shown).slice(0, SHOWN_MAX);
 		writeCache(POOL_KEY, pool);
 		return id;
 	};
@@ -124,7 +158,7 @@ export function nextAsset (server: ImmichServer, sel: string, avoid: string): Pr
 	return search(server, sel).then((ids) => {
 		pool.ids = ids.slice();
 		let id = take();
-		if (!id && ids.length > 0) { pool.shown = []; pool.ids = ids.filter((x) => x !== avoid); id = take(); }   // everything seen: start over
+		if (!id && ids.length > 0) { pool.shown = []; pool.ids = ids.filter((x) => fresh(x, [])); id = take(); }   // everything seen: start over
 		return done(id);
 	});
 }
@@ -134,30 +168,45 @@ export function previewUrl (server: ImmichServer, id: string): string {
 	return `${server.url}/api/assets/${id}/thumbnail?size=preview&apiKey=${encodeURIComponent(server.key)}`;
 }
 
+/** The pictures to show for a pick from nextAsset: one URL, or two for a portrait pair (left, then right). */
+export function previewUrls (server: ImmichServer, pic: string): string[] { return pictureIds(pic).map((id) => previewUrl(server, id)); }
+
 /** The two blurred copies (light for the glass, strong for the lower rows and the cold-start backdrop), as data: URLs, made from the small
- *  thumbnail: blurred once on a canvas here, never per frame. */
-export function blurredCopies (server: ImmichServer, id: string): Promise<{light: string; strong: string}> {
+ *  thumbnails: blurred once on a canvas here, never per frame. A portrait pair is blurred side by side, as it is shown. */
+export function blurredCopies (server: ImmichServer, pic: string): Promise<{light: string; strong: string}> {
+	return Promise.all(pictureIds(pic).map((id) => thumbnail(server, id))).then((imgs) => ({light: blur(imgs, 960, 540, 6, 0.8), strong: blur(imgs, 480, 270, 14, 0.7)}));
+}
+
+function thumbnail (server: ImmichServer, id: string): Promise<HTMLImageElement> {
 	return immichRequest(server.url, server.key, `/api/assets/${id}/thumbnail?size=thumbnail`, {as: 'base64'}).then((b64) => {
 		const data = b64.trim();
 		if (!data) throw new Error('no thumbnail');
 		const mime = data.indexOf('/9j/') === 0 ? 'image/jpeg' : data.indexOf('iVBOR') === 0 ? 'image/png' : 'image/webp';
-		return new Promise<{light: string; strong: string}>((resolve, reject) => {
+		return new Promise<HTMLImageElement>((resolve, reject) => {
 			const img = new Image();
-			img.onload = () => resolve({light: blur(img, 960, 540, 6, 0.8), strong: blur(img, 480, 270, 14, 0.7)});
+			img.onload = () => resolve(img);
 			img.onerror = () => reject(new Error('thumbnail did not decode'));
 			img.src = `data:${mime};base64,${data}`;
 		});
 	});
 }
 
-function blur (img: HTMLImageElement, w: number, h: number, radius: number, quality: number): string {
+function blur (imgs: HTMLImageElement[], w: number, h: number, radius: number, quality: number): string {
 	const canvas = document.createElement('canvas');
 	canvas.width = w; canvas.height = h;
 	const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-	// cover-crop the thumbnail to 16:9, drawn a little oversize so the blur does not pull in transparent edges
-	const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight) * 1.08;
-	const dw = img.naturalWidth * scale, dh = img.naturalHeight * scale;
 	ctx.filter = `blur(${radius}px)`;
-	ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+	const cw = w / imgs.length;
+	imgs.forEach((img, i) => {
+		// cover-crop each thumbnail to its column, drawn a little oversize so the blur does not pull in transparent edges
+		const scale = Math.max(cw / img.naturalWidth, h / img.naturalHeight) * 1.08;
+		const dw = img.naturalWidth * scale, dh = img.naturalHeight * scale;
+		ctx.save();
+		ctx.beginPath();
+		ctx.rect(i * cw, 0, cw, h);
+		ctx.clip();
+		ctx.drawImage(img, i * cw + (cw - dw) / 2, (h - dh) / 2, dw, dh);
+		ctx.restore();
+	});
 	return canvas.toDataURL('image/jpeg', quality);
 }

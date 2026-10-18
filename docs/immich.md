@@ -26,8 +26,11 @@ Settings > Wallpaper > Photos shows your own photos from an Immich server on the
 - **All my photos**: random from everything.
 - **Your albums**: each album with photos in it is listed by name.
 
-Only landscape photos are used (a portrait phone photo would be cropped to a strip). Recent and All also skip pictures with no camera
-make in their EXIF, which drops screenshots and saved images. Recently shown photos (the last 40) are not repeated.
+Landscape photos fill the screen. Portrait photos show in pairs, side by side, so they are not cropped to a strip. The two photos in a pair
+come from different days, so a pair is not two shots of the same moment. A portrait with no partner from another day in the batch is
+skipped. Square photos are skipped, since they lose too much in either layout. Recent and All also skip pictures with no camera make in
+their EXIF, which drops screenshots and saved images. Recently shown photos (the last 40) are not repeated, counted per photo, so a
+portrait does not come back soon in a new pair.
 
 ## How it works
 
@@ -35,7 +38,8 @@ make in their EXIF, which drops screenshots and saved images. Recently shown pho
   TV (`immichRequest` in `app/src/lib/root.ts`, which only accepts a plain address, a plain key and five fixed paths).
 - The photo itself is loaded as an ordinary image from `/api/assets/<id>/thumbnail?size=preview&apiKey=...` (about 1440 px on the long
   side), which needs no CORS. It is never sent through images.weserv.nl or anywhere else off the home network.
-- The blurred copies the glass and the lower rows show are made on the TV from Immich's small thumbnail, once per photo.
+- The blurred copies the glass and the lower rows show are made on the TV from Immich's small thumbnail, once per photo. For a pair, both
+  thumbnails are blurred side by side, as the pair shows.
 - The next photo is chosen 8 s after the current one is up and its blur goes into the boot record, so a cold start paints that blur at once
   and the photo fades in over it, as for the cloud wallpapers.
 - The key is kept in the app's localStorage on the TV (to build the photo URL at start-up without a root call) and in

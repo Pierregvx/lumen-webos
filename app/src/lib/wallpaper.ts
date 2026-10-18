@@ -6,12 +6,13 @@
 // idle (lib/wpstore.ts keeps it on the TV), and its strongly blurred copy (a few KB) goes into the boot record, so index.html paints that
 // blur before the script has loaded. The app then draws, and the sharp picture, read from the TV rather than the internet, fades in over it.
 // Immich (immich:<source>): the same, except that the sharp picture comes from the Immich server on the home network and the blurred copies
-// are made on the TV from its thumbnail (lib/immich.ts).
+// are made on the TV from its thumbnail (lib/immich.ts). Two portrait photos show side by side as one picture: their URLs travel as one
+// src joined by PAIR_SEP.
 
 import {LOCAL_WALLPAPERS, WALLPAPERS, cloudUrl} from '../config/wallpapers';
 import {BOOT_WALLPAPER_KEY, readCache, writeCache, type BootWallpaper} from './boot';
 import {blobToDataUrl, fetchBlob, getPics, keepOnly, putPics, type Pics} from './wpstore';
-import {blurredCopies, cachedServer, loadServer, nextAsset, previewUrl} from './immich';
+import {blurredCopies, cachedServer, loadServer, nextAsset, previewUrls} from './immich';
 import {bootMark} from './log';
 
 const HTML_CLASS = 'wp-image';
@@ -19,6 +20,12 @@ const PROXY = 'https://images.weserv.nl/';       // free image resizer: a 1920-w
 const FADE_MS = 450;
 /** how long after a picture is up before the next launch's one is fetched, so it never competes with start-up */
 const PREPARE_DELAY_MS = 8000;
+/** never in a URL, so it can join the two URLs of a portrait pair */
+const PAIR_SEP = '\n';
+
+/** The background-image value for a src: one picture, or a portrait pair (laid out by the wp-pair class). */
+function cssImage (src: string): string { return src.split(PAIR_SEP).map((u) => `url("${u}")`).join(', '); }
+function isPair (src: string): boolean { return src.indexOf(PAIR_SEP) !== -1; }
 
 /** Resized copy of a cloud picture (width in px). */
 export function resized (url: string, width: number): string {
@@ -113,7 +120,7 @@ let shown: string | null = null;      // the picture on screen (its resizer URL 
 let releaseTimer = 0;
 let released = false;
 let token = 0;
-const decoded: {img: HTMLImageElement | null} = {img: null};   // held so the decoded picture stays in the cache while it is on screen
+const decoded: {imgs: HTMLImageElement[]} = {imgs: []};   // held so the decoded picture stays in the cache while it is on screen
 
 /** A bundled picture is a local file, so index.html paints it sharp before the script loads. A cloud picture is not painted from the
  *  network there: the boot record holds the blurred copy of the next launch's picture instead (prepareNext). */
@@ -175,11 +182,11 @@ function immichNow (sel: string): Promise<{id: string; full: string; light: stri
 	const boot = readCache<BootWallpaper>(BOOT_WALLPAPER_KEY);
 	const server = cachedServer();
 	if (server && boot && boot.sel === sel && boot.next && boot.next !== shownId && boot.bg) {
-		return Promise.resolve({id: boot.next, full: previewUrl(server, boot.next), light: boot.blur || boot.bg, strong: boot.bg});
+		return Promise.resolve({id: boot.next, full: previewUrls(server, boot.next).join(PAIR_SEP), light: boot.blur || boot.bg, strong: boot.bg});
 	}
 	return (server ? Promise.resolve(server) : loadServer()).then((srv) => {
 		if (!srv) return null;
-		return nextAsset(srv, sel, shownId).then((id) => id ? blurredCopies(srv, id).then((b) => ({id, full: previewUrl(srv, id), light: b.light, strong: b.strong})) : null);
+		return nextAsset(srv, sel, shownId).then((id) => id ? blurredCopies(srv, id).then((b) => ({id, full: previewUrls(srv, id).join(PAIR_SEP), light: b.light, strong: b.strong})) : null);
 	});
 }
 
@@ -198,14 +205,14 @@ function ensureElement (): HTMLElement {
 			releaseTimer = window.setTimeout(() => {
 				if (!element || !shown) return;
 				released = true;
-				decoded.img = null;
+				decoded.imgs = [];
 				element.style.backgroundImage = 'none';
 				document.documentElement.style.removeProperty('--wp-blur');
 				document.documentElement.style.removeProperty('--wp-bg');
 			}, 5000);
 		} else if (released && element && shown) {
 			released = false;
-			element.style.backgroundImage = `url("${local ? local.full : shown}")`;
+			element.style.backgroundImage = cssImage(local ? local.full : shown);
 			setBlur(shown);
 		}
 	});
@@ -219,15 +226,16 @@ function paint (el: HTMLElement, src: string): void {
 	window.clearTimeout(fadeTimer);
 	const old = el.querySelector('.wpfade');
 	if (old) old.remove();
-	const next = `url("${src}")`;
-	if (!before || before === 'none' || before === next || document.documentElement.classList.contains('reduce-motion')) { el.style.backgroundImage = next; return; }
+	const next = cssImage(src);
+	const pair = isPair(src);
+	if (!before || before === 'none' || before === next || document.documentElement.classList.contains('reduce-motion')) { el.style.backgroundImage = next; el.classList.toggle('wp-pair', pair); return; }
 	// the new picture on a layer inside #wpimage (so night dimming covers it), faded with opacity only, then moved onto #wpimage itself
 	const layer = document.createElement('div');
-	layer.className = 'wpfade';
-	layer.style.backgroundImage = `url("${src}")`;
+	layer.className = pair ? 'wpfade wp-pair' : 'wpfade';
+	layer.style.backgroundImage = next;
 	el.appendChild(layer);
 	window.requestAnimationFrame(() => window.requestAnimationFrame(() => { layer.style.opacity = '1'; }));
-	fadeTimer = window.setTimeout(() => { el.style.backgroundImage = next; layer.remove(); }, FADE_MS + 60);
+	fadeTimer = window.setTimeout(() => { el.style.backgroundImage = next; el.classList.toggle('wp-pair', pair); layer.remove(); }, FADE_MS + 60);
 }
 
 /** Resolves once the first wallpaper of this launch is on screen (or there is none to show), so heavier work can wait for it. */
@@ -243,10 +251,10 @@ export function setWallpaper (sel: string): void {
 	const list = candidates(sel);
 	const root = document.documentElement.classList;
 	if (list.length === 0) { root.remove(HTML_CLASS); el.style.backgroundImage = 'none'; shown = null; shownId = ''; useLocal(null); setBlur(null); writeCache(BOOT_WALLPAPER_KEY, null); markShown(); return; }
-	const show = (c: Candidate, img: HTMLImageElement, src: string) => {
+	const show = (c: Candidate, imgs: HTMLImageElement[], src: string) => {
 		shown = c.src;
 		shownId = c.id || '';
-		decoded.img = img;
+		decoded.imgs = imgs;
 		released = false;
 		paint(el, src);
 		root.add(HTML_CLASS);
@@ -261,14 +269,23 @@ export function setWallpaper (sel: string): void {
 		immichNow(sel).then((pic) => {
 			if (mine !== token) return;
 			if (!pic) { fallback(); return; }
-			const img = new Image();
-			img.onload = () => {
-				bootMark('wp-loaded', `${img.naturalWidth}px`);
-				const ready = typeof img.decode === 'function' ? img.decode().catch(() => undefined) : Promise.resolve();
-				ready.then(() => { bootMark('wp-decoded'); if (mine !== token) return; useLocal(pic); show({src: pic.full, id: pic.id}, img, pic.full); });
-			};
-			img.onerror = fallback;
-			img.src = pic.full;
+			// both halves of a portrait pair are loaded and decoded before either shows
+			const load = (url: string) => new Promise<HTMLImageElement>((resolve, reject) => {
+				const img = new Image();
+				img.onload = () => resolve(img);
+				img.onerror = reject;
+				img.src = url;
+			});
+			const decode = (img: HTMLImageElement) => typeof img.decode === 'function' ? img.decode().catch(() => undefined) : Promise.resolve();
+			Promise.all(pic.full.split(PAIR_SEP).map(load)).then((imgs) => {
+				bootMark('wp-loaded', `${imgs.map((i) => i.naturalWidth).join('+')}px`);
+				return Promise.all(imgs.map(decode)).then(() => {
+					bootMark('wp-decoded');
+					if (mine !== token) return;
+					useLocal(pic);
+					show({src: pic.full, id: pic.id}, imgs, pic.full);
+				});
+			}, fallback);
 		}, fallback);
 		return;
 	}
@@ -287,7 +304,7 @@ export function setWallpaper (sel: string): void {
 				bootMark('wp-loaded', `${img.naturalWidth}px`);
 				// decode off the main thread before the swap, so the first frame with the new picture does not stall on decoding it
 				const ready = typeof img.decode === 'function' ? img.decode().catch(() => undefined) : Promise.resolve();
-				ready.then(() => { bootMark('wp-decoded'); if (mine === token) show(c, img, src); });
+				ready.then(() => { bootMark('wp-decoded'); if (mine === token) show(c, [img], src); });
 			};
 			img.onerror = () => { useLocal(null); tryAt(i + 1); };
 			img.src = src;
