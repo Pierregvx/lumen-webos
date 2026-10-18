@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from 'preact/hooks';
 import {cachedLive, cachedLogos, mergeListings, readChannels, readListings, readLogos, readSchedule, rowChannels, saveLive, type Channel, type Listings, type LiveCache} from '../lib/livetv';
 import {wallpaperShown} from '../lib/wallpaper';
-import {bootMark} from '../lib/log';
+import {bootMark, logError} from '../lib/log';
 
 export interface LiveTv {
 	channels: Channel[];
@@ -28,6 +28,28 @@ const READ_AFTER_MS = 2000;
 /** if the wallpaper never reports in (a picture that hangs), Live TV starts anyway */
 const WALLPAPER_WAIT_MS = 10000;
 const NONE: LiveCache = {channels: [], listings: {}};
+/** while no channel has anything on now (just after the TV is switched on the TV's table can be empty), the TV is asked again this often */
+const EMPTY_RETRY_MS = 60000;
+
+let lastLine = '';
+
+/** how many channels have a programme on at `t` */
+function onNow (listings: Listings, t: number): number {
+	let n = 0;
+	for (const k in listings) if (listings[k].some((p) => p.start <= t && t < p.end)) n++;
+	return n;
+}
+
+/** The new read, plus the last one's programmes not yet over for any channel the new read left out, so a thin read never blanks the row. */
+function keepUnfinished (fresh: Listings, old: Listings, t: number): Listings {
+	const out: Listings = {...fresh};
+	for (const k in old) {
+		if (out[k] && out[k].length > 0) continue;
+		const left = old[k].filter((p) => p.end > t);
+		if (left.length > 0) out[k] = left;
+	}
+	return out;
+}
 
 /** The Live TV row's and the Guide's data. Nothing happens until the wallpaper is on screen, so a cold start draws the wallpaper and the
  *  apps first: then the last answer (and its logos) comes out of localStorage, and a moment later the TV is asked again. After that it is asked
@@ -49,12 +71,15 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[
 		readAt.current = Date.now();
 		const channels = withChannels || !latest.current.data.channels.length ? readChannels() : Promise.resolve(latest.current.data.channels);
 		channels
-			.then((list) => readListings().then((listings) => {
-				const next = {channels: list, listings};
+			.then((list) => readListings().then((read) => {
+				const t = Date.now();
+				const line = `now and next: ${Object.keys(read).length} channels listed, ${onNow(read, t)} with something on now`;
+				if (line !== lastLine) { lastLine = line; logError('guide', line); }   // the retry asks every minute: log only a change
+				const next = {channels: list, listings: keepUnfinished(read, latest.current.data.listings, t)};
 				if (JSON.stringify(next) !== JSON.stringify(latest.current.data)) { setData(next); saveLive(next); }
 				return readLogos(list).then((l) => setLogos((was) => (Object.keys(l).length === Object.keys(was).length ? was : {...l})));
 			}))
-			.catch(() => undefined)
+			.catch((e: Error) => logError('guide', `now and next failed: ${e.message}`))
 			.then(() => { busy.current = false; bootMark('live-read'); });
 	};
 
@@ -109,7 +134,9 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[
 			// a programme on a row channel ended since the last read: read the guide again
 			const {data: d, rowIds: ids} = latest.current;
 			const ended = rowChannels(d.channels, ids).some((c) => (d.listings[c.signal] || []).some((p) => p.end > readAt.current && p.end <= Date.now()));
-			if (ended && !document.hidden) refresh(false);
+			// or nothing is on anywhere (an empty table just after switch-on, or a read that failed): ask again every minute until something is
+			const empty = (d.channels.length === 0 || onNow(d.listings, Date.now()) === 0) && Date.now() - readAt.current >= EMPTY_RETRY_MS;
+			if ((ended || empty) && !document.hidden) refresh(d.channels.length === 0);
 		}, 15000);
 		return () => window.clearInterval(id);
 	}, [enabled, started]);
