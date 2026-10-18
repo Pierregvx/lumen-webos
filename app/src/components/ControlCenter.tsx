@@ -82,6 +82,16 @@ const listHeight = (count: number) => count * OPT_H + (count - 1) * OPT_GAP;
 type Phase = 'grid' | 'opening' | 'list' | 'closing';
 interface Morph {kind: 'open' | 'close'; cell: MenuCell; geo: {x: number; y: number; w: number; h: number; fw: number; fh: number; tile: End; over: End; list: End}}
 
+/** Grows a top-bar panel in from the button that opened it (the top-bar pill with data-top={key}): a short scale and fade, as tvOS does. */
+export function growFrom (panel: HTMLElement | null, key: string): void {
+	const button = document.querySelector(`.topbar [data-top="${key}"]`);
+	if (!panel || !button || !panel.animate || document.documentElement.classList.contains('reduce-motion')) return;
+	const b = button.getBoundingClientRect();
+	const p = panel.getBoundingClientRect();
+	panel.style.transformOrigin = `${b.left + b.width / 2 - p.left}px ${b.top + b.height / 2 - p.top}px`;
+	panel.animate([{opacity: 0, transform: 'scale(0.6)'}, {opacity: 1, transform: 'none'}], {duration: 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)'});
+}
+
 /** Control Center (opened from the round button top right): sound, picture mode, appearance, clock, LG Home, Art mode (your photos), screen off,
  *  restart, backlight and Eye Comfort. Volume is left to the remote's own buttons. Arrows move between controls, OK presses one, Left/Right on
  *  the backlight bar change it, Back closes. */
@@ -105,6 +115,8 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 	useEffect(() => () => timers.current.forEach((id) => window.clearTimeout(id)), []);
 	const still = () => document.documentElement.classList.contains('reduce-motion');
 	const after = (ms: number, fn: () => void) => { timers.current.push(window.setTimeout(fn, still() ? 0 : ms)); };
+
+	useLayoutEffect(() => growFrom(panel.current, 'controls'), []);
 
 	// read the TV's values a moment after the panel is on screen, so opening it is never held up by the TV answering
 	useEffect(() => {
@@ -214,7 +226,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 	/** Every layer's keyframes for one open or close, sampled from the same timeline. */
 	const timeline = (m: Morph) => {
 		const g = m.geo;
-		const pill: Keyframe[] = [], glass: Keyframe[] = [], text: Keyframe[] = [], list: Keyframe[] = [], grid: Keyframe[] = [];
+		const pill: Keyframe[] = [], glass: Keyframe[] = [], rim: Keyframe[] = [], text: Keyframe[] = [], list: Keyframe[] = [], grid: Keyframe[] = [];
 		for (let i = 0; i <= STEPS; i++) {
 			const t = i / STEPS;
 			const open = m.kind === 'open';
@@ -229,6 +241,8 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			text.push({transform: `translate(${dx}px, ${dy}px) scale(1.1)`, opacity: open ? 1 - ramp(t, 0.06, 0.27) : ramp(t, 0.42, 0.6)});
 			// opening: the glass is gone by 167 ms, while the list is still fading in and growing
 			glass.push({opacity: open ? 1 - ramp(t, 0.2, 0.5) : ramp(t, 0, 0.23)});
+			// the edge highlight and shadow grow with the pill's scale, so they go before it grows and come back once it is near the tile's size
+			rim.push({opacity: open ? 1 - ramp(t, 0, 0.1) : ramp(t, 0.55, 0.75)});
 			// the list sits inside the pill at the pill's size, as tvOS's does: scaled evenly to fit inside its padding, and centred
 			const pw = g.w * at.sx;
 			const ph = g.h * at.sy;
@@ -240,11 +254,12 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 				? {opacity: 1 - ramp(t, 0.08, 0.4), transform: `scale(${1 - GRID_SHRINK * easeOut(ramp(t, 0, 0.4))})`}
 				: {opacity: ramp(t, 0.2, 0.42), transform: `scale(${1 - GRID_SHRINK + GRID_SHRINK * easeOut(ramp(t, 0.15, 0.55))})`});
 		}
-		return {pill, glass, text, list, grid};
+		return {pill, glass, rim, text, list, grid};
 	};
 
 	const pillEl = useRef<HTMLDivElement>(null);
 	const glassEl = useRef<HTMLDivElement>(null);
+	const rimEl = useRef<HTMLDivElement>(null);
 	const textEl = useRef<HTMLDivElement>(null);
 	const listEl = useRef<HTMLDivElement>(null);
 	const gridEl = useRef<HTMLDivElement>(null);
@@ -256,7 +271,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 		const k = timeline(morph);
 		const ms = still() ? 0 : morph.kind === 'open' ? OPEN_MS : CLOSE_MS;
 		const opts: KeyframeAnimationOptions = {duration: ms, easing: 'linear', fill: 'both'};
-		const pairs: [HTMLElement | null, Keyframe[]][] = [[pillEl.current, k.pill], [glassEl.current, k.glass], [textEl.current, k.text], [listEl.current, k.list], [gridEl.current, k.grid]];
+		const pairs: [HTMLElement | null, Keyframe[]][] = [[pillEl.current, k.pill], [glassEl.current, k.glass], [rimEl.current, k.rim], [textEl.current, k.text], [listEl.current, k.list], [gridEl.current, k.grid]];
 		running.current = pairs.filter(([el]) => el && el.animate).map(([el, frames]) => (el as HTMLElement).animate(frames, opts));
 		const grid = gridEl.current;
 		if (grid) grid.style.transformOrigin = `${morph.geo.x + morph.geo.w / 2}px ${morph.geo.y + morph.geo.h / 2}px`;
@@ -387,7 +402,8 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 					const i = info(morph.cell);
 					return [
 						<div key="pill" ref={pillEl} class="cc__morph" style={box}>
-							<div ref={glassEl} class="cc__mod cc__mod--focused" />
+							<div ref={glassEl} class="cc__mod cc__mod--focused cc__morph__glass" />
+							<div ref={rimEl} class="cc__morph__rim" />
 						</div>,
 						<div key="text" ref={textEl} class={`cc__tile cc__morph__text${i.on ? ' cc__mod--on' : ''}`} style={box}>{tileInside(i)}</div>
 					];

@@ -4,6 +4,7 @@ import {VideoCaption} from '../components/VideoCaption';
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import {Clock} from '../components/Clock';
 import {Glyph} from '../components/Glyph';
+import {growFrom} from '../components/ControlCenter';
 import {Row} from '../components/Row';
 import {Tile, type TileModel} from '../components/Tile';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
@@ -436,6 +437,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 				) : (
 					<div
 						key={item.key}
+						data-top={item.key}
 						class={`pill${focusedTop(i) ? ' pill--focused' : ''}${n.zone === 'panel' && item.key === INPUTS_KEY ? ' pill--open' : ''}`}
 						onMouseLeave={pointerLeft}
 						onMouseEnter={topPointer(i)}
@@ -470,7 +472,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 			{n.zone === 'panel' && (
 				<>
 					<div class="panel-backdrop panel-backdrop--clear" onClick={() => { n.zone = n.panelFrom; render(); }} />
-					<div class="panel panel--cc panel--inputs">
+					<div class="panel panel--cc panel--inputs" ref={(el) => { if (el && !el.dataset.grown) { el.dataset.grown = '1'; growFrom(el, INPUTS_KEY); } }}>
 						{inputs.map((item, i) => (
 							<div
 								key={item.key}

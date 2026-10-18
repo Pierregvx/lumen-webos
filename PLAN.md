@@ -46,6 +46,8 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
       toward it and fades; the list fades in inside the pill, then the pill clears (about 0.33 s). OK picks and it runs backwards, landing on the
       tile with a small overshoot; Back returns without a change. Check it matches the video, with Live blur on and off, that it stays smooth
       (the pill's corners are the one thing that is not transform or opacity), and that Reduce motion just switches.
+- [ ] Control Center and Inputs focus (verify): the focused control is solid white with dark text, like the focused backlight bar (the light look
+      keeps its dark focus). Both panels grow and fade in from their top-bar button (about 0.26 s). Check LG's input pictures read dark on white.
 - [ ] Control Center on one grid, at tvOS size (90px controls, about 420px across): the top buttons' glass, and their focus (brighter, larger).
       With Live blur on, each control is a live blur like the top buttons (ten small ones): check moving between them stays smooth. A control
       that is on (Theme dark, Clock not Auto, Eye Comfort) shows a blue icon. Start Screensaver
