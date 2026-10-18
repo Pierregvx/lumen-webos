@@ -155,7 +155,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 
 	return (
 		<>
-			<div class="panel-backdrop" onClick={onClose} />
+			<div class="panel-backdrop panel-backdrop--clear" onClick={onClose} />
 			<div class="panel panel--cc">
 				<div class="cc__row">
 					{wide('sound', 'speaker', tr('Sound mode'), SOUND_LABEL[values.sound] || values.sound)}

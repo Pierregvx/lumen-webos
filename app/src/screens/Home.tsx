@@ -471,7 +471,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 			</div>
 			{n.zone === 'panel' && (
 				<>
-					<div class="panel-backdrop" onClick={() => { n.zone = n.panelFrom; render(); }} />
+					<div class="panel-backdrop panel-backdrop--clear" onClick={() => { n.zone = n.panelFrom; render(); }} />
 					<div class="panel">
 						<div class="panel__title">{tr('Inputs')}</div>
 						<div class="panel__grid">

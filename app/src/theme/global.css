@@ -503,6 +503,8 @@ html, body {
 .pill--focused, .pill--open { background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.20) 55%, rgba(255, 255, 255, 0.34)), var(--wp-blur, var(--glass-fallback)); }
 
 .panel-backdrop { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.38); z-index: 19; }
+/* Control Center and Inputs float over the home screen undimmed, as on tvOS; the layer stays so a click outside closes them */
+.panel-backdrop--clear { background: none; }
 .panel {
 	position: absolute; top: 190px; right: var(--layout-edge-padding); width: 760px; padding: 30px 36px 14px; border-radius: 44px; z-index: 20;
 	animation: panel-in 180ms ease-out;
