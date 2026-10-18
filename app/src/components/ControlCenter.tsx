@@ -1,5 +1,5 @@
 import {t as tr} from '../lib/i18n';
-import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
+import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import {Glyph, type GlyphName} from './Glyph';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {PICTURE_LABEL, PICTURE_MODES, SOUND_LABEL, SOUND_MODES, setSoundMode, readBacklight, readControls, setBacklight, setEyeComfort, restartTv, screenOff, setPictureMode, type Controls} from '../lib/tvcontrols';
@@ -42,20 +42,45 @@ const startOf = (row: number, i: number) => GRID[row].slice(0, i).reduce((n, c) 
 /** Each backlight change is a root command (a luna-send process on the TV), so a run of presses sends only the last level, this long after. */
 const BACKLIGHT_DELAY_MS = 300;
 
-/** Opening a list: the tile's text and the rest of the grid fade, then a copy of the tile grows to the list's size by transform and fades as
- *  the list fades in. Closing runs it backwards. These match the transitions on .cc__grid and .cc__list in global.css. */
-const TEXT_MS = 80;
-const GROW_MS = 200;
-/** keyframes in the copy's grow or shrink; enough that its corners stay round between them */
-const MORPH_STEPS = 12;
-/** one end of the copy's grow: its offset and scale, and its corner radius on screen */
+/** Opening a list, copied from the tvOS 26 Control Center frame by frame (30 fps): the tile turns into a dark pill that grows to the list's
+ *  size while its text fades and the rest of the grid shrinks toward it and fades; the list fades in inside the pill, then the pill clears.
+ *  The pill is darkest while the grid is still under it, so nothing shows through. Closing runs it backwards and lands with a small overshoot. */
+const OPEN_MS = 330;
+const CLOSE_MS = 430;
+/** keyframes per animation; enough that the pill's corners stay round between them */
+const STEPS = 20;
+/** the pill's darkest fill */
+const DARK = 0.85;
+/** how far the rest of the grid shrinks toward the tile */
+const GRID_SHRINK = 0.15;
+/** how much the list grows while it fades in */
+const LIST_GROW = 0.1;
+/** how far past the tile the pill shrinks when closing, before it settles */
+const OVERSHOOT = 1.15;
+/** how far the pill has grown at each video frame (every 33 ms) of tvOS's open, measured off the frames */
+const GROW = [0, 0.12, 0.35, 0.6, 0.8, 0.9, 0.94, 0.97, 0.985, 0.995, 1];
+/** the same for the close, up to the overshoot (the first 62% of CLOSE_MS); it then settles onto the tile */
+const SHRINK = [0, 0.03, 0.1, 0.2, 0.4, 0.65, 0.85, 0.95, 1];
+const SHRINK_END = 0.62;
+/** where the pill is: its offset and scale from the tile's own box, and its corner radius on screen */
 interface End {tx: number; ty: number; sx: number; sy: number; r: number}
+/** 0 before a, 1 after b, a straight line between */
+const ramp = (t: number, a: number, b: number) => Math.max(0, Math.min(1, (t - a) / (b - a)));
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+/** a value read off evenly spaced samples, t from 0 to 1 */
+const track = (points: number[], t: number) => {
+	const at = Math.max(0, Math.min(1, t)) * (points.length - 1);
+	const i = Math.min(points.length - 2, Math.floor(at));
+	return points[i] + (points[i + 1] - points[i]) * (at - i);
+};
+const mix = (a: End, b: End, e: number): End => ({tx: a.tx + (b.tx - a.tx) * e, ty: a.ty + (b.ty - a.ty) * e, sx: a.sx + (b.sx - a.sx) * e, sy: a.sy + (b.sy - a.sy) * e, r: a.r + (b.r - a.r) * e});
 /** a list choice's height and the gap between choices, as .cc__opt in global.css */
 const OPT_H = 72;
 const OPT_GAP = 12;
 const listHeight = (count: number) => count * OPT_H + (count - 1) * OPT_GAP;
 
-type Phase = 'grid' | 'fading' | 'opening' | 'list' | 'closing';
+type Phase = 'grid' | 'opening' | 'list' | 'closing';
+interface Morph {kind: 'open' | 'close'; cell: MenuCell; geo: {x: number; y: number; w: number; h: number; tile: End; over: End; list: End}}
 
 /** Control Center (opened from the round button top right): sound, picture mode, appearance, clock, LG Home, Art mode (your photos), screen off,
  *  restart, backlight and Eye Comfort. Volume is left to the remote's own buttons. Arrows move between controls, OK presses one, Left/Right on
@@ -70,10 +95,8 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 	// the open list: which tile it belongs to and the focused choice
 	const [menu, setMenu] = useState<{cell: MenuCell; idx: number} | null>(null);
 	const [phase, setPhase] = useState<Phase>('grid');
-	// the tile the list opens from: its text is faded while set, and its glass is hidden while the copy stands in for it
-	const [source, setSource] = useState<{cell: CellId; gone: boolean} | null>(null);
-	// the copy of the tile, laid out at the tile's size and place, that grows into the list and shrinks back
-	const [morph, setMorph] = useState<{box: string; first: Keyframe} | null>(null);
+	// the pill that stands in for the tile while the list opens or closes; the tile itself is hidden meanwhile
+	const [morph, setMorph] = useState<Morph | null>(null);
 	const state = useRef({values, pos, confirm, menu, phase});
 	state.current = {values, pos, confirm, menu, phase};
 	const tiles = useRef<Partial<Record<CellId, HTMLElement | null>>>({});
@@ -82,8 +105,6 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 	useEffect(() => () => timers.current.forEach((id) => window.clearTimeout(id)), []);
 	const still = () => document.documentElement.classList.contains('reduce-motion');
 	const after = (ms: number, fn: () => void) => { timers.current.push(window.setTimeout(fn, still() ? 0 : ms)); };
-	// two frames, so the box is drawn at its start before the transition to its end begins
-	const nextFrame = (fn: () => void) => requestAnimationFrame(() => requestAnimationFrame(fn));
 
 	// read the TV's values a moment after the panel is on screen, so opening it is never held up by the TV answering
 	useEffect(() => {
@@ -156,57 +177,84 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 
 	/** Where the copy sits (the tile's own box, so its corners match) and the transforms for its two ends: the focused tile (scaled 1.1 about
 	 *  its centre) and the whole list. */
-	const copyOf = (cell: MenuCell, count: number) => {
+	/** The pill's geometry for a tile and a list of count choices. The pill is laid out in the tile's own box, so its ends match the tile. */
+	const geometry = (cell: MenuCell, count: number) => {
 		const el = tiles.current[cell];
 		const w = el ? el.offsetWidth : 1;
 		const h = el ? el.offsetHeight : 1;
 		const x = el ? el.offsetLeft : 0;
 		const y = el ? el.offsetTop : 0;
 		const full = panel.current ? panel.current.offsetWidth : w;
-		// the two ends as the copy's offset, scale and on-screen corner radius: the focused tile (scaled 1.1 about its centre) and the list
-		const tile = {tx: -0.05 * w, ty: -0.05 * h, sx: 1.1, sy: 1.1, r: (h / 2) * 1.1};
-		const list = {tx: -x, ty: -y, sx: full / w, sy: listHeight(count) / h, r: OPT_H / 2};
-		return {box: `left:${x}px;top:${y}px;width:${w}px;height:${h}px`, tile, list};
+		const grown = (s: number): End => ({tx: ((1 - s) * w) / 2, ty: ((1 - s) * h) / 2, sx: s, sy: s, r: (h / 2) * s});
+		return {
+			x, y, w, h,
+			tile: grown(1.1), // focused tiles are drawn at 1.1
+			over: grown(1.1 * OVERSHOOT),
+			list: {tx: -x, ty: -y, sx: full / w, sy: listHeight(count) / h, r: OPT_H / 2}
+		};
 	};
 
-	/** The copy's keyframes from one end to the other. Its scale is uneven, so each frame sets the corners in the copy's own units to come out
-	 *  round on screen, easing from the tile's radius to an option pill's. fadeIn says whether it fades in (closing) or out (opening). */
-	const frames = (from: End, to: End, fadeIn: boolean): Keyframe[] => {
-		const out: Keyframe[] = [];
-		for (let i = 0; i <= MORPH_STEPS; i++) {
-			const t = i / MORPH_STEPS;
-			const e = 1 - Math.pow(1 - t, 3);
-			const at = (a: number, b: number) => a + (b - a) * e;
-			const sx = at(from.sx, to.sx);
-			const sy = at(from.sy, to.sy);
-			const r = at(from.r, to.r);
-			out.push({
-				transform: `translate(${at(from.tx, to.tx)}px, ${at(from.ty, to.ty)}px) scale(${sx}, ${sy})`,
-				borderRadius: `${r / sx}px / ${r / sy}px`,
-				opacity: fadeIn ? Math.min(1, t / 0.5) : Math.min(1, (1 - t) / 0.55)
-			});
+	/** Every layer's keyframes for one open or close, sampled from the same timeline. */
+	const timeline = (m: Morph) => {
+		const g = m.geo;
+		const pill: Keyframe[] = [], glass: Keyframe[] = [], dark: Keyframe[] = [], text: Keyframe[] = [], list: Keyframe[] = [], grid: Keyframe[] = [];
+		for (let i = 0; i <= STEPS; i++) {
+			const t = i / STEPS;
+			const open = m.kind === 'open';
+			const at = open ? mix(g.tile, g.list, track(GROW, t))
+				: t < SHRINK_END ? mix(g.list, g.over, track(SHRINK, t / SHRINK_END)) : mix(g.over, g.tile, easeOut(ramp(t, SHRINK_END, 1)));
+			// the corners reach the list's radius early, as tvOS's pill turns square-ish soon after it starts to grow
+			const r = open ? g.tile.r + (g.list.r - g.tile.r) * Math.min(1, track(GROW, t) * 1.5) : at.r;
+			pill.push({transform: `translate(${at.tx}px, ${at.ty}px) scale(${at.sx}, ${at.sy})`, borderRadius: `${r / at.sx}px / ${r / at.sy}px`});
+			// the tile's text follows the pill's centre at its own size
+			const dx = at.tx + (g.w * at.sx) / 2 - g.w / 2;
+			const dy = at.ty + (g.h * at.sy) / 2 - g.h / 2;
+			text.push({transform: `translate(${dx}px, ${dy}px) scale(1.1)`, opacity: open ? 1 - ramp(t, 0.06, 0.27) : ramp(t, 0.42, 0.6)});
+			glass.push({opacity: open ? 1 - ramp(t, 0, 0.25) : ramp(t, 0.39, 0.62)});
+			dark.push({opacity: DARK * (open ? ramp(t, 0.05, 0.3) - ramp(t, 0.4, 0.65) : ramp(t, 0, 0.23) - ramp(t, 0.39, 0.62))});
+			list.push(open
+				? {opacity: ramp(t, 0.3, 0.6), transform: `scale(${1 - LIST_GROW + LIST_GROW * easeOut(ramp(t, 0.3, 1))})`}
+				: {opacity: 1 - ramp(t, 0.05, 0.47), transform: `scale(${1 - LIST_GROW * ramp(t, 0, 0.47)})`});
+			grid.push(open
+				? {opacity: 1 - ramp(t, 0.15, 0.5), transform: `scale(${1 - GRID_SHRINK * easeOut(ramp(t, 0, 0.5))})`}
+				: {opacity: ramp(t, 0.2, 0.42), transform: `scale(${1 - GRID_SHRINK + GRID_SHRINK * easeOut(ramp(t, 0.15, 0.55))})`});
 		}
-		return out;
+		return {pill, glass, dark, text, list, grid};
 	};
-	const morphEl = useRef<HTMLDivElement>(null);
-	const play = (keyframes: Keyframe[], done: () => void) => {
-		const el = morphEl.current;
-		const ms = still() ? 0 : GROW_MS;
-		if (el && el.animate) el.animate(keyframes, {duration: ms, easing: 'linear', fill: 'forwards'});
-		after(ms + 20, done);
-	};
+
+	const pillEl = useRef<HTMLDivElement>(null);
+	const glassEl = useRef<HTMLDivElement>(null);
+	const darkEl = useRef<HTMLDivElement>(null);
+	const textEl = useRef<HTMLDivElement>(null);
+	const listEl = useRef<HTMLDivElement>(null);
+	const gridEl = useRef<HTMLDivElement>(null);
+	const running = useRef<Animation[]>([]);
+	// start every layer in the same frame the pill is drawn, before the browser paints it
+	useLayoutEffect(() => {
+		if (!morph) return;
+		running.current.forEach((a) => a.cancel());
+		const k = timeline(morph);
+		const ms = still() ? 0 : morph.kind === 'open' ? OPEN_MS : CLOSE_MS;
+		const opts: KeyframeAnimationOptions = {duration: ms, easing: 'linear', fill: 'both'};
+		const pairs: [HTMLElement | null, Keyframe[]][] = [[pillEl.current, k.pill], [glassEl.current, k.glass], [darkEl.current, k.dark], [textEl.current, k.text], [listEl.current, k.list], [gridEl.current, k.grid]];
+		running.current = pairs.filter(([el]) => el && el.animate).map(([el, frames]) => (el as HTMLElement).animate(frames, opts));
+		const grid = gridEl.current;
+		if (grid) grid.style.transformOrigin = `${morph.geo.x + morph.geo.w / 2}px ${morph.geo.y + morph.geo.h / 2}px`;
+		after(ms + 20, () => {
+			if (morph.kind === 'open') { setPhase('list'); setMorph(null); }
+			else { setMorph(null); setMenu(null); setPhase('grid'); }
+			// the classes now hold each layer's end state
+			running.current.forEach((a) => a.cancel());
+			running.current = [];
+		});
+	}, [morph]);
 
 	const openMenu = (cell: MenuCell) => {
 		if (state.current.phase !== 'grid') return;
 		const list = options(cell);
 		const idx = Math.max(0, list.map((o) => o.value).indexOf(chosen(cell)));
-		const c = copyOf(cell, list.length);
-		const keyframes = frames(c.tile, c.list, false);
-		setConfirm(false); setMenu({cell, idx}); setPhase('fading'); setSource({cell, gone: false});
-		after(TEXT_MS, () => {
-			setSource({cell, gone: true}); setPhase('opening'); setMorph({box: c.box, first: keyframes[0]});
-			nextFrame(() => play(keyframes, () => { setPhase('list'); setMorph(null); }));
-		});
+		setConfirm(false); setMenu({cell, idx}); setPhase('opening');
+		setMorph({kind: 'open', cell, geo: geometry(cell, list.length)});
 	};
 
 	/** Back to the grid, after applying the choice if one was picked. */
@@ -214,21 +262,15 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 		const {menu: m, phase: ph} = state.current;
 		if (!m || ph !== 'list') return;
 		if (pick) apply(m.cell, options(m.cell)[idx === undefined ? m.idx : idx].value);
-		const c = copyOf(m.cell, options(m.cell).length);
-		const keyframes = frames(c.list, c.tile, true);
-		setPhase('closing'); setMorph({box: c.box, first: keyframes[0]});
-		nextFrame(() => play(keyframes, () => {
-			// the tile's glass takes over from the copy in the same frame, then its text fades back in
-			setSource({cell: m.cell, gone: false}); setMorph(null); setMenu(null); setPhase('grid');
-			nextFrame(() => setSource(null));
-		}));
+		setPhase('closing');
+		setMorph({kind: 'close', cell: m.cell, geo: geometry(m.cell, options(m.cell).length)});
 	};
 
 	const move = (row: number, x: number) => { setPos({row, x}); setConfirm(false); };
 
 	const handleKey = useCallback((key: NavKey): boolean => {
 		const {pos: p, values: v, menu: m, phase: ph} = state.current;
-		if (ph === 'fading' || ph === 'opening' || ph === 'closing') return true;
+		if (ph === 'opening' || ph === 'closing') return true;
 		if (m) {
 			if (key === 'back') closeMenu(false);
 			else if (key === 'enter') closeMenu(true);
@@ -254,18 +296,30 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 		for (let r = 0; r < GRID.length; r++) { const i = GRID[r].map((c) => c.id).indexOf(cell); if (i >= 0) { setPos({row: r, x: startOf(r, i)}); return; } }
 	};
 
-	const wide = (cell: CellId, glyph: GlyphName, title: string, sub: string, on = false) => (
-		<div
-			key={cell}
-			ref={(el) => { tiles.current[cell] = el; }}
-			class={`cc__mod cc__tile${current === cell ? ' cc__mod--focused' : ''}${source && source.cell === cell ? ` cc__mod--source${source.gone ? ' cc__mod--gone' : ''}` : ''}${on ? ' cc__mod--on' : ''}`}
-			onMouseEnter={focus(cell)}
-			onClick={() => press(cell)}
-		>
-			<div class="cc__icon"><Glyph name={glyph} /></div>
-			<div class="cc__text"><div class="cc__name">{title}</div><div class="cc__sub">{sub}</div></div>
-		</div>
-	);
+	/** What a list tile shows: icon, name, current choice, and whether it shows as on. */
+	const info = (cell: MenuCell): {glyph: GlyphName; title: string; sub: string; on: boolean} =>
+		cell === 'sound' ? {glyph: 'speaker', title: tr('Sound'), sub: SOUND_LABEL[values.sound] || values.sound, on: false}
+			: cell === 'picture' ? {glyph: 'picture', title: tr('Picture'), sub: PICTURE_LABEL[values.picture] || values.picture, on: false}
+				: cell === 'dark' ? {glyph: 'screensaver', title: tr('Theme'), sub: darkMode === 'on' ? tr('Dark') : darkMode === 'auto' ? tr('Auto') : tr('Light'), on: darkMode === 'on'}
+					: {glyph: 'timer', title: tr('Clock'), sub: clockFormat === '12h' ? tr('12-hour') : clockFormat === '24h' ? tr('24-hour') : tr('Auto'), on: clockFormat !== 'auto'};
+	const tileInside = (i: {glyph: GlyphName; title: string; sub: string}) => [
+		<div key="i" class="cc__icon"><Glyph name={i.glyph} /></div>,
+		<div key="t" class="cc__text"><div class="cc__name">{i.title}</div><div class="cc__sub">{i.sub}</div></div>
+	];
+	const wide = (cell: MenuCell) => {
+		const i = info(cell);
+		return (
+			<div
+				key={cell}
+				ref={(el) => { tiles.current[cell] = el; }}
+				class={`cc__mod cc__tile${current === cell ? ' cc__mod--focused' : ''}${morph && morph.cell === cell ? ' cc__mod--gone' : ''}${i.on ? ' cc__mod--on' : ''}`}
+				onMouseEnter={focus(cell)}
+				onClick={() => press(cell)}
+			>
+				{tileInside(i)}
+			</div>
+		);
+	};
 	// icon-only circles, as on tvOS; the focused one is named in the caption under the panel
 	const CIRCLES: {cell: CellId; glyph: GlyphName; label: string}[] = [
 		{cell: 'home', glyph: 'house', label: 'LG Home'}, {cell: 'art', glyph: 'image', label: 'Art mode'},
@@ -285,14 +339,14 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 		<>
 			<div class="panel-backdrop panel-backdrop--clear" onClick={onClose} />
 			<div class="panel panel--cc" ref={panel}>
-				<div class={`cc__grid${phase === 'grid' || phase === 'closing' ? '' : ' cc__grid--leaving'}`}>
+				<div ref={gridEl} class={`cc__grid${phase === 'grid' || phase === 'closing' ? '' : ' cc__grid--leaving'}`}>
 				<div class="cc__row">
-					{wide('sound', 'speaker', tr('Sound'), SOUND_LABEL[values.sound] || values.sound)}
-					{wide('picture', 'picture', tr('Picture'), PICTURE_LABEL[values.picture] || values.picture)}
+					{wide('sound')}
+					{wide('picture')}
 				</div>
 				<div class="cc__row">
-					{wide('dark', 'screensaver', tr('Theme'), darkMode === 'on' ? tr('Dark') : darkMode === 'auto' ? tr('Auto') : tr('Light'), darkMode === 'on')}
-					{wide('clock', 'timer', tr('Clock'), clockFormat === '12h' ? tr('12-hour') : clockFormat === '24h' ? tr('24-hour') : tr('Auto'), clockFormat !== 'auto')}
+					{wide('dark')}
+					{wide('clock')}
 				</div>
 				<div class="cc__row">{circle('home')}{circle('art')}{circle('screenoff')}{circle('restart')}</div>
 				<div class="cc__row">
@@ -308,9 +362,19 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 				</div>
 				<div class="cc__caption">{caption}</div>
 				</div>
-				{morph && <div ref={morphEl} class="cc__mod cc__mod--focused cc__morph" style={`${morph.box};transform:${morph.first.transform};border-radius:${morph.first.borderRadius};opacity:${morph.first.opacity}`} />}
+				{morph && (() => {
+					const box = `left:${morph.geo.x}px;top:${morph.geo.y}px;width:${morph.geo.w}px;height:${morph.geo.h}px`;
+					const i = info(morph.cell);
+					return [
+						<div key="pill" ref={pillEl} class="cc__morph" style={box}>
+							<div ref={glassEl} class="cc__mod cc__mod--focused" />
+							<div ref={darkEl} class="cc__morph__dark" />
+						</div>,
+						<div key="text" ref={textEl} class={`cc__tile cc__morph__text${i.on ? ' cc__mod--on' : ''}`} style={box}>{tileInside(i)}</div>
+					];
+				})()}
 				{menu && (
-					<div class={`cc__list${phase === 'opening' || phase === 'list' ? ' cc__list--shown' : ''}`}>
+					<div ref={listEl} class={`cc__list${phase === 'closing' || phase === 'grid' ? '' : ' cc__list--shown'}`}>
 						{options(menu.cell).map((o, i) => (
 							<div
 								key={o.value}

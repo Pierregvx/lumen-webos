@@ -41,10 +41,11 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [ ] Screensaver > Start on the home screen after (30 s, 1, 2 or 5 min): left alone on the home screen, the photo screensaver opens straight away with no LG screensaver first. Not in Settings, the guide or Control Center. Dock After idle now hides after 30 s, not 8.
 - [ ] Inputs: a column of wide glass pills, one per input, in the Control Center's glass; Up and Down move, OK switches. Check LG's input
       pictures are the same size as the Control Center icons.
-- [ ] Control Center lists (verify): OK on Sound, Picture, Theme or Clock opens a list of choices, focus on the current one (blue icon). The
-      tile's text and the rest of the grid fade, a copy of the tile in the same glass grows to the list's size and fades as the list fades in
-      (about 0.3 s). Up and Down move, OK picks and it runs backwards into the tile, Back returns without a change. Check the copy looks like
-      the tile itself expanding, with Live blur on and off, that it stays smooth (transform and opacity only), and that Reduce motion just switches.
+- [ ] Control Center lists (verify): OK on Sound, Picture, Theme or Clock opens a list of choices, focus on the current one (blue icon), timed
+      off the tvOS 26 video frame by frame. The tile turns into a dark pill that grows to the list's size while the rest of the grid shrinks
+      toward it and fades; the list fades in inside the pill, then the pill clears (about 0.33 s). OK picks and it runs backwards, landing on the
+      tile with a small overshoot; Back returns without a change. Check it matches the video, with Live blur on and off, that it stays smooth
+      (the pill's corners are the one thing that is not transform or opacity), and that Reduce motion just switches.
 - [ ] Control Center on one grid, at tvOS size (90px controls, about 420px across): the top buttons' glass, and their focus (brighter, larger).
       With Live blur on, each control is a live blur like the top buttons (ten small ones): check moving between them stays smooth. A control
       that is on (Theme dark, Clock not Auto, Eye Comfort) shows a blue icon. Start Screensaver

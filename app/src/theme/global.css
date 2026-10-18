@@ -1080,18 +1080,20 @@ html.liveblur .cc__mod {
 .cc__fill .cc__slidertext svg { stroke: #111; }
 .cc__num { margin-left: auto; font-weight: 500; }
 
-/* A tile's list of choices (Sound, Picture, Theme, Clock), as tvOS's Sleep Timer: the tile's text and the rest of the grid fade, a copy of the
-   tile grows to the list's size and fades, and the list fades in under it. Timings match TEXT_MS and GROW_MS in ControlCenter.tsx. */
-.cc__grid .cc__mod { transition: transform var(--motion-focus-ms) ease-out, opacity 150ms ease-out; }
-.cc__grid .cc__tile > *, .cc__caption { transition: opacity 80ms ease-out; }
-.cc__grid--leaving { pointer-events: none; }
-.cc__grid--leaving .cc__mod:not(.cc__mod--source), .cc__grid--leaving .cc__caption, .cc__mod--source > * { opacity: 0; }
-/* the copy and the tile swap in one frame, so the tile's glass shows and hides at once */
-.cc__grid .cc__mod--source { transition: transform var(--motion-focus-ms) ease-out, opacity 0s; }
+/* A tile's list of choices (Sound, Picture, Theme, Clock), as tvOS's Sleep Timer. ControlCenter.tsx animates every layer with keyframes; these
+   classes hold the states between. The pill stands in for the tile: its focused glass, a dark fill over it, and the tile's text on top. */
+.cc__grid--leaving { opacity: 0; pointer-events: none; }
 .cc__mod--gone { opacity: 0; }
-.panel--cc .cc__morph { position: absolute; transform-origin: 0 0; pointer-events: none; transition: none; }
-.cc__list { position: absolute; left: 0; top: 0; width: 100%; opacity: 0; transition: opacity 100ms ease-out; }
-.cc__list--shown { opacity: 1; transition: opacity 150ms ease-out 50ms; }
+.cc__list { position: absolute; left: 0; top: 0; width: 100%; opacity: 0; transform-origin: 50% 0; }
+.cc__list--shown { opacity: 1; }
+.cc__list:not(.cc__list--shown) { pointer-events: none; }
+.panel--cc .cc__morph { position: absolute; transform-origin: 0 0; pointer-events: none; }
+.panel--cc .cc__morph > * { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border-radius: inherit; transform: none; transition: none; }
+.cc__morph__dark { background: rgb(12, 12, 16); opacity: 0; }
+.panel--cc .cc__morph__text { position: absolute; pointer-events: none; color: #fff; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35); }
+.cc__morph__text svg { position: static; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.cc__morph__text:not(.cc__mod--on) svg { stroke: rgba(255, 255, 255, 0.9); }
+html.light .cc__morph__text { text-shadow: none; }
 /* height and gap match OPT_H and OPT_GAP in ControlCenter.tsx */
 .panel--cc .cc__opt { width: 100%; height: 72px; border-radius: 36px; margin-bottom: 12px; }
 .panel--cc .cc__opt.cc__mod--focused { transform: scale(1.05); }
