@@ -65,6 +65,7 @@ Brand icons and logos of third-party apps, your own photographs and the private 
 (gitignored); the build lays that folder over the app if it is there. The layout is described at the top of `app/vite.config.ts`.
 Builds from the Homebrew Channel never have the font, so `npm run push-font` copies it to `/var/lib/homehook/fonts/` on the TV. After each update, Lumen copies it into its own folder, the only place it can read files from.
 `tools/gen_iconpack.py` builds icon tiles into it from logos you put in `tools/logos/` and from your own TV's app icons.
+The cloud wallpaper library is `tools/catalog.json`, turned into `app/src/config/wallpapers.ts` by `python3 tools/build_catalog.py`. `tools/harvest.py` fills it from Reddit; `tools/harvest_open.py [met|cleveland|commons]` adds Art (Cleveland; Met is in the script but gave none) and Landscapes (Wikimedia Commons) with credits. Rerun either, then `build_catalog.py`.
 `npm run release` builds the public `.ipk` (stable id, no `app/private/`) into `release/`.
 
 ## Install on the TV

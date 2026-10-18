@@ -56,7 +56,13 @@ function cloudIdFor (sel: string): string {
 	return list[Math.floor(Math.random() * list.length)].id;
 }
 
-interface Candidate { src: string; id?: string }
+interface Candidate { src: string; id?: string; caption?: PictureCaption }
+
+export interface PictureCaption { title: string; credit?: string }
+let caption: PictureCaption | null = null;
+/** the title and credit of the cloud picture on screen, for the home screen caption; null for anything else */
+export function getPictureCaption (): PictureCaption | null { return caption; }
+function setCaption (c: PictureCaption | null): void { caption = c; window.dispatchEvent(new Event('lumen-wpcaption')); }
 
 function candidates (sel: string): Candidate[] {
 	const fallback: Candidate[] = LOCAL_WALLPAPERS.length > 0 ? [{src: LOCAL_WALLPAPERS[0].file}] : [];
@@ -69,7 +75,8 @@ function candidates (sel: string): Candidate[] {
 	const item = WALLPAPERS.filter((w) => w.id === id)[0];
 	if (!item) return fallback;
 	const url = cloudUrl(item);
-	return ([{src: resized(url, 1920), id}, {src: url, id}] as Candidate[]).concat(fallback);
+	const cap = item.title ? {title: item.title, credit: item.credit} : undefined;
+	return ([{src: resized(url, 1920), id, caption: cap}, {src: url, id, caption: cap}] as Candidate[]).concat(fallback);
 }
 
 /** The light blurred copy the glass shapes show: bundled defaults have a -blur.jpg beside them; cloud pictures get one from the resizer. */
@@ -257,10 +264,11 @@ export function setWallpaper (sel: string): void {
 	currentSel = sel;
 	const list = candidates(sel);
 	const root = document.documentElement.classList;
-	if (list.length === 0) { root.remove(HTML_CLASS); el.style.backgroundImage = 'none'; shown = null; shownId = ''; useLocal(null); setBlur(null); writeCache(BOOT_WALLPAPER_KEY, null); markShown(); return; }
+	if (list.length === 0) { root.remove(HTML_CLASS); el.style.backgroundImage = 'none'; shown = null; shownId = ''; setCaption(null); useLocal(null); setBlur(null); writeCache(BOOT_WALLPAPER_KEY, null); markShown(); return; }
 	const show = (c: Candidate, imgs: HTMLImageElement[], src: string) => {
 		shown = c.src;
 		shownId = c.id || '';
+		setCaption(c.caption || null);
 		decoded.imgs = imgs;
 		released = false;
 		paint(el, src);
@@ -298,7 +306,7 @@ export function setWallpaper (sel: string): void {
 	}
 	const tryAt = (i: number) => {
 		if (mine !== token) return;                      // a newer choice replaced this one
-		if (i >= list.length) { root.remove(HTML_CLASS); markShown(); return; }
+		if (i >= list.length) { root.remove(HTML_CLASS); setCaption(null); markShown(); return; }
 		const c = list[i];
 		// a cloud picture already on the TV (prepared by the last launch) is read from there; anything else comes from its URL
 		const stored = c.src.indexOf(PROXY) === 0 ? getPics(c.src) : Promise.resolve(null);

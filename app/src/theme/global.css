@@ -848,7 +848,11 @@ html.light.wp-video .screen--settings::before { background-image: linear-gradien
 .screen--dockhidden .status { transform: translateY(calc(952px - 100%)); }
 .videocap { position: absolute; right: var(--layout-edge-padding); top: calc(var(--layout-header-top) + 806px); max-width: 800px; text-align: right; opacity: 0; transition: opacity 420ms ease; pointer-events: none; }
 .screen--dockhidden .videocap { opacity: 1; }
-html:not(.wp-video) .videocap { display: none; }
+html:not(.wp-video) .videocap:not(.videocap--pic), html.wp-video .videocap--pic { display: none; }
+/* a picture's caption stays up with the dock, just above its glass, and slides down with the clock when the dock goes */
+.videocap--pic { opacity: 1; transform: translateY(-190px); transition: opacity 420ms ease, transform 600ms cubic-bezier(0.25, 0.1, 0.25, 1); }
+.screen--dockhidden .videocap--pic { transform: none; }
+.screen--lower .videocap--pic { opacity: 0; }
 .videocap__place { font-size: 36px; font-weight: 600; letter-spacing: 0.01em; color: #fff; text-shadow: 0 2px 14px rgba(0, 0, 0, 0.6); }
 .videocap__text { margin-top: 6px; font-size: 22px; line-height: 1.3; color: rgba(255, 255, 255, 0.86); text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); }
 
