@@ -45,7 +45,7 @@ const LIVE_INFO_W = 660;
 /** how much higher the Live TV row sits when focused, so its now/next block fits on screen */
 const LIVE_BELOW = 150;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
+const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', ambientPrint: 'ambient-print', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 0.5, 1, 5, 15, 30, 60];   // minutes
 /** when the video wallpaper plays (Settings > Wallpaper > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
 const VIDEO_HOURS: Record<string, [number, number]> = {day: [7, 19], evening: [17, 23], night: [19, 7]};
@@ -479,6 +479,12 @@ export function App () {
 			description: 'Turns the TV\'s backlight down while your photos show, and back up when you press a key.',
 			value: config.ambientBrightness !== 'tv',
 			...listed(OPTION.ambientBrightness)
+		}, {
+			id: OPTION.ambientPrint,
+			group: 'screensaver' as const,
+			label: 'Print look',
+			description: 'Makes your photos look like prints on a wall rather than a glowing screen: softer blacks, paper-white whites and a gentle fall of light.',
+			value: config.ambientPrint
 		}] : []),
 		{
 			id: OPTION.videoHours,
@@ -586,7 +592,7 @@ export function App () {
 			description: 'Frames drawn in the last second and the longest frame, in the top-left corner. Only in dev builds.',
 			value: config.fpsCounter
 		}] : [])
-	], [config.liveTvRow, config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleSeconds, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur, config.ambient, config.ambientOn, config.ambientSeconds, config.ambientBrightness, immich.ready]);
+	], [config.liveTvRow, config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleSeconds, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur, config.ambient, config.ambientOn, config.ambientSeconds, config.ambientBrightness, config.ambientPrint, immich.ready]);
 
 	const wallpaper: WallpaperTab = useMemo(() => {
 		if (!inSettings) return {categories: [], entries: [], current: '', onPick: () => undefined, onFavorite: () => undefined};
@@ -713,6 +719,7 @@ export function App () {
 		else if (optionId === OPTION.liveBlur) updateConfig({...config, liveBlur: !config.liveBlur});
 		else if (optionId === OPTION.nightDim) updateConfig({...config, nightDim: !config.nightDim});
 		else if (optionId === OPTION.ambientOn) updateConfig({...config, ambientOn: !config.ambientOn});
+		else if (optionId === OPTION.ambientPrint) updateConfig({...config, ambientPrint: !config.ambientPrint});
 	}, [config]);
 
 	/** a value picked from an option's pop-up list */
@@ -754,7 +761,7 @@ export function App () {
 		<>
 			{/* Home stays mounted under Settings so it keeps its focus position. */}
 			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} menuItems={MENU_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} dockHide={config.dockHide} focusRow={focusRow} />
-			{screen === 'ambient' && <Ambient source={config.ambient} seconds={config.ambientSeconds} backlight={AMBIENT_BACKLIGHT[config.ambientBrightness]} weather={weather} showPeriod={config.showAmPm} onExit={() => setScreen('home')} />}
+			{screen === 'ambient' && <Ambient source={config.ambient} seconds={config.ambientSeconds} backlight={AMBIENT_BACKLIGHT[config.ambientBrightness]} weather={weather} showPeriod={config.showAmPm} print={config.ambientPrint} onExit={() => setScreen('home')} />}
 			{screen === 'guide' && <Guide channels={live.channels} listings={live.listings} logos={live.logos} now={live.now} schedule={live.schedule} full={config.guideFull} onMode={(full) => { if (configRef.current.guideFull !== full) updateConfig({...configRef.current, guideFull: full}); }} active={!controls} onOpen={watchChannel} onClose={() => setScreen('home')} />}
 			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onChoose={onChoose} onClose={() => setScreen('home')} />}
 			{controls && <ControlCenter

@@ -67,6 +67,8 @@ export interface UserConfig {
 	ambientSeconds: number;
 	/** how far the screensaver lowers the TV's backlight while it shows: tv (not at all) | dim | low */
 	ambientBrightness: string;
+	/** screensaver photos look like a print on the wall: lifted blacks, paper whites, light falling off from the top left */
+	ambientPrint: boolean;
 	/** how strongly the focused tile stands out: subtle | normal | strong */
 	focusStrength: string;
 	/** apps in the first row (the glass bar): 5, 6 or 7 */
@@ -117,6 +119,7 @@ export const DEFAULT_CONFIG: UserConfig = {
 	ambientOn: false,
 	ambientSeconds: 30,
 	ambientBrightness: 'dim',
+	ambientPrint: false,
 	focusStrength: 'normal',
 	firstRow: 6,
 	videoHours: 'always',
@@ -173,6 +176,7 @@ export function parseConfig (raw: string): UserConfig {
 		liveBlur: parsed.liveBlur !== false,
 		ambientSeconds: [10, 20, 30, 60, 120, 300].indexOf(Number(parsed.ambientSeconds)) !== -1 ? Number(parsed.ambientSeconds) : 30,
 		ambientBrightness: parsed.ambientBrightness === 'tv' || parsed.ambientBrightness === 'low' ? parsed.ambientBrightness : 'dim',
+		ambientPrint: parsed.ambientPrint === true,
 		ambient: typeof parsed.ambient === 'string' && parsed.ambient.indexOf('immich:') === 0 ? parsed.ambient : 'immich:recent',
 		// before ambientOn, an empty source meant LG's screensaver
 		ambientOn: typeof parsed.ambientOn === 'boolean' ? parsed.ambientOn : typeof parsed.ambient === 'string' && parsed.ambient.indexOf('immich:') === 0,
