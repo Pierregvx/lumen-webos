@@ -958,6 +958,7 @@ html.focus-strong .rows { --motion-focus-scale: 1.24; }
 .screen > .pill.status .clock { margin: 0 0 0 -6px; }
 .screen > .pill.status .clock__time { font-size: 150px; font-weight: 650; line-height: 0.95; letter-spacing: -0.02em; }
 .screen > .pill.status .clock__colon { opacity: 1; top: -0.06em; }
+.sf .screen > .pill.status .clock__colon { top: 0; }
 .screen > .pill.status .clock__period { font-size: 40px; font-weight: 400; margin-left: 12px; align-self: flex-end; margin-bottom: 18px; }
 .status__row { display: flex; flex-direction: row; align-items: center; margin-top: 10px; }
 .status__row .status__date { font-size: 30px; font-weight: 500; margin-right: 0; }
