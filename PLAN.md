@@ -117,7 +117,8 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [ ] Guide button: rebind it with Input Hook to run `luna-send -n 1 luna://com.webos.applicationManager/launch '{"id":"com.samrenfrew.lumen","params":{"view":"guide"}}'`.
       With Lumen closed and with it in front, it should open the Guide (or the Full guide, by Settings). Needs the Live TV row on. (verify)
 - [ ] Colour buttons: which does this remote have, and which key codes reach the app?
-- [ ] Chrome DevTools on the TV: which method works on webOS 25 (Dev Manager Desktop inspect, `ares-inspect`). Needed for Phase 4 traces.
+- [x] Chrome DevTools on the TV: WebAppMgr runs with `--remote-debugging-port=9998` on localhost. Tunnel it over SSH
+      (`ssh -N -L 9998:127.0.0.1:9998 root@<tv>`), then `http://localhost:9998/json` lists the pages, Lumen among them. Found 2026-10-18.
 - [x] Settings keys: read works for `picture/backlight`, `picture/eyeComfortMode`, `sound/soundOutput` (`docs/spikes.md`). Backlight and Eye Comfort set work. Sound output
       dropped: TV speakers only.
 - [x] Live TV channel service, for the Freeview tiles idea in Later. Yes (2026-10-17): 188 aerial channels with names, PNG logos and the
