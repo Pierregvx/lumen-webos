@@ -206,15 +206,16 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			const dx = at.tx + (g.w * at.sx) / 2 - g.w / 2;
 			const dy = at.ty + (g.h * at.sy) / 2 - g.h / 2;
 			text.push({transform: `translate(${dx}px, ${dy}px) scale(1.1)`, opacity: open ? 1 - ramp(t, 0.06, 0.27) : ramp(t, 0.42, 0.6)});
-			glass.push({opacity: open ? 1 - ramp(t, 0.35, 0.65) : ramp(t, 0, 0.23)});
+			// opening: the glass is gone by 167 ms, while the list is still fading in and growing
+			glass.push({opacity: open ? 1 - ramp(t, 0.2, 0.5) : ramp(t, 0, 0.23)});
 			// the list sits inside the pill at the pill's size, as tvOS's does, scaled evenly to fit and centred across it
 			const pw = g.w * at.sx;
 			const fit = Math.min(1, pw / g.fw, (g.h * at.sy) / g.fh);
 			const lx = g.x + at.tx + (pw - fit * g.fw) / 2;
 			const ly = g.y + at.ty;
-			list.push({opacity: open ? ramp(t, 0.3, 0.6) : 1 - ramp(t, 0.05, 0.47), transform: `translate(${lx}px, ${ly}px) scale(${fit})`});
+			list.push({opacity: open ? easeOut(ramp(t, 0.08, 0.8)) : 1 - ramp(t, 0.05, 0.47), transform: `translate(${lx}px, ${ly}px) scale(${fit})`});
 			grid.push(open
-				? {opacity: 1 - ramp(t, 0.15, 0.5), transform: `scale(${1 - GRID_SHRINK * easeOut(ramp(t, 0, 0.5))})`}
+				? {opacity: 1 - ramp(t, 0.08, 0.4), transform: `scale(${1 - GRID_SHRINK * easeOut(ramp(t, 0, 0.4))})`}
 				: {opacity: ramp(t, 0.2, 0.42), transform: `scale(${1 - GRID_SHRINK + GRID_SHRINK * easeOut(ramp(t, 0.15, 0.55))})`});
 		}
 		return {pill, glass, text, list, grid};
