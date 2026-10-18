@@ -764,7 +764,7 @@ export function App () {
 				onClockFormat={() => { const modes = ['auto', '12h', '24h']; const c = configRef.current; updateConfig({...c, clockFormat: modes[(modes.indexOf(c.clockFormat) + 1) % modes.length]}); }}
 				onClose={() => setControls(false)}
 				onError={(text) => showToast(text, 'error')}
-				onAction={(a: CenterAction) => { setControls(false); if (a === 'art') showScreensaver(true); else onActivate('menu', a === 'lg-home' ? {key: MISC.lgHome, label: 'LG Home'} : {key: 'screensaver', label: 'Screensaver'}); }}
+				onAction={(a: CenterAction) => { setControls(false); if (a === 'art') showScreensaver(true); else onActivate('menu', {key: MISC.lgHome, label: 'LG Home'}); }}
 			/>}
 			<Toast message={toast} />
 		</>

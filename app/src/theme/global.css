@@ -700,49 +700,10 @@ html.night:not(.light):not(.wp-video):not(.liveblur) .screen--plainglass .topbar
 .screen > .pill.status .clock__time { font-size: 52px; font-weight: 300; line-height: 1; letter-spacing: 0; }
 .screen > .pill.status .clock__period { font-size: 22px; }
 
-/* ---------- Control Center: glass tiles (no live blur: the panel's glass is the pre-blurred wallpaper copy) ---------- */
-.panel--cc { width: 700px; padding: 26px 26px 26px; top: 130px; border-radius: 48px; }
-.cc__top { display: flex; flex-direction: row; justify-content: space-between; align-items: baseline; margin: 0 8px 18px; }
-.cc__title { font-size: 30px; color: var(--color-text-primary); letter-spacing: 0.02em; }
-.cc__net { font-size: 22px; opacity: 0.75; color: var(--color-text-primary); }
-.cc__row { display: flex; flex-direction: row; justify-content: space-between; margin-bottom: 16px; }
-.cc__tile { width: 322px; height: 96px; border-radius: 48px; display: flex; flex-direction: row; align-items: center; padding: 0 18px 0 16px; box-sizing: border-box; color: var(--color-text-primary); background: rgba(255, 255, 255, 0.16); box-shadow: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.55), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.22); }
-.cc__badge { flex: 0 0 auto; width: 62px; height: 62px; border-radius: 31px; margin-right: 16px; background: rgba(255, 255, 255, 0.22); display: flex; align-items: center; justify-content: center; }
-.cc__badge svg, .cc__circle svg, .cc__slidertext svg { position: static; left: auto; top: auto; width: 32px; height: 32px; stroke: rgba(255, 255, 255, 0.62); }
-.cc__text { min-width: 0; }
-.cc__name { font-size: 26px; font-weight: 600; white-space: nowrap; }
-.cc__sub { font-size: 21px; opacity: 0.8; white-space: nowrap; margin-top: 2px; }
-.cc__tile--on .cc__badge { background: #fff; }
-.cc__tile--on .cc__badge svg { stroke: #111; }
-.cc__tile--focused { background: #fff; color: #111; transform: scale(1.03); }
-.cc__tile--focused .cc__badge { background: rgba(0, 0, 0, 0.1); }
-.cc__tile--focused .cc__badge svg { stroke: #111; }
-.cc__row--round { padding: 4px 12px 0; }
-.cc__round { width: 130px; display: flex; flex-direction: column; align-items: center; }
-.cc__circle { width: 96px; height: 96px; border-radius: 48px; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.16); box-shadow: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.55), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.22); }
-.cc__circle--focused { background: #fff; transform: scale(1.1); }
-.cc__circle--focused svg { stroke: #111; }
-.cc__label { margin-top: 10px; font-size: 20px; color: var(--color-text-primary); opacity: 0.85; white-space: nowrap; }
-.cc__slider { position: relative; height: 80px; border-radius: 40px; overflow: hidden; margin-top: 8px; background: rgba(255, 255, 255, 0.16); box-shadow: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.55), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.22); }
-.cc__fill { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255, 255, 255, 0.55); }
-.cc__slidertext { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; flex-direction: row; align-items: center; padding: 0 26px; font-size: 26px; font-weight: 600; color: #111; }
-.cc__slidertext svg { margin-right: 14px; stroke: #111; }
-.cc__num { margin-left: auto; font-weight: 500; }
-.cc__slider--focused { box-shadow: 0 0 0 4px #fff; transform: scale(1.02); }
-.cc__slider + .cc__slider { margin-top: 16px; }
-.cc__eye { margin-left: auto; display: flex; flex-direction: row; align-items: center; padding: 6px 16px 6px 12px; border-radius: 26px; font-size: 21px; font-weight: 500; opacity: 0.55; }
-.cc__eye svg { width: 26px; height: 26px; margin-right: 8px; }
-.cc__eye--on { opacity: 1; background: rgba(255, 255, 255, 0.85); }
-.cc__eye + .cc__num { margin-left: 18px; }
-
-/* ---------- Control Center polish ---------- */
+/* ---------- date pill and top buttons ---------- */
 .screen > .pill.status { flex-direction: row; }
 .screen > .pill.status .clock { position: static; opacity: 1; flex: 0 0 auto; }
 .topbar .pill:last-child .pill__label { left: auto; right: 0; transform: none; }
-.panel--cc { top: 150px; }
-.cc__tile, .cc__circle, .cc__slider { background: rgba(28, 34, 48, 0.34); }
-.cc__tile--focused { background: #fff; }
-.cc__circle--focused { background: #fff; }
 
 /* ---------- date and time on one row ---------- */
 .screen > .pill.status { flex-direction: column; align-items: flex-start; justify-content: center; }
@@ -773,16 +734,8 @@ html.night:not(.light):not(.wp-video):not(.liveblur) .screen--plainglass .topbar
 html, body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; font-optical-sizing: auto; letter-spacing: -0.011em; }
 .tile__label { font-weight: 600; letter-spacing: -0.015em; line-height: 1.15; text-shadow: 0 2px 14px rgba(0, 0, 0, 0.55), 0 0 2px rgba(0, 0, 0, 0.25); text-align: center; }
 .panel .tile__label { font-weight: 600; }
-.settings__title, .panel__title, .cc__title { font-weight: 600; letter-spacing: -0.02em; }
+.settings__title, .panel__title { font-weight: 600; letter-spacing: -0.02em; }
 .wp__chip, .settings__button { font-weight: 600; }
-
-/* five round buttons in Control Center */
-.cc__round { width: 112px; }
-.cc__row--round { padding: 4px 4px 0; }
-
-/* six round buttons in Control Center */
-.cc__round { width: 100px; }
-.cc__label { font-size: 19px; }
 
 /* ---------- icons: small square icons stay sharp on a tile of their own colour ---------- */
 .tile__image--icon { left: 50%; top: 50%; width: auto; height: 66%; max-width: 70%; transform: translate(-50%, -50%); object-fit: contain; border-radius: 16%; }
@@ -790,7 +743,6 @@ html, body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibi
 /* ---------- panels: no entry animation, glass placed with a fixed offset instead of background-attachment: fixed ---------- */
 .panel { animation: none; box-shadow: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.5), 0 10px 24px rgba(0, 0, 0, 0.3); }
 .panel { --pw: 760px; --pt: 190px; background-attachment: scroll, scroll; background-position: 0 0, calc(var(--pw) + var(--layout-edge-padding) - 1920px) calc(-1 * var(--pt)); }
-.panel--cc { --pw: 700px; --pt: 150px; }
 .panel--ctx { background-position: 0 0, -740px -300px; }
 .panel--folder { background-position: 0 0, -580px -250px; }
 
@@ -853,21 +805,10 @@ html.light .status { background-image: none !important; background-color: transp
 html.light .status, html.light .status * { color: #fff !important; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45); }
 html.light .screen.screen--settings, html.light .wp-image .screen.screen--settings, html.light .wp-video .screen.screen--settings { background: rgba(243, 244, 249, 0.97); }
 html.light .settings__hint { color: rgba(20, 22, 32, 0.62); }
-html.light .wp__chip--focused, html.light .settings__button--focused, html.light .menu__row--focused, html.light .cc__tile--focused, html.light .cc__circle--focused, html.light .pill--focused, html.light .topcap--focused { background-color: #14151b !important; color: #fff !important; box-shadow: 0 8px 18px rgba(20, 24, 40, 0.30); }
+html.light .wp__chip--focused, html.light .settings__button--focused, html.light .menu__row--focused, html.light .pill--focused, html.light .topcap--focused { background-color: #14151b !important; color: #fff !important; box-shadow: 0 8px 18px rgba(20, 24, 40, 0.30); }
 html.light .panel { background-image: linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10)), var(--wp-blur) !important; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.85), 0 24px 60px rgba(20, 24, 40, 0.28); }
-html.light .cc__tile { background: rgba(255, 255, 255, 0.36); box-shadow: 0 2px 8px rgba(20, 24, 40, 0.10); }
-html.light .cc__badge { background: rgba(20, 24, 40, 0.10); }
-html.light .cc__badge svg, html.light .cc__circle svg, html.light .menu__row svg, html.light .pill svg, html.light .topcap svg { stroke: rgba(20, 22, 32, 0.72); }
-html.light .cc__tile--on .cc__badge { background: #14151b; }
-html.light .cc__tile--on .cc__badge svg { stroke: #fff; }
-html.light .cc__circle { background: rgba(255, 255, 255, 0.42); box-shadow: 0 2px 8px rgba(20, 24, 40, 0.10); }
-html.light .cc__slider { background: rgba(255, 255, 255, 0.40); box-shadow: 0 2px 8px rgba(20, 24, 40, 0.10); }
-html.light .cc__fill { background: rgba(20, 24, 40, 0.20); }
-html.light .cc__slidertext, html.light .cc__slidertext svg { color: #14151b; stroke: #14151b; }
-html.light .cc__tile--focused .cc__badge { background: rgba(255, 255, 255, 0.18); }
-html.light .cc__tile--focused .cc__badge svg, html.light .cc__circle--focused svg, html.light .menu__row--focused svg, html.light .pill--focused svg, html.light .topcap--focused svg { stroke: #fff; }
-html.light .cc__slider--focused { box-shadow: 0 0 0 4px #14151b; }
-html.light .cc__eye--on { background: rgba(255, 255, 255, 0.9); }
+html.light .menu__row svg, html.light .pill svg, html.light .topcap svg { stroke: rgba(20, 22, 32, 0.72); }
+html.light .menu__row--focused svg, html.light .pill--focused svg, html.light .topcap--focused svg { stroke: #fff; }
 
 .wp__note { margin: -8px 6px 16px; font-size: 22px; line-height: 1.35; color: var(--color-text-secondary); max-width: 1500px; }
 
@@ -1041,37 +982,6 @@ html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.1; }
 .topbar { right: var(--layout-rows-edge); }
 .panel { right: var(--layout-rows-edge); background-position: 0 0, calc(var(--pw) + var(--layout-rows-edge) - 1920px) calc(-1 * var(--pt)); }
 
-/* ---------- Control Center, tvOS 26 style: a narrow panel of squircle modules, no title ----------
-   Wide tiles two to a row, five icon squares (the focused one named under them), then the two sliders. Every module has the same corner,
-   and the panel's corner is that plus the padding, so they are concentric. */
-.panel--cc { --pw: 600px; --pt: 150px; width: 600px; padding: 20px; border-radius: 48px; top: 150px; }
-.panel--cc .cc__row { justify-content: space-between; margin-bottom: 14px; }
-.panel--cc .cc__tile { width: 273px; height: 104px; border-radius: 28px; padding: 0 14px; transform: none; }
-.panel--cc .cc__badge { width: 56px; height: 56px; border-radius: 28px; margin-right: 14px; }
-.panel--cc .cc__badge svg { width: 28px; height: 28px; }
-.panel--cc .cc__name { font-size: 24px; }
-.panel--cc .cc__sub { font-size: 20px; }
-.panel--cc .cc__tile--focused { transform: scale(1.04); box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28); }
-.cc__row--squares { margin-bottom: 0 !important; }
-.cc__square {
-	width: 100px; height: 100px; border-radius: 28px; display: flex; align-items: center; justify-content: center;
-	background: rgba(28, 34, 48, 0.34); box-shadow: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.55), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.22);
-	transition: transform var(--motion-focus-ms) ease-out;
-}
-.cc__square svg { position: static; width: 36px; height: 36px; stroke: rgba(255, 255, 255, 0.72); }
-.cc__square--focused { background: #fff; transform: scale(1.06); box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28); }
-.cc__square--focused svg { stroke: #111; }
-.cc__caption { height: 36px; line-height: 36px; text-align: center; font-size: 21px; font-weight: 600; color: var(--color-text-primary); }
-.panel--cc .cc__slider { height: 88px; border-radius: 28px; margin-top: 0; }
-.panel--cc .cc__slider + .cc__slider { margin-top: 14px; }
-.panel--cc .cc__slider--focused { transform: scale(1.02); }
-.panel--cc .cc__slidertext { padding: 0 24px; font-size: 24px; }
-html.light .cc__square { background: rgba(255, 255, 255, 0.42); box-shadow: 0 2px 8px rgba(20, 24, 40, 0.10); }
-html.light .cc__square svg { stroke: rgba(20, 22, 32, 0.72); }
-html.light .cc__square--focused { background-color: #14151b !important; }
-html.light .cc__square--focused svg { stroke: #fff; }
-.cc__caption span { display: inline-block; white-space: nowrap; }
-
 /* ---------- glass bar: 40px of glass round the tiles (it was 24), sitting low so the grid peeks in just under it ----------
    The bar's tiles show no name (it would fall on the bar's edge and the row below); the grid's do. The grid rows are a little further apart
    than the bar and the first grid row, so the names fit. */
@@ -1112,36 +1022,77 @@ html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.15; }
 .rows > .row:first-child .tile--focused .tile__box { box-shadow: 0 12px 22px rgba(0, 0, 0, 0.32), 0 3px 6px rgba(0, 0, 0, 0.18); }
 .rows .tile--focused .tile__box::after { z-index: 2; }
 
-/* ---------- Control Center, tvOS 26 Liquid Glass: no panel, each control is its own piece of glass ----------
-   Wide tiles and sliders are pills, the buttons circles. The glass is the pre-blurred wallpaper copy (--wp-bg) fixed to the screen, so it
-   lines up with the picture behind, whatever the Live blur setting: eleven live blurs would be far too much for the TV. Focused, a control
-   turns white (no glass, so its scale does not misplace a fixed background). */
+/* ---------- Control Center (components/ControlCenter.tsx), tvOS 26 style: no panel, each control is its own piece of glass ----------
+   One grid, four squares wide: circles are one square, tiles two, the backlight bar three. Every control is the same height, fully rounded,
+   16px apart, and focus is the same everywhere: it turns white and grows. The glass is the pre-blurred wallpaper copy fixed to the screen,
+   since ten live blurs would be far too much for the TV; a focused control drops it, so its scale does not misplace the picture. */
 html body .panel.panel--cc {
+	--cc-u: 118px; --cc-gap: 16px;
 	background: none !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
-	width: 560px; padding: 0; top: 160px; border-radius: 0;
+	width: calc(4 * var(--cc-u) + 3 * var(--cc-gap)); padding: 0; top: 160px; border-radius: 0;
 }
-html body .panel--cc .cc__tile, html body .panel--cc .cc__square, html body .panel--cc .cc__slider {
+.cc__row { display: flex; flex-direction: row; margin-bottom: var(--cc-gap); }
+.cc__row > * + * { margin-left: var(--cc-gap); }
+.cc__mod {
+	position: relative; flex: 0 0 auto; height: var(--cc-u); border-radius: calc(var(--cc-u) / 2); box-sizing: border-box; color: #fff;
 	background-color: rgba(20, 24, 36, 0.30);
 	background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0.04) 50%, rgba(255, 255, 255, 0.10) 100%), linear-gradient(rgba(14, 18, 28, 0.44), rgba(14, 18, 28, 0.44)), var(--wp-bg, var(--glass-fallback));
-	background-size: auto, auto, 1920px 1080px; background-attachment: scroll, scroll, fixed; background-position: 0 0, 0 0, 0 0; background-repeat: no-repeat;
+	background-size: auto, auto, 1920px 1080px; background-attachment: scroll, scroll, fixed; background-repeat: no-repeat;
 	box-shadow: inset 0 2px 1px -1px rgba(255, 255, 255, 0.75), inset 2px 0 1px -1px rgba(255, 255, 255, 0.35), inset 0 -2px 1px -1px rgba(255, 255, 255, 0.18), 0 10px 22px rgba(0, 0, 0, 0.28);
+	transition: transform var(--motion-focus-ms) ease-out;
 }
-html body .panel--cc .cc__tile { border-radius: 52px; padding: 0 18px 0 22px; }
-html body .panel--cc .cc__square { border-radius: 50px; }
-html body .panel--cc .cc__slider { border-radius: 44px; }
-html body .panel--cc .cc__badge { background: rgba(255, 255, 255, 0.16); }
-html body .panel--cc .cc__tile--focused, html body .panel--cc .cc__square--focused { background: #fff; box-shadow: 0 12px 26px rgba(0, 0, 0, 0.32); }
-html body .panel--cc .cc__tile--focused .cc__badge { background: rgba(0, 0, 0, 0.08); }
-html body .panel--cc .cc__slider--focused { box-shadow: 0 0 0 4px #fff, 0 12px 26px rgba(0, 0, 0, 0.32); }
-.panel--cc .cc__caption { text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); }
-/* light look: the same glass, lifted */
-html.light body .panel--cc .cc__tile, html.light body .panel--cc .cc__square, html.light body .panel--cc .cc__slider {
+.cc__mod svg { position: static; width: 34px; height: 34px; stroke: rgba(255, 255, 255, 0.8); }
+.cc__mod--focused { background: #fff; color: #111; transform: scale(1.06); box-shadow: 0 12px 26px rgba(0, 0, 0, 0.32); }
+.cc__mod--focused svg { stroke: #111; }
+
+.cc__tile { width: calc(2 * var(--cc-u) + var(--cc-gap)); display: flex; flex-direction: row; align-items: center; padding: 0 20px 0 22px; }
+.cc__badge { flex: 0 0 auto; width: 58px; height: 58px; border-radius: 29px; margin-right: 14px; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.16); }
+.cc__badge svg { width: 30px; height: 30px; }
+.cc__tile--on .cc__badge { background: #fff; }
+.cc__tile--on .cc__badge svg { stroke: #111; }
+.cc__mod--focused .cc__badge { background: rgba(0, 0, 0, 0.08); }
+.cc__text { min-width: 0; }
+.cc__name { font-size: 24px; font-weight: 600; white-space: nowrap; }
+.cc__sub { font-size: 20px; opacity: 0.8; white-space: nowrap; margin-top: 2px; }
+
+.cc__circle { width: var(--cc-u); display: flex; align-items: center; justify-content: center; }
+.cc__circle--on:not(.cc__mod--focused) { background: rgba(255, 255, 255, 0.55); }
+.cc__circle--on:not(.cc__mod--focused) svg { stroke: #111; }
+
+.cc__slider { width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); overflow: hidden; }
+.cc__fill { position: absolute; left: 0; top: 0; bottom: 0; overflow: hidden; background: rgba(255, 255, 255, 0.6); }
+.cc__mod--focused .cc__fill { background: #fff; }
+.cc__mod--focused.cc__slider { background-color: rgba(20, 24, 36, 0.30); background-image: linear-gradient(rgba(14, 18, 28, 0.55), rgba(14, 18, 28, 0.55)); color: #fff; }
+.cc__slidertext { position: absolute; left: 0; top: 0; bottom: 0; width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); display: flex; flex-direction: row; align-items: center; padding: 0 30px; box-sizing: border-box; font-size: 24px; font-weight: 600; white-space: nowrap; }
+.cc__slidertext svg { margin-right: 14px; }
+.cc__fill .cc__slidertext { color: #111; }
+.cc__fill .cc__slidertext svg { stroke: #111; }
+.cc__mod--focused > .cc__slidertext svg { stroke: rgba(255, 255, 255, 0.8); }
+.cc__num { margin-left: auto; font-weight: 500; }
+
+.cc__caption { height: 36px; line-height: 36px; text-align: center; font-size: 22px; font-weight: 600; color: #fff; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); }
+
+/* light look: the same glass, lifted; focus turns dark instead of white */
+html.light body .panel--cc .cc__mod {
+	color: #14151b;
 	background-color: rgba(255, 255, 255, 0.30);
 	background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0.40) 50%, rgba(255, 255, 255, 0.50) 100%), linear-gradient(transparent, transparent), var(--wp-bg, var(--glass-fallback));
 	box-shadow: inset 0 2px 1px -1px #fff, inset 2px 0 1px -1px rgba(255, 255, 255, 0.7), 0 10px 22px rgba(20, 24, 40, 0.20);
 }
-html.light body .panel--cc .cc__tile--focused, html.light body .panel--cc .cc__square--focused { background: #14151b; }
-html.light .panel--cc .cc__caption { color: #fff; }
+html.light .cc__mod svg { stroke: rgba(20, 22, 32, 0.72); }
+html.light .cc__badge { background: rgba(20, 24, 40, 0.10); }
+html.light .cc__tile--on .cc__badge { background: #14151b; }
+html.light .cc__tile--on .cc__badge svg { stroke: #fff; }
+html.light body .panel--cc .cc__circle--on:not(.cc__mod--focused) { background: rgba(20, 24, 40, 0.30); }
+html.light .cc__circle--on:not(.cc__mod--focused) svg { stroke: #14151b; }
+html.light body .panel--cc .cc__mod--focused:not(.cc__slider) { background: #14151b; color: #fff; }
+html.light .cc__mod--focused:not(.cc__slider) svg { stroke: #fff; }
+html.light .cc__mod--focused .cc__badge { background: rgba(255, 255, 255, 0.18); }
+html.light .cc__fill { background: rgba(20, 24, 40, 0.20); }
+html.light .cc__fill .cc__slidertext { color: #14151b; }
+html.light .cc__mod--focused .cc__fill { background: #14151b; }
+html.light .cc__mod--focused .cc__fill .cc__slidertext { color: #fff; }
+html.light .cc__mod--focused .cc__fill .cc__slidertext svg { stroke: #fff; }
 
 /* ---------- ambient screensaver (components/Ambient.tsx): your photos, crossfade and a slow zoom, clock bottom left ---------- */
 .ambient { position: fixed; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 100; background: #000; overflow: hidden; }
