@@ -130,11 +130,11 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 	const wide = (cell: CellId, glyph: GlyphName, title: string, sub: string, on = false) => (
 		<div
 			key={cell}
-			class={`cc__mod cc__tile${current === cell ? ' cc__mod--focused' : ''}${on ? ' cc__tile--on' : ''}`}
+			class={`cc__mod cc__tile${current === cell ? ' cc__mod--focused' : ''}${on ? ' cc__mod--on' : ''}`}
 			onMouseEnter={focus(cell)}
 			onClick={() => press(cell)}
 		>
-			<div class="cc__badge"><Glyph name={glyph} /></div>
+			<div class="cc__icon"><Glyph name={glyph} /></div>
 			<div class="cc__text"><div class="cc__name">{title}</div><div class="cc__sub">{sub}</div></div>
 		</div>
 	);
@@ -146,7 +146,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 	];
 	const circle = (cell: CellId, on = false) => {
 		const c = CIRCLES.filter((q) => q.cell === cell)[0];
-		return <div key={cell} class={`cc__mod cc__circle${current === cell ? ' cc__mod--focused' : ''}${on ? ' cc__circle--on' : ''}`} onMouseEnter={focus(cell)} onClick={() => press(cell)}><Glyph name={c.glyph} /></div>;
+		return <div key={cell} class={`cc__mod cc__circle${current === cell ? ' cc__mod--focused' : ''}${on ? ' cc__mod--on' : ''}`} onMouseEnter={focus(cell)} onClick={() => press(cell)}><Glyph name={c.glyph} /></div>;
 	};
 	const named = CIRCLES.filter((q) => q.cell === current)[0];
 	const caption = !named ? '' : named.cell === 'restart' && confirm ? tr('Press OK again') : named.cell === 'eye' ? `${tr(named.label)}: ${tr(values.eyeComfort ? 'On' : 'Off')}` : tr(named.label);
@@ -158,11 +158,11 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			<div class="panel-backdrop panel-backdrop--clear" onClick={onClose} />
 			<div class="panel panel--cc">
 				<div class="cc__row">
-					{wide('sound', 'speaker', tr('Sound mode'), SOUND_LABEL[values.sound] || values.sound)}
+					{wide('sound', 'speaker', tr('Sound'), SOUND_LABEL[values.sound] || values.sound)}
 					{wide('picture', 'picture', tr('Picture'), PICTURE_LABEL[values.picture] || values.picture)}
 				</div>
 				<div class="cc__row">
-					{wide('dark', 'screensaver', tr('Appearance'), darkMode === 'on' ? tr('Dark') : darkMode === 'auto' ? tr('Auto') : tr('Light'), darkMode === 'on')}
+					{wide('dark', 'screensaver', tr('Theme'), darkMode === 'on' ? tr('Dark') : darkMode === 'auto' ? tr('Auto') : tr('Light'), darkMode === 'on')}
 					{wide('clock', 'timer', tr('Clock'), clockFormat === '12h' ? tr('12-hour') : clockFormat === '24h' ? tr('24-hour') : tr('Auto'), clockFormat !== 'auto')}
 				</div>
 				<div class="cc__row">{circle('home')}{circle('art')}{circle('screenoff')}{circle('restart')}</div>
