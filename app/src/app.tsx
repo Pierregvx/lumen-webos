@@ -141,6 +141,8 @@ export function App () {
 			if (p.view === 'recent') setFocusRow({id: ROW.dock, seq: ++seq});
 			// watch.sh opens Lumen with {"view":"ambient"} when the TV's screensaver starts (Settings > Screensaver)
 			if (p.view === 'ambient' && configRef.current.ambientOn) { ambientOpening.current = null; setScreen('ambient'); }
+			// {"view":"guide"} is the remote's Guide button, rebound with LG Input Hook; the Guide only has data with the Live TV row on
+			if (p.view === 'guide' && configRef.current.liveTvRow) { setScreen('guide'); setControls(false); }
 			// a plain relaunch is the remote's Home button: back to the home screen from Settings, the Guide, the screensaver or Control Center
 			if (!p.view) { setScreen('home'); setControls(false); }
 		};

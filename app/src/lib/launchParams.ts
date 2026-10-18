@@ -1,4 +1,4 @@
-// Launch parameters: {"view":"recent"} opens Lumen on its Recent row (the Recents button, rebound with LG Input Hook). webOS hands them over
+// Launch parameters: {"view":"recent"} opens Lumen on its Recent row and {"view":"guide"} on the Guide (buttons rebound with LG Input Hook). webOS hands them over
 // in webOSSystem.launchParams (PalmSystem on older firmware) on a cold start and in a webOSRelaunch event when Lumen is already running. Untested on webOS 25 (PLAN Phase 2).
 
 const system = () => window.webOSSystem || window.PalmSystem;
