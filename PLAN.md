@@ -36,6 +36,8 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [ ] Photos: Recent, with people (verify): only pictures with faces. If Immich leaves out `people` on /api/search/random, it falls back to Recent.
 - [ ] Photos day variety: two pictures in a row (pairs included) are never from the same day, unless the source has nothing else.
 - [ ] Screensaver > Start on the home screen after (30 s, 1, 2 or 5 min): left alone on the home screen, the photo screensaver opens straight away with no LG screensaver first. Not in Settings, the guide or Control Center. Dock After idle now hides after 30 s, not 8.
+- [ ] Inputs: a column of wide glass pills, one per input, in the Control Center's glass; Up and Down move, OK switches. Check LG's input
+      pictures are the same size as the Control Center icons.
 - [ ] Control Center on one grid, at tvOS size (90px controls, about 420px across): the top buttons' glass, and their focus (brighter, larger).
       With Live blur on, each control is a live blur like the top buttons (ten small ones): check moving between them stays smooth. A control
       that is on (Theme dark, Clock not Auto, Eye Comfort) shows a blue icon. Start Screensaver

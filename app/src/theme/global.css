@@ -1033,6 +1033,13 @@ html body .panel.panel--cc {
 	background: none !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
 	width: calc(4 * var(--cc-u) + 3 * var(--cc-gap)); padding: 0; top: 150px; border-radius: 0;
 }
+/* Inputs: the same glass, one wide pill per input (three grid squares) */
+html body .panel.panel--inputs { width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); }
+.panel--inputs .cc__tile { width: 100%; margin-bottom: var(--cc-gap); }
+/* LG's input pictures fill only half their square, so they are drawn at 72px in the 40px icon space to look the size of the other icons */
+.cc__inputicon { width: 72px; height: 72px; margin: -16px; object-fit: contain; filter: brightness(2.4); }
+html.light .cc__inputicon { filter: brightness(0.4); }
+html.light .cc__mod--focused .cc__inputicon { filter: brightness(2.4); }
 .cc__row { display: flex; flex-direction: row; margin-bottom: var(--cc-gap); }
 .cc__row > * + * { margin-left: var(--cc-gap); }
 .cc__mod {

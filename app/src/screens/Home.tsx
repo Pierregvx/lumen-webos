@@ -303,10 +303,8 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 		if (n.zone === 'panel') {
 			const last = ins.length - 1;
 			switch (key) {
-				case 'left': n.panelIndex = clamp(n.panelIndex - 1, 0, last); break;
-				case 'right': n.panelIndex = clamp(n.panelIndex + 1, 0, last); break;
-				case 'up': if (n.panelIndex - PANEL_COLUMNS >= 0) n.panelIndex -= PANEL_COLUMNS; break;
-				case 'down': if (n.panelIndex + PANEL_COLUMNS <= last) n.panelIndex += PANEL_COLUMNS; break;
+				case 'up': n.panelIndex = clamp(n.panelIndex - 1, 0, last); break;
+				case 'down': n.panelIndex = clamp(n.panelIndex + 1, 0, last); break;
 				case 'back': n.zone = n.panelFrom; break;
 			}
 			render();
@@ -472,20 +470,21 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 			{n.zone === 'panel' && (
 				<>
 					<div class="panel-backdrop panel-backdrop--clear" onClick={() => { n.zone = n.panelFrom; render(); }} />
-					<div class="panel">
-						<div class="panel__title">{tr('Inputs')}</div>
-						<div class="panel__grid">
-							{inputs.map((item, i) => (
-								<Tile
-									key={item.key}
-									model={item}
-									focused={i === n.panelIndex}
-									onHover={() => { n.panelIndex = i; render(); }}
-									onActivate={() => activatePanel(i)}
-								/>
-							))}
-							{inputs.length === 0 && <div class="panel__empty">No inputs selected: add some in Settings &gt; Sources</div>}
-						</div>
+					<div class="panel panel--cc panel--inputs">
+						{inputs.map((item, i) => (
+							<div
+								key={item.key}
+								class={`cc__mod cc__tile${i === n.panelIndex ? ' cc__mod--focused' : ''}`}
+								onMouseEnter={() => { n.panelIndex = i; render(); }}
+								onClick={() => activatePanel(i)}
+							>
+								<div class="cc__icon">
+									{item.glyphImageUrl ? <img class="cc__inputicon" src={item.glyphImageUrl} alt="" decoding="async" /> : item.glyph ? <Glyph name={item.glyph} /> : null}
+								</div>
+								<div class="cc__text"><div class="cc__name">{tr(item.label)}</div></div>
+							</div>
+						))}
+						{inputs.length === 0 && <div class="cc__caption">No inputs selected: add some in Settings &gt; Sources</div>}
 					</div>
 				</>
 			)}
