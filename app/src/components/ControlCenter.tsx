@@ -43,9 +43,13 @@ const startOf = (row: number, i: number) => GRID[row].slice(0, i).reduce((n, c) 
 const BACKLIGHT_DELAY_MS = 300;
 
 /** Opening a list: the tile's text and the rest of the grid fade, then a copy of the tile grows to the list's size by transform and fades as
- *  the list fades in. Closing runs it backwards. These match the transitions on .cc__grid, .cc__morph and .cc__list in global.css. */
+ *  the list fades in. Closing runs it backwards. These match the transitions on .cc__grid and .cc__list in global.css. */
 const TEXT_MS = 80;
 const GROW_MS = 200;
+/** keyframes in the copy's grow or shrink; enough that its corners stay round between them */
+const MORPH_STEPS = 12;
+/** one end of the copy's grow: its offset and scale, and its corner radius on screen */
+interface End {tx: number; ty: number; sx: number; sy: number; r: number}
 /** a list choice's height and the gap between choices, as .cc__opt in global.css */
 const OPT_H = 72;
 const OPT_GAP = 12;
@@ -69,7 +73,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 	// the tile the list opens from: its text is faded while set, and its glass is hidden while the copy stands in for it
 	const [source, setSource] = useState<{cell: CellId; gone: boolean} | null>(null);
 	// the copy of the tile, laid out at the tile's size and place, that grows into the list and shrinks back
-	const [morph, setMorph] = useState<{box: string; transform: string; opacity: number; motion: '' | 'grow' | 'shrink'} | null>(null);
+	const [morph, setMorph] = useState<{box: string; first: Keyframe} | null>(null);
 	const state = useRef({values, pos, confirm, menu, phase});
 	state.current = {values, pos, confirm, menu, phase};
 	const tiles = useRef<Partial<Record<CellId, HTMLElement | null>>>({});
@@ -159,11 +163,37 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 		const x = el ? el.offsetLeft : 0;
 		const y = el ? el.offsetTop : 0;
 		const full = panel.current ? panel.current.offsetWidth : w;
-		return {
-			box: `left:${x}px;top:${y}px;width:${w}px;height:${h}px`,
-			tile: `translate(${-0.05 * w}px, ${-0.05 * h}px) scale(1.1)`,
-			list: `translate(${-x}px, ${-y}px) scale(${full / w}, ${listHeight(count) / h})`
-		};
+		// the two ends as the copy's offset, scale and on-screen corner radius: the focused tile (scaled 1.1 about its centre) and the list
+		const tile = {tx: -0.05 * w, ty: -0.05 * h, sx: 1.1, sy: 1.1, r: (h / 2) * 1.1};
+		const list = {tx: -x, ty: -y, sx: full / w, sy: listHeight(count) / h, r: OPT_H / 2};
+		return {box: `left:${x}px;top:${y}px;width:${w}px;height:${h}px`, tile, list};
+	};
+
+	/** The copy's keyframes from one end to the other. Its scale is uneven, so each frame sets the corners in the copy's own units to come out
+	 *  round on screen, easing from the tile's radius to an option pill's. fadeIn says whether it fades in (closing) or out (opening). */
+	const frames = (from: End, to: End, fadeIn: boolean): Keyframe[] => {
+		const out: Keyframe[] = [];
+		for (let i = 0; i <= MORPH_STEPS; i++) {
+			const t = i / MORPH_STEPS;
+			const e = 1 - Math.pow(1 - t, 3);
+			const at = (a: number, b: number) => a + (b - a) * e;
+			const sx = at(from.sx, to.sx);
+			const sy = at(from.sy, to.sy);
+			const r = at(from.r, to.r);
+			out.push({
+				transform: `translate(${at(from.tx, to.tx)}px, ${at(from.ty, to.ty)}px) scale(${sx}, ${sy})`,
+				borderRadius: `${r / sx}px / ${r / sy}px`,
+				opacity: fadeIn ? Math.min(1, t / 0.5) : Math.min(1, (1 - t) / 0.55)
+			});
+		}
+		return out;
+	};
+	const morphEl = useRef<HTMLDivElement>(null);
+	const play = (keyframes: Keyframe[], done: () => void) => {
+		const el = morphEl.current;
+		const ms = still() ? 0 : GROW_MS;
+		if (el && el.animate) el.animate(keyframes, {duration: ms, easing: 'linear', fill: 'forwards'});
+		after(ms + 20, done);
 	};
 
 	const openMenu = (cell: MenuCell) => {
@@ -171,14 +201,11 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 		const list = options(cell);
 		const idx = Math.max(0, list.map((o) => o.value).indexOf(chosen(cell)));
 		const c = copyOf(cell, list.length);
+		const keyframes = frames(c.tile, c.list, false);
 		setConfirm(false); setMenu({cell, idx}); setPhase('fading'); setSource({cell, gone: false});
 		after(TEXT_MS, () => {
-			setSource({cell, gone: true}); setPhase('opening');
-			setMorph({box: c.box, transform: c.tile, opacity: 1, motion: ''});
-			nextFrame(() => {
-				setMorph({box: c.box, transform: c.list, opacity: 0, motion: 'grow'});
-				after(GROW_MS + 20, () => { setPhase('list'); setMorph(null); });
-			});
+			setSource({cell, gone: true}); setPhase('opening'); setMorph({box: c.box, first: keyframes[0]});
+			nextFrame(() => play(keyframes, () => { setPhase('list'); setMorph(null); }));
 		});
 	};
 
@@ -188,16 +215,13 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 		if (!m || ph !== 'list') return;
 		if (pick) apply(m.cell, options(m.cell)[idx === undefined ? m.idx : idx].value);
 		const c = copyOf(m.cell, options(m.cell).length);
-		setPhase('closing');
-		setMorph({box: c.box, transform: c.list, opacity: 0, motion: ''});
-		nextFrame(() => {
-			setMorph({box: c.box, transform: c.tile, opacity: 1, motion: 'shrink'});
-			after(GROW_MS + 20, () => {
-				// the tile's glass takes over from the copy in the same frame, then its text fades back in
-				setSource({cell: m.cell, gone: false}); setMorph(null); setMenu(null); setPhase('grid');
-				nextFrame(() => setSource(null));
-			});
-		});
+		const keyframes = frames(c.list, c.tile, true);
+		setPhase('closing'); setMorph({box: c.box, first: keyframes[0]});
+		nextFrame(() => play(keyframes, () => {
+			// the tile's glass takes over from the copy in the same frame, then its text fades back in
+			setSource({cell: m.cell, gone: false}); setMorph(null); setMenu(null); setPhase('grid');
+			nextFrame(() => setSource(null));
+		}));
 	};
 
 	const move = (row: number, x: number) => { setPos({row, x}); setConfirm(false); };
@@ -284,7 +308,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 				</div>
 				<div class="cc__caption">{caption}</div>
 				</div>
-				{morph && <div class={`cc__mod cc__mod--focused cc__morph${morph.motion ? ` cc__morph--${morph.motion}` : ''}`} style={`${morph.box};transform:${morph.transform};opacity:${morph.opacity}`} />}
+				{morph && <div ref={morphEl} class="cc__mod cc__mod--focused cc__morph" style={`${morph.box};transform:${morph.first.transform};border-radius:${morph.first.borderRadius};opacity:${morph.first.opacity}`} />}
 				{menu && (
 					<div class={`cc__list${phase === 'opening' || phase === 'list' ? ' cc__list--shown' : ''}`}>
 						{options(menu.cell).map((o, i) => (
