@@ -968,10 +968,10 @@ html.focus-strong .rows { --motion-focus-scale: 1.24; }
 /* ---------- big clock: the time large and light, the date and weather on one line under it ---------- */
 .screen > .pill.status { flex-direction: column; align-items: flex-start; padding: 0; }
 .screen > .pill.status .clock { margin: 0 0 0 -6px; }
-.screen > .pill.status .clock__time { font-size: 150px; font-weight: 650; line-height: 0.95; letter-spacing: -0.02em; }
+.screen > .pill.status .clock__time { font-size: 120px; font-weight: 650; line-height: 0.95; letter-spacing: -0.02em; }
 .screen > .pill.status .clock__colon { opacity: 1; top: -0.06em; }
 .sf .screen > .pill.status .clock__colon { top: 0; }
-.screen > .pill.status .clock__period { font-size: 40px; font-weight: 400; margin-left: 12px; align-self: flex-end; margin-bottom: 18px; }
+.screen > .pill.status .clock__period { font-size: 32px; font-weight: 400; margin-left: 10px; align-self: flex-end; margin-bottom: 14px; }
 /* the home screen's clock is smaller than the screensaver's, which keeps the full size */
 .screen:not(.ambient__status) > .pill.status .clock__time { font-size: 80px; }
 .screen:not(.ambient__status) > .pill.status .clock__period { font-size: 21px; margin-left: 7px; margin-bottom: 9px; }

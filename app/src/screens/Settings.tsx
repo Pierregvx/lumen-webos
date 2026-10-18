@@ -183,14 +183,21 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 				value: o.valueText !== undefined ? o.valueText : o.value ? 'On' : 'Off',
 				chevron: !!(o.choices && o.choices.length)
 			}));
+			const descriptions = list.map((o) => o.description);
+			// Choose wallpaper sits under Wallpaper type, since the type decides what it offers
+			const at = link ? list.findIndex((o) => o.id === 'wp-type') + 1 : -1;
+			if (at >= 0) {
+				rows.splice(at, 0, {key: CHOOSE_WALLPAPER, label: 'Choose wallpaper', chevron: true} as ListRow);
+				descriptions.splice(at, 0, wallpaper.summary || '');
+			}
 			return {
 				title: g.label,
 				glyph: g.glyph,
-				rows: link ? [{key: CHOOSE_WALLPAPER, label: 'Choose wallpaper', chevron: true} as ListRow].concat(rows) : rows,
-				descriptions: (link ? [wallpaper.summary || ''] : []).concat(list.map((o) => o.description)),
+				rows,
+				descriptions,
 				activate: (i) => {
-					if (link && i === 0) { push({kind: 'wallpaper'}); return; }
-					const o = list[link ? i - 1 : i];
+					if (i === at) { push({kind: 'wallpaper'}); return; }
+					const o = list[at >= 0 && i > at ? i - 1 : i];
 					if (o) activateOption(o);
 				}
 			};
