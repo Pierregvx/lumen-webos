@@ -190,8 +190,8 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			x, y, w, h, fw: full, fh: listHeight(count),
 			tile: grown(1.1), // focused tiles are drawn at 1.1
 			over: grown(1.1 * OVERSHOOT),
-			// the pill ends PILL_PAD bigger than the list all round
-			list: {tx: -x - PILL_PAD, ty: -y - PILL_PAD, sx: (full + 2 * PILL_PAD) / w, sy: (listHeight(count) + 2 * PILL_PAD) / h, r: OPT_H / 2 + PILL_PAD}
+			// the pill ends PILL_PAD bigger than the list all round, with an option's corners
+			list: {tx: -x - PILL_PAD, ty: -y - PILL_PAD, sx: (full + 2 * PILL_PAD) / w, sy: (listHeight(count) + 2 * PILL_PAD) / h, r: OPT_H / 2}
 		};
 	};
 
@@ -220,8 +220,8 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			const open = m.kind === 'open';
 			const at = open ? opening(g, t)
 				: t < SHRINK_END ? mix(g.list, g.over, track(SHRINK, t / SHRINK_END)) : mix(g.over, g.tile, easeOut(ramp(t, SHRINK_END, 1)));
-			// the corners reach the list's radius early, as tvOS's pill turns square-ish soon after it starts to grow
-			const r = open ? g.tile.r + (g.list.r - g.tile.r) * Math.min(1, track(GROW, t) * 1.5) : at.r;
+			// the corners ease from the tile's round ends to an option's radius as the pill grows
+			const r = at.r;
 			pill.push({transform: `translate(${at.tx}px, ${at.ty}px) scale(${at.sx}, ${at.sy})`, borderRadius: `${r / at.sx}px / ${r / at.sy}px`});
 			// the tile's text follows the pill's centre at its own size
 			const dx = at.tx + (g.w * at.sx) / 2 - g.w / 2;

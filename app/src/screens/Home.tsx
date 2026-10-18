@@ -474,7 +474,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 						{inputs.map((item, i) => (
 							<div
 								key={item.key}
-								class={`cc__mod cc__tile${i === n.panelIndex ? ' cc__mod--focused' : ''}`}
+								class={`cc__mod cc__tile cc__opt${i === n.panelIndex ? ' cc__mod--focused' : ''}`}
 								onMouseEnter={() => { n.panelIndex = i; render(); }}
 								onClick={() => activatePanel(i)}
 							>

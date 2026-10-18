@@ -1036,9 +1036,8 @@ html:root body .panel.panel--cc {
 	background: none !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
 	width: calc(4 * var(--cc-u) + 3 * var(--cc-gap)); padding: 0; top: 150px; border-radius: 0;
 }
-/* Inputs: the same glass, one wide pill per input (three grid squares) */
+/* Inputs: the same glass, three grid squares wide, one pill per input at the size of a Control Center list's options (.cc__opt) */
 html:root body .panel.panel--inputs { width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); }
-.panel--inputs .cc__tile { width: 100%; margin-bottom: var(--cc-gap); }
 /* LG's input pictures fill only part of their square: at 50px in the 40px icon space they draw about 28px across, like the other icons */
 .cc__inputicon { width: 50px; height: 50px; margin: -5px; object-fit: contain; filter: brightness(0) invert(1) opacity(0.9); }
 html.light .cc__inputicon { filter: brightness(0) opacity(0.72); }
