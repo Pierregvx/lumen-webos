@@ -727,7 +727,7 @@ html.night:not(.light):not(.wp-video):not(.liveblur) .screen--plainglass .topbar
 .status__row .status__date { margin-right: 12px; }
 .screen > .pill.status .clock__period { margin-left: 6px; }
 .status__weather { font-weight: 500; font-size: 22px; letter-spacing: -0.005em; opacity: 0.82; animation: status-in 600ms ease-out; }
-@keyframes status-in { from { opacity: 0; } to { opacity: 0.82; } }
+@keyframes status-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* ---------- scroll windows: room at the sides so the focus ring and shadow are never clipped ---------- */
 .grid__viewport { padding: 16px 24px; margin: 0 -24px; }
@@ -855,9 +855,12 @@ html.light.wp-video .screen--settings::before { background-image: linear-gradien
 .screen--dockhidden .videocap { opacity: 1; }
 html:not(.wp-video) .videocap:not(.videocap--pic), html.wp-video .videocap--pic { display: none; }
 /* a picture's caption stays up with the dock, just above its glass, and slides down with the clock when the dock goes */
-.videocap--pic { opacity: 1; transform: translateY(-190px); transition: opacity 420ms ease, transform 600ms cubic-bezier(0.25, 0.1, 0.25, 1); }
-.screen--dockhidden .videocap--pic { transform: none; }
+.videocap--pic { opacity: 1; transform: translateY(-176px); transition: opacity 420ms ease, transform 600ms cubic-bezier(0.25, 0.1, 0.25, 1); }
+/* with the dock away its last line sits on the date's line */
+.screen--dockhidden .videocap--pic { transform: translateY(62px); }
 .screen--lower .videocap--pic { opacity: 0; }
+.videocap--pic .videocap__place { font-size: 28px; }
+.videocap--pic .videocap__text { margin-top: 4px; font-size: 18px; }
 .videocap__place { font-size: 36px; font-weight: 600; letter-spacing: 0.01em; color: #fff; text-shadow: 0 2px 14px rgba(0, 0, 0, 0.6); }
 .videocap__text { margin-top: 6px; font-size: 22px; line-height: 1.3; color: rgba(255, 255, 255, 0.86); text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); }
 
@@ -969,11 +972,14 @@ html.focus-strong .rows { --motion-focus-scale: 1.24; }
 .screen > .pill.status .clock__colon { opacity: 1; top: -0.06em; }
 .sf .screen > .pill.status .clock__colon { top: 0; }
 .screen > .pill.status .clock__period { font-size: 40px; font-weight: 400; margin-left: 12px; align-self: flex-end; margin-bottom: 18px; }
+/* the home screen's clock is smaller than the screensaver's, which keeps the full size */
+.screen:not(.ambient__status) > .pill.status .clock__time { font-size: 120px; }
+.screen:not(.ambient__status) > .pill.status .clock__period { font-size: 32px; margin-left: 10px; margin-bottom: 14px; }
 .status__row { display: flex; flex-direction: row; align-items: center; margin-top: 10px; }
 .status__row .status__date { font-size: 30px; font-weight: 500; margin-right: 0; }
-.status__weather { display: flex; flex-direction: row; align-items: center; margin: 0 0 0 26px; font-size: 30px; font-weight: 500; opacity: 0.9; animation: status-in 600ms ease-out; }
+.status__weather { display: flex; flex-direction: row; align-items: center; margin: 0 0 0 26px; font-size: 30px; font-weight: 500; opacity: 1; animation: status-in 600ms ease-out; }
 .screen > .pill.status .status__icon { width: 36px; height: 36px; margin: 0 10px 0 0; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.status__cond { margin-left: 12px; font-weight: 400; opacity: 0.85; }
+.status__cond { margin-left: 12px; font-weight: 500; }
 
 /* ---------- tvOS 26 layout: a wider glass bar, the app grid peeking in under it, the grid scrolled to the top ----------
    The rows reach out to --layout-rows-edge (the bar is about 91% of the screen wide). The first grid row's tops show at the bottom of the

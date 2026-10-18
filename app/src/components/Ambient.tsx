@@ -27,7 +27,9 @@ export function Ambient ({source, seconds = 30, backlight, weather, showPeriod, 
 		const pill = status.current && status.current.querySelector<HTMLElement>('.pill.status');
 		if (!warm || !home || !pill || document.documentElement.classList.contains('reduce-motion')) return;
 		const a = home.getBoundingClientRect(), b = pill.getBoundingClientRect();
-		pill.style.transform = `translate(${a.left - b.left}px, ${a.top - b.top}px)`;
+		// the home clock is smaller: it grows to the screensaver's size as it slides
+		pill.style.transformOrigin = '0 0';
+		pill.style.transform = `translate(${a.left - b.left}px, ${a.top - b.top}px) scale(${b.width ? a.width / b.width : 1})`;
 		void pill.offsetWidth;
 		pill.style.transition = 'transform 900ms cubic-bezier(0.4, 0, 0.2, 1)';
 		pill.style.transform = '';

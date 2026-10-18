@@ -450,7 +450,7 @@ export function App () {
 		{
 			id: OPTION.wpNew,
 			group: 'wallpaper' as const,
-			label: 'New picture each time Lumen opens',
+			label: 'New picture on startup',
 			description: 'Opens on another of your pictures or photos each time. Off, it opens on the last one it showed.',
 			value: config.wpNewOnLaunch
 		},
