@@ -226,7 +226,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 	/** Every layer's keyframes for one open or close, sampled from the same timeline. */
 	const timeline = (m: Morph) => {
 		const g = m.geo;
-		const pill: Keyframe[] = [], glass: Keyframe[] = [], rim: Keyframe[] = [], text: Keyframe[] = [], list: Keyframe[] = [], grid: Keyframe[] = [];
+		const pill: Keyframe[] = [], glass: Keyframe[] = [], rim: Keyframe[] = [], text: Keyframe[] = [], list: Keyframe[] = [], listFade: Keyframe[] = [], grid: Keyframe[] = [], gridFade: Keyframe[] = [];
 		for (let i = 0; i <= STEPS; i++) {
 			const t = i / STEPS;
 			const open = m.kind === 'open';
@@ -240,7 +240,8 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			const dy = at.ty + (g.h * at.sy) / 2 - g.h / 2;
 			text.push({transform: `translate(${dx}px, ${dy}px) scale(1.1)`, opacity: open ? 1 - ramp(t, 0.06, 0.27) : ramp(t, 0.42, 0.6)});
 			// opening: the glass is gone by 167 ms, while the list is still fading in and growing
-			glass.push({opacity: open ? 1 - ramp(t, 0.2, 0.5) : ramp(t, 0, 0.23)});
+			// closing: the glass stays faint while the list fades, and fills in only as the pill nears the tile
+			glass.push({opacity: open ? 1 - ramp(t, 0.2, 0.5) : 0.25 * easeOut(ramp(t, 0.15, 0.5)) + 0.75 * ramp(t, 0.6, 0.85)});
 			// the edge highlight and shadow grow with the pill's scale, so they go before it grows and come back once it is near the tile's size
 			rim.push({opacity: open ? 1 - ramp(t, 0, 0.1) : ramp(t, 0.55, 0.75)});
 			// the list sits inside the pill at the pill's size, as tvOS's does: scaled evenly to fit inside its padding, and centred
@@ -249,12 +250,13 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			const fit = Math.max(0, Math.min(1, (pw - 2 * PILL_PAD) / g.fw, (ph - 2 * PILL_PAD) / g.fh));
 			const lx = g.x + at.tx + (pw - fit * g.fw) / 2;
 			const ly = g.y + at.ty + (ph - fit * g.fh) / 2;
-			list.push({opacity: open ? easeOut(ramp(t, 0.08, 0.8)) : 1 - ramp(t, 0.05, 0.47), transform: `translate(${lx}px, ${ly}px) scale(${fit})`});
-			grid.push(open
-				? {opacity: 1 - ramp(t, 0.08, 0.4), transform: `scale(${1 - GRID_SHRINK * easeOut(ramp(t, 0, 0.4))})`}
-				: {opacity: ramp(t, 0.2, 0.42), transform: `scale(${1 - GRID_SHRINK + GRID_SHRINK * easeOut(ramp(t, 0.15, 0.55))})`});
+			// opacity goes on each piece of glass, not the list or grid: a fading parent would cut its live blur off from the wallpaper
+			list.push({transform: `translate(${lx}px, ${ly}px) scale(${fit})`});
+			listFade.push({opacity: open ? easeOut(ramp(t, 0.08, 0.8)) : 1 - ramp(t, 0.05, 0.47)});
+			grid.push({transform: open ? `scale(${1 - GRID_SHRINK * easeOut(ramp(t, 0, 0.4))})` : `scale(${1 - GRID_SHRINK + GRID_SHRINK * easeOut(ramp(t, 0.15, 0.55))})`});
+			gridFade.push({opacity: open ? 1 - ramp(t, 0.08, 0.4) : ramp(t, 0.2, 0.42)});
 		}
-		return {pill, glass, rim, text, list, grid};
+		return {pill, glass, rim, text, list, listFade, grid, gridFade};
 	};
 
 	const pillEl = useRef<HTMLDivElement>(null);
@@ -271,7 +273,9 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 		const k = timeline(morph);
 		const ms = still() ? 0 : morph.kind === 'open' ? OPEN_MS : CLOSE_MS;
 		const opts: KeyframeAnimationOptions = {duration: ms, easing: 'linear', fill: 'both'};
-		const pairs: [HTMLElement | null, Keyframe[]][] = [[pillEl.current, k.pill], [glassEl.current, k.glass], [rimEl.current, k.rim], [textEl.current, k.text], [listEl.current, k.list], [gridEl.current, k.grid]];
+		const each = (root: HTMLElement | null, sel: string, frames: Keyframe[]) => (root ? Array.from(root.querySelectorAll<HTMLElement>(sel)) : []).map((el): [HTMLElement, Keyframe[]] => [el, frames]);
+		const pairs: [HTMLElement | null, Keyframe[]][] = [[pillEl.current, k.pill], [glassEl.current, k.glass], [rimEl.current, k.rim], [textEl.current, k.text], [listEl.current, k.list], [gridEl.current, k.grid],
+			...each(listEl.current, '.cc__opt', k.listFade), ...each(gridEl.current, '.cc__mod:not(.cc__mod--gone), .cc__caption', k.gridFade)];
 		running.current = pairs.filter(([el]) => el && el.animate).map(([el, frames]) => (el as HTMLElement).animate(frames, opts));
 		const grid = gridEl.current;
 		if (grid) grid.style.transformOrigin = `${morph.geo.x + morph.geo.w / 2}px ${morph.geo.y + morph.geo.h / 2}px`;
