@@ -1022,74 +1022,70 @@ html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.15; }
 .rows > .row:first-child .tile--focused .tile__box { box-shadow: 0 12px 22px rgba(0, 0, 0, 0.32), 0 3px 6px rgba(0, 0, 0, 0.18); }
 .rows .tile--focused .tile__box::after { z-index: 2; }
 
-/* ---------- Control Center (components/ControlCenter.tsx), tvOS 26 style: no panel, each control is its own piece of glass ----------
+/* ---------- Control Center (components/ControlCenter.tsx), sized and laid out like tvOS: no panel, each control its own piece of glass ----------
    One grid, four squares wide: circles are one square, tiles two, the backlight bar three. Every control is the same height, fully rounded,
-   16px apart, and focus is the same everywhere: it turns white and grows. The glass is the pre-blurred wallpaper copy fixed to the screen,
-   since ten live blurs would be far too much for the TV; a focused control drops it, so its scale does not misplace the picture. */
+   18px apart. The glass and the focus are the top buttons' own: the light gradient over the blurred wallpaper, brighter and larger when
+   focused. The picture is the pre-blurred copy fixed to the screen (--wp-bg, loaded whatever the Live blur setting): ten live blurs would be
+   far too much for the TV. */
 html body .panel.panel--cc {
-	--cc-u: 118px; --cc-gap: 16px;
+	--cc-u: 90px; --cc-gap: 18px;
 	background: none !important; box-shadow: none !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
-	width: calc(4 * var(--cc-u) + 3 * var(--cc-gap)); padding: 0; top: 160px; border-radius: 0;
+	width: calc(4 * var(--cc-u) + 3 * var(--cc-gap)); padding: 0; top: 150px; border-radius: 0;
 }
 .cc__row { display: flex; flex-direction: row; margin-bottom: var(--cc-gap); }
 .cc__row > * + * { margin-left: var(--cc-gap); }
 .cc__mod {
 	position: relative; flex: 0 0 auto; height: var(--cc-u); border-radius: calc(var(--cc-u) / 2); box-sizing: border-box; color: #fff;
-	background-color: rgba(20, 24, 36, 0.30);
-	background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0.04) 50%, rgba(255, 255, 255, 0.10) 100%), linear-gradient(rgba(14, 18, 28, 0.44), rgba(14, 18, 28, 0.44)), var(--wp-bg, var(--glass-fallback));
+	background-color: rgba(30, 36, 50, 0.30);
+	background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.07) 42%, rgba(255, 255, 255, 0.16) 100%), linear-gradient(rgba(30, 36, 50, 0.30), rgba(30, 36, 50, 0.30)), var(--wp-bg, var(--glass-fallback));
 	background-size: auto, auto, 1920px 1080px; background-attachment: scroll, scroll, fixed; background-repeat: no-repeat;
-	box-shadow: inset 0 2px 1px -1px rgba(255, 255, 255, 0.75), inset 2px 0 1px -1px rgba(255, 255, 255, 0.35), inset 0 -2px 1px -1px rgba(255, 255, 255, 0.18), 0 10px 22px rgba(0, 0, 0, 0.28);
+	box-shadow: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.9), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.42), inset 0 0 14px rgba(255, 255, 255, 0.10), 0 8px 18px rgba(0, 0, 0, 0.25);
+	text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
 	transition: transform var(--motion-focus-ms) ease-out;
 }
-.cc__mod svg { position: static; width: 34px; height: 34px; stroke: rgba(255, 255, 255, 0.8); }
-.cc__mod--focused { background: #fff; color: #111; transform: scale(1.06); box-shadow: 0 12px 26px rgba(0, 0, 0, 0.32); }
-.cc__mod--focused svg { stroke: #111; }
+.cc__mod svg { position: static; width: 32px; height: 32px; fill: none; stroke: rgba(255, 255, 255, 0.85); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.cc__mod--focused { transform: scale(1.1); background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.20) 55%, rgba(255, 255, 255, 0.34)), linear-gradient(rgba(30, 36, 50, 0.30), rgba(30, 36, 50, 0.30)), var(--wp-bg, var(--glass-fallback)); }
 
-.cc__tile { width: calc(2 * var(--cc-u) + var(--cc-gap)); display: flex; flex-direction: row; align-items: center; padding: 0 20px 0 22px; }
-.cc__badge { flex: 0 0 auto; width: 58px; height: 58px; border-radius: 29px; margin-right: 14px; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.16); }
-.cc__badge svg { width: 30px; height: 30px; }
+.cc__tile { width: calc(2 * var(--cc-u) + var(--cc-gap)); display: flex; flex-direction: row; align-items: center; padding: 0 12px; }
+.cc__badge { flex: 0 0 auto; width: 42px; height: 42px; border-radius: 21px; margin-right: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.16); }
+.cc__badge svg { width: 24px; height: 24px; }
 .cc__tile--on .cc__badge { background: #fff; }
 .cc__tile--on .cc__badge svg { stroke: #111; }
-.cc__mod--focused .cc__badge { background: rgba(0, 0, 0, 0.08); }
 .cc__text { min-width: 0; }
-.cc__name { font-size: 24px; font-weight: 600; white-space: nowrap; }
-.cc__sub { font-size: 20px; opacity: 0.8; white-space: nowrap; margin-top: 2px; }
+.cc__name { font-size: 20px; font-weight: 600; white-space: nowrap; line-height: 1.2; }
+.cc__sub { font-size: 20px; opacity: 0.7; white-space: nowrap; line-height: 1.2; }
 
 .cc__circle { width: var(--cc-u); display: flex; align-items: center; justify-content: center; }
-.cc__circle--on:not(.cc__mod--focused) { background: rgba(255, 255, 255, 0.55); }
-.cc__circle--on:not(.cc__mod--focused) svg { stroke: #111; }
+.cc__circle--on { background-color: rgba(255, 255, 255, 0.75); background-image: none; }
+.cc__circle--on svg { stroke: #111; }
 
 .cc__slider { width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); overflow: hidden; }
-.cc__fill { position: absolute; left: 0; top: 0; bottom: 0; overflow: hidden; background: rgba(255, 255, 255, 0.6); }
+.cc__fill { position: absolute; left: 0; top: 0; bottom: 0; overflow: hidden; background: rgba(255, 255, 255, 0.7); text-shadow: none; }
 .cc__mod--focused .cc__fill { background: #fff; }
-.cc__mod--focused.cc__slider { background-color: rgba(20, 24, 36, 0.30); background-image: linear-gradient(rgba(14, 18, 28, 0.55), rgba(14, 18, 28, 0.55)); color: #fff; }
-.cc__slidertext { position: absolute; left: 0; top: 0; bottom: 0; width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); display: flex; flex-direction: row; align-items: center; padding: 0 30px; box-sizing: border-box; font-size: 24px; font-weight: 600; white-space: nowrap; }
-.cc__slidertext svg { margin-right: 14px; }
+.cc__slidertext { position: absolute; left: 0; top: 0; bottom: 0; width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); display: flex; flex-direction: row; align-items: center; padding: 0 24px; box-sizing: border-box; font-size: 20px; font-weight: 600; white-space: nowrap; }
+.cc__slidertext svg { width: 26px; height: 26px; margin-right: 12px; }
 .cc__fill .cc__slidertext { color: #111; }
 .cc__fill .cc__slidertext svg { stroke: #111; }
-.cc__mod--focused > .cc__slidertext svg { stroke: rgba(255, 255, 255, 0.8); }
 .cc__num { margin-left: auto; font-weight: 500; }
 
-.cc__caption { height: 36px; line-height: 36px; text-align: center; font-size: 22px; font-weight: 600; color: #fff; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); }
+.cc__caption { height: 30px; line-height: 30px; text-align: center; font-size: 20px; font-weight: 600; color: #fff; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); }
 
-/* light look: the same glass, lifted; focus turns dark instead of white */
-html.light body .panel--cc .cc__mod {
-	color: #14151b;
-	background-color: rgba(255, 255, 255, 0.30);
-	background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.62) 0%, rgba(255, 255, 255, 0.40) 50%, rgba(255, 255, 255, 0.50) 100%), linear-gradient(transparent, transparent), var(--wp-bg, var(--glass-fallback));
-	box-shadow: inset 0 2px 1px -1px #fff, inset 2px 0 1px -1px rgba(255, 255, 255, 0.7), 0 10px 22px rgba(20, 24, 40, 0.20);
-}
+/* light look: the top buttons' light glass, and focus turns dark as theirs does */
+html.light .cc__mod { color: #14151b; text-shadow: none; background-color: rgb(120, 128, 148); background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.07) 42%, rgba(255, 255, 255, 0.16) 100%), linear-gradient(transparent, transparent), var(--wp-bg, var(--glass-fallback)); background-blend-mode: normal, normal, screen; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.8), 0 4px 12px rgba(20, 24, 40, 0.12); }
+html.light.wp-video .cc__mod { background-color: transparent; background-blend-mode: normal; }
+html.light .cc__circle--on:not(.cc__mod--focused), html.light .cc__mod--focused:not(.cc__slider) { background-blend-mode: normal; }
 html.light .cc__mod svg { stroke: rgba(20, 22, 32, 0.72); }
 html.light .cc__badge { background: rgba(20, 24, 40, 0.10); }
 html.light .cc__tile--on .cc__badge { background: #14151b; }
 html.light .cc__tile--on .cc__badge svg { stroke: #fff; }
-html.light body .panel--cc .cc__circle--on:not(.cc__mod--focused) { background: rgba(20, 24, 40, 0.30); }
-html.light .cc__circle--on:not(.cc__mod--focused) svg { stroke: #14151b; }
-html.light body .panel--cc .cc__mod--focused:not(.cc__slider) { background: #14151b; color: #fff; }
+html.light .cc__circle--on:not(.cc__mod--focused) { background: rgba(20, 24, 40, 0.30); }
+html.light .cc__circle--on svg { stroke: #14151b; }
+html.light .cc__mod--focused:not(.cc__slider) { background: #14151b; color: #fff; box-shadow: 0 8px 18px rgba(20, 24, 40, 0.30); }
 html.light .cc__mod--focused:not(.cc__slider) svg { stroke: #fff; }
 html.light .cc__mod--focused .cc__badge { background: rgba(255, 255, 255, 0.18); }
 html.light .cc__fill { background: rgba(20, 24, 40, 0.20); }
 html.light .cc__fill .cc__slidertext { color: #14151b; }
+html.light .cc__fill .cc__slidertext svg { stroke: #14151b; }
 html.light .cc__mod--focused .cc__fill { background: #14151b; }
 html.light .cc__mod--focused .cc__fill .cc__slidertext { color: #fff; }
 html.light .cc__mod--focused .cc__fill .cc__slidertext svg { stroke: #fff; }
