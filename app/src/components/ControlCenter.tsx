@@ -322,6 +322,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			const j = clamp(i + (key === 'left' ? -1 : 1), 0, GRID[p.row].length - 1);
 			if (j !== i) move(p.row, startOf(p.row, j));
 		}
+		else if (key === 'up' && p.row === 0) onClose();   // Up past the top row closes, back to the top buttons
 		else if (key === 'up' || key === 'down') move(clamp(p.row + (key === 'up' ? -1 : 1), 0, GRID.length - 1), start);
 		return true;
 	}, []);

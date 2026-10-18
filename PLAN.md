@@ -31,6 +31,10 @@ Every push to a branch other than `main` reaches the TV as a Homebrew Channel up
 
 Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or later).
 - [ ] Wallpaper settings redesign (verify): Settings > Wallpaper has Wallpaper type (Pictures, Video, Immich photos, Plain), New picture on startup, and Change wallpaper automatically. Your old choice carried over once: a shuffle became its category picked, a fixed picture became the only pick, video stayed video, Immich stayed Immich. Choose wallpaper shows only the current type: for Pictures, categories with a Select all tile first and a tick on each picked picture; for Immich, the sources and albums, several at once. Art pictures get the Print look on the home screen.
+- [ ] Darker live glass (verify): 2px blur, 30% black tint, sheen and rims at half strength; the glass bar's sheen only near its ends. Focused buttons and the brightness slider are softer too.
+- [ ] Settings > Appearance > Liquid glass dock (verify): the glass bar bends the picture at its rim; goes plain while the rows are down; survives a restart. Over a video it only tints.
+- [ ] Control Center and Inputs (verify): Up from the top row closes them, back to where they opened from.
+- [ ] Home caption (verify): no credit puts the title on the credit's line; a long credit wraps to two lines, then stops with an ellipsis. The date and weather are 26px.
 - [ ] Wallpaper captions and the new Art and Landscapes sources (verify): a cloud picture shows its title and credit bottom right, just above the dock, and slides down with the clock when the dock goes; nothing for the bundled defaults, Immich, plain or video. Art (Cleveland) and Landscapes (Wikimedia Commons, their 1920-wide copies) load through the resizer like the Reddit ones; check the Landscapes and Art shuffles work.
 - [ ] Full guide blurb (verify): the focused programme's description shows under its time, two lines at most, without the "[S]" flags. Comes from the guide service; the fallback (the TV's schedule table) has none, so then nothing shows.
 - [ ] Lighter live blur (verify): the glass bar, top buttons and panels blur 10px, not 30px. Text on the glass still reads from the sofa; if not, try 14px (`--live-glass` in global.css).
@@ -130,7 +134,7 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
       dropped: TV speakers only.
 - [x] Live TV channel service, for the Freeview tiles idea in Later. Yes (2026-10-17): 188 aerial channels with names, PNG logos and the
       guide read as root; `apiadapter/tv/openChannel` tunes, even from Home. Details in `docs/live-tv.md`.
-- [ ] `backdrop-filter` on the dock only, behind a temporary flag: 60 fps while moving focus and while the video wallpaper plays?
+- [x] `backdrop-filter` on the dock only: SVG refraction runs at 56-58 fps (2026-10-18), but the video is on a hardware layer the page cannot read, so nothing can blur or bend it. Details in `RESEARCH.md` section 5.
 - [ ] `https://sylvan.apple.com/` videos play directly (then the plain HTTP fallback in `lib/wallpaperVideo.ts` goes).
 - [ ] Immich: endpoint paths against the server's `/api` docs and which permissions a read-only key needs.
 - [ ] `hosts-extra`: capture what this TV calls (LG ads and tracking) and fill it in. It is empty now; the old entries were JioHotstar's.

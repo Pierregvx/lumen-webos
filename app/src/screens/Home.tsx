@@ -304,7 +304,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 		if (n.zone === 'panel') {
 			const last = ins.length - 1;
 			switch (key) {
-				case 'up': n.panelIndex = clamp(n.panelIndex - 1, 0, last); break;
+				case 'up': if (n.panelIndex === 0) n.zone = n.panelFrom; else n.panelIndex--; break;   // Up past the first input closes the list
 				case 'down': n.panelIndex = clamp(n.panelIndex + 1, 0, last); break;
 				case 'back': n.zone = n.panelFrom; break;
 			}

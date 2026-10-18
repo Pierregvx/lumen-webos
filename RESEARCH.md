@@ -39,6 +39,15 @@ Target hardware: LG UQ80 (65UQ8040PSB), webOS 22, alpha 5 Gen5 chip, 1.5 GB RAM,
 4. The wallpaper picker draws only the rows near the one in view, not all 233 thumbnails.
 5. Default 5 wallpapers bundled (each with a 960x540 pre-blurred copy); the 233-image library loads from the cloud on demand.
 
+## 5. Liquid Glass refraction on the webOS 25 TV (tested 2026-10-18)
+- Chromium 120 accepts `backdrop-filter: blur(10px) saturate(1.8) brightness(1.06) url(#lg)`, where `#lg` is an SVG `feImage` + `feDisplacementMap` with a convex-bezel map made once on a canvas (the kube.io method).
+- On the dock glass bar (1750 x 224) the frame rate stayed at 56-58 fps against 51 fps without it. The cost is small.
+- The video wallpaper is on a hardware video layer under the page. The page reads every video pixel as 0 while the video plays. Thus no page effect (CSS blur, SVG refraction or WebGL) can blur or bend the video. Over the video, the glass shows only its tint and rims.
+- Refraction can work over still pictures, Immich photos and plain backgrounds, because those are page content.
+- The colour fringe (one displacement pass per colour, nikdelvin/liquid-glass) cost about 8 fps standing still, with 250 ms hitches. One pass costs 1-2 fps standing still and about half the frame rate while focus moves along the dock.
+- Refraction on the panels (Control Center, Inputs) dropped to 7 fps while moving in them. Only the dock can take it. It is a setting (Liquid glass dock), off by default.
+- The rest of the glass keeps a plain live blur, now 2px with a 30% black tint and the sheen and rims at about half strength. Sam preferred this look.
+
 ## Sources
 - https://webostv.developer.lge.com/develop/specifications/web-api-and-web-engine (Chromium per webOS version)
 - https://developer.samsung.com/smarttv/develop/guides/web-app-memory-optimization-guide.html (TV memory/GPU rules)

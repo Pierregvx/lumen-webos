@@ -68,6 +68,8 @@ export interface UserConfig {
 	hideNames: boolean;
 	/** test: glass blurs what is behind it live (backdrop-filter) instead of showing a pre-blurred copy of the wallpaper */
 	liveBlur: boolean;
+	/** the glass bar bends the picture at its rim, like Liquid Glass (lib/liquidGlass.ts) */
+	liquidDock: boolean;
 	/** the Immich source the ambient screen shows (immich:recent, immich:album:<id>, ...) */
 	ambient: string;
 	/** your photos replace LG's screensaver (Art mode in Control Center shows them either way) */
@@ -128,6 +130,7 @@ export const DEFAULT_CONFIG: UserConfig = {
 	reduceMotion: false,
 	hideNames: false,
 	liveBlur: true,
+	liquidDock: false,
 	ambient: 'immich:recent',
 	ambientOn: false,
 	ambientSeconds: 30,
@@ -190,6 +193,7 @@ export function parseConfig (raw: string): UserConfig {
 		reduceMotion: parsed.reduceMotion === true,
 		hideNames: parsed.hideNames === true,
 		liveBlur: parsed.liveBlur !== false,
+		liquidDock: parsed.liquidDock === true,
 		ambientSeconds: [10, 20, 30, 60, 120, 300].indexOf(Number(parsed.ambientSeconds)) !== -1 ? Number(parsed.ambientSeconds) : 30,
 		ambientBrightness: parsed.ambientBrightness === 'tv' || parsed.ambientBrightness === 'low' ? parsed.ambientBrightness : 'dim',
 		ambientPrint: parsed.ambientPrint === true,
