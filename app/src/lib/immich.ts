@@ -111,6 +111,9 @@ function today (): string {
 
 /** A batch of candidate pictures for a source, already filtered. */
 function search (server: ImmichServer, sel: string): Promise<Batch> {
+	// several sources picked (immich:recent|immich:album:<id>): each search draws from one of them
+	const parts = sel.split('|');
+	if (parts.length > 1) return search(server, parts[Math.floor(Math.random() * parts.length)]);
 	const keep = (list: Asset[], broad: boolean) => arrange(list.filter((a) => (!a.type || a.type === 'IMAGE') && (!broad || camera(a))));
 	const random = (body: object, broad: boolean) =>
 		immichRequest(server.url, server.key, '/api/search/random', {body: {type: 'IMAGE', withExif: true, size: 40, ...body}})

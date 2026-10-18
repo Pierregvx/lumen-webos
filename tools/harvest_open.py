@@ -21,6 +21,17 @@ def api(url):
         except ValueError: time.sleep(3 * (attempt + 1))      # the Met answers a 403 page when it is hit too fast; wait and go slower
     return {}
 def plain(s): return re.sub(r'\s+', ' ', html.unescape(re.sub(r'<[^>]+>', '', s or ''))).strip()
+BOILER = re.compile(r'^(this (is|image|file|media)|an? (photo|image|picture) of)\b', re.I)      # a stock sentence, not a title
+def tidy(t):
+    """A Commons file name as a title: no leading year or number, dates, camera codes or trailing counters."""
+    t = re.sub(r'\b(19|20)\d\d[-_.]\d\d[-_.]\d\d\b', ' ', t)                          # 2014-08-16
+    t = re.sub(r'\b\d{8}\b( \d{3,5}\b)?', ' ', t)                                                # 20160807
+    t = re.sub(r'\b(DSC|IMG|DD|P|DSCF|_MG)[ _-]?\d+\b', ' ', t, flags=re.I)                # DD 123, IMG_1234
+    t = re.sub(r'^\s*(\d{1,4}[\s._-]+)+', '', t)                                           # 2015 , 01-
+    t = re.sub(r'([\s,._-]+\d{1,3})+\s*$', '', t)                                          # trailing 1, (2)
+    t = re.sub(r'\b(moy|res|hdr|edit|crop|pano)\b', ' ', t, flags=re.I)
+    t = re.sub(r'\s*,\s*,+', ',', re.sub(r'\s+', ' ', t)).strip(' ,;.-_')
+    return t[0].upper() + t[1:] if t else ''
 def short(s, n): return s if len(s) <= n else s[:n].rsplit(' ', 1)[0].rstrip(' ,;.-') + '…'
 
 def dims(buf):
@@ -112,7 +123,7 @@ def commons():
                 name = plain(m.get('ObjectName', {}).get('value')) or re.sub(r'\.jpe?g$', '', p['title'][5:], flags=re.I).replace('_', ' ')
                 desc = plain(m.get('ImageDescription', {}).get('value'))
                 who = short(plain(m.get('Artist', {}).get('value')), 48) or 'unknown'
-                out.append({'url': ii['thumburl'].split('?')[0], 'title': short(desc if 8 <= len(desc) <= 90 else name, 80), 'source': 'Wikimedia Commons', 'category': 'Landscapes',
+                out.append({'url': ii['thumburl'].split('?')[0], 'title': short(desc if 8 <= len(desc) <= 90 and not BOILER.match(desc) else tidy(name) or name, 80), 'source': 'Wikimedia Commons', 'category': 'Landscapes',
                             'credit': 'Photo: ' + who + ('' if lic.lower().startswith(('cc0', 'public', 'pd')) else f' ({lic})'), 'w': 1920, 'h': round(1920 * ii['height'] / ii['width'])})
             cont = d.get('continue')
             if not cont: break

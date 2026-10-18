@@ -3,6 +3,7 @@
 
 import {STORAGE_KEY} from '../config/constants';
 import {DEFAULT_APP_IDS} from '../config/catalog';
+import {WALLPAPERS} from '../config/wallpapers';
 
 /** Settings > Screensaver > Start on the home screen after: the choices, in seconds (0 = never). */
 export const IDLE_SECONDS = [0, 30, 60, 120, 300];
@@ -16,8 +17,16 @@ export interface UserConfig {
 	useHomebrew: boolean;
 	/** play a video behind the home screen (aerials and stock clips, streamed from the internet). Off by default. */
 	videoWallpaper: boolean;
-	/** which still wallpaper: local:N (bundled), cloud:<id> (from the library), shuffle, or none */
+	/** what the still wallpaper shows, worked out from the fields below by withWallpaper (index.html reads it): pick | immich:<a>|<b> | none */
 	wallpaper: string;
+	/** Settings > Wallpaper > Wallpaper type: pictures | video | immich | plain */
+	wallpaperType: string;
+	/** the pictures the home screen picks from (cloud:<id>, local:N), chosen one by one or a category at a time */
+	wallpaperPicks: string[];
+	/** the Immich sources the home screen picks from (immich:recent, immich:album:<id>, ...) */
+	immichPicks: string[];
+	/** a new picture from the picks each time Lumen opens; off, it opens on the last one */
+	wpNewOnLaunch: boolean;
 	/** show AM/PM beside the time when the TV uses a 12-hour clock */
 	showAmPm: boolean;
 	/** menu language: 'auto' follows the TV, else a code from lib/i18n.ts */
@@ -94,7 +103,11 @@ export const DEFAULT_CONFIG: UserConfig = {
 	sourceIds: null,
 	useHomebrew: true,
 	videoWallpaper: false,
-	wallpaper: 'local:0',
+	wallpaper: 'pick',
+	wallpaperType: 'pictures',
+	wallpaperPicks: [],
+	immichPicks: ['immich:recent'],
+	wpNewOnLaunch: true,
 	showAmPm: true,
 	language: 'auto',
 	darkMode: 'on',
@@ -134,11 +147,13 @@ export const DEFAULT_CONFIG: UserConfig = {
 export function loadConfig (): UserConfig {
 	try {
 		const raw = localStorage.getItem(STORAGE_KEY);
-		return raw ? parseConfig(raw) : {...DEFAULT_CONFIG};
+		return raw ? parseConfig(raw) : freshConfig();
 	} catch {
-		return {...DEFAULT_CONFIG};
+		return freshConfig();
 	}
 }
+
+function freshConfig (): UserConfig { return {...DEFAULT_CONFIG, wallpaperPicks: starterPicks()}; }
 
 /** Whether this install has settings of its own yet (false on a fresh install, before anything has been saved). */
 export function hasSavedConfig (): boolean {
@@ -148,12 +163,13 @@ export function hasSavedConfig (): boolean {
 /** A config from JSON, with every field checked and anything missing or wrong replaced by its default. Throws on malformed JSON. */
 export function parseConfig (raw: string): UserConfig {
 	const parsed = JSON.parse(raw) as Partial<UserConfig>;
-	return {
+	return withWallpaper({
 		appIds: Array.isArray(parsed.appIds) ? parsed.appIds : DEFAULT_CONFIG.appIds,
 		sourceIds: Array.isArray(parsed.sourceIds) ? parsed.sourceIds : null,
 		useHomebrew: parsed.useHomebrew !== false,
 		videoWallpaper: parsed.videoWallpaper === true,
 		wallpaper: typeof parsed.wallpaper === 'string' ? parsed.wallpaper : DEFAULT_CONFIG.wallpaper,
+		...wallpaperFields(parsed),
 		showAmPm: parsed.showAmPm !== false,
 		dockHide: parsed.dockHide === 'off' || parsed.dockHide === 'idle' || parsed.dockHide === 'both' ? parsed.dockHide : 'down',
 		darkMode: parsed.darkMode === 'auto' ? 'auto' : parsed.darkMode === 'off' ? 'off' : 'on',
@@ -189,7 +205,41 @@ export function parseConfig (raw: string): UserConfig {
 		liveTvRow: parsed.liveTvRow !== false,
 		liveChannels: Array.isArray(parsed.liveChannels) ? parsed.liveChannels.filter((x) => typeof x === 'string') : null,
 		guideFull: parsed.guideFull === true
+	});
+}
+
+/** Landscapes and Art: what the pictures start from on a new install */
+export function starterPicks (): string[] {
+	return WALLPAPERS.filter((w) => w.category === 'Landscapes' || w.category === 'Art').map((w) => `cloud:${w.id}`);
+}
+
+/** The wallpaper type and picks, from a config that has them or, once, from the older single choice it replaces. */
+function wallpaperFields (p: Partial<UserConfig>): Pick<UserConfig, 'wallpaperType' | 'wallpaperPicks' | 'immichPicks' | 'wpNewOnLaunch'> {
+	const strings = (v: unknown) => Array.isArray(v) ? (v as unknown[]).filter((x): x is string => typeof x === 'string') : null;
+	const type = p.wallpaperType === 'video' || p.wallpaperType === 'immich' || p.wallpaperType === 'plain' || p.wallpaperType === 'pictures' ? p.wallpaperType : '';
+	if (type) return {wallpaperType: type, wallpaperPicks: strings(p.wallpaperPicks) || starterPicks(), immichPicks: strings(p.immichPicks) || ['immich:recent'], wpNewOnLaunch: p.wpNewOnLaunch !== false};
+	const old = typeof p.wallpaper === 'string' ? p.wallpaper : '';
+	const favs = strings(p.favoriteWallpapers) || [];
+	const picks = old === 'shuffle:Favorites' && favs.length > 0 ? favs.map((id) => `cloud:${id}`)
+		: old.indexOf('shuffle:') === 0 ? WALLPAPERS.filter((w) => w.category === old.slice(8)).map((w) => `cloud:${w.id}`)
+		: old.indexOf('cloud:') === 0 || old.indexOf('local:') === 0 ? [old]
+		: starterPicks();
+	return {
+		wallpaperType: p.videoWallpaper === true ? 'video' : old.indexOf('immich:') === 0 ? 'immich' : old === 'none' ? 'plain' : 'pictures',
+		wallpaperPicks: picks.length > 0 ? picks : starterPicks(),
+		immichPicks: old.indexOf('immich:') === 0 ? [old] : ['immich:recent'],
+		// a fixed picture stays put; a shuffle was a new one each launch
+		wpNewOnLaunch: old.indexOf('cloud:') !== 0 && old.indexOf('local:') !== 0
 	};
+}
+
+/** The config with `wallpaper` and `videoWallpaper` worked out from the wallpaper type and picks. Video keeps the pictures as its still
+ *  wallpaper, shown outside the video hours. */
+export function withWallpaper (c: UserConfig): UserConfig {
+	const wallpaper = c.wallpaperType === 'plain' ? 'none'
+		: c.wallpaperType === 'immich' ? (c.immichPicks.length > 0 ? c.immichPicks.join('|') : 'immich:recent')
+		: 'pick';
+	return wallpaper === c.wallpaper && c.videoWallpaper === (c.wallpaperType === 'video') ? c : {...c, wallpaper, videoWallpaper: c.wallpaperType === 'video'};
 }
 
 export function saveConfig (config: UserConfig): void {

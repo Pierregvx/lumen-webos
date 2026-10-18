@@ -1,20 +1,21 @@
 import {clamp} from '../hooks/useKeys';
 
 export interface WallpaperEntry {
-	key: string;            // local:N | cloud:<id> | shuffle | none
+	key: string;            // local:N | cloud:<id> | all:<category> | video:<place> | immich:<source>
 	title: string;
 	category: string;
 	fav?: boolean;
 	on?: boolean;           // ticked in a multiple choice (video places)
 	tint?: string;          // video tiles: a gradient with a play mark
-	thumb?: string;         // picture; shuffle / none are drawn as plain tiles
+	thumb?: string;         // picture; anything else is drawn as a plain tile
+	label?: string;         // the text on a plain tile
 }
 
 interface Props {
 	categories: string[];
 	categoryIndex: number;
 	entries: WallpaperEntry[];            // already filtered to the category
-	current: string;                      // the chosen key
+	current?: string;                     // the chosen key, for a single choice
 	chipsFocused: boolean;
 	gridFocused: boolean;
 	selected: number;
@@ -34,7 +35,7 @@ const COL_STEP = 360 + 66.67;         // thumbnail width + gap
 const ROWS_BEFORE = 1;                // rows kept drawn above and below the visible ones
 const ROWS_AFTER = 4;
 
-/** Wallpaper tab of Settings: category chips on top, a grid of thumbnails below. */
+/** Wallpaper tab of Settings: category chips on top, a grid of thumbnails below, each ticked when it is picked. */
 export function WallpaperPicker ({categories, categoryIndex, entries, current, chipsFocused, gridFocused, selected, onCategory, onSelect, onActivate, onHold, note}: Props) {
 	const viewport = note ? VIEWPORT_HEIGHT - 70 : VIEWPORT_HEIGHT;
 	let holdTimer = 0;
@@ -68,7 +69,7 @@ export function WallpaperPicker ({categories, categoryIndex, entries, current, c
 							onClick={() => { if (held) { held = false; return; } onActivate(i); }}
 						>
 							<div class="wp__thumb" style={e.thumb ? {backgroundImage: `url("${e.thumb}")`} : e.tint ? {background: e.tint} : undefined}>
-								{!e.thumb && <span class="wp__thumbtext">{e.tint ? '\u25B6' : e.key === 'none' ? 'Plain' : 'Shuffle'}</span>}
+								{!e.thumb && <span class="wp__thumbtext">{e.tint ? '\u25B6' : e.label || e.title}</span>}
 								{e.fav && <span class="wp__fav">{'\u2605'}</span>}
 								{(e.key === current || e.on) && <span class="wp__tick">{'\u2713'}</span>}
 							</div>

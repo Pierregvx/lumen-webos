@@ -1,8 +1,8 @@
-// Still wallpaper behind the home screen. Choices: local:N (bundled in the app, always works), cloud:<id> (from the cloud
-// library in config/wallpapers.ts, loaded over the internet when picked), shuffle (a random cloud one each launch), none.
+// Still wallpaper behind the home screen. Choices: pick (one of the pictures picked in Settings: local:N, bundled in the app and always there,
+// or cloud:<id>, from the library in config/wallpapers.ts, loaded over the internet), immich:<source>|<source>, or none.
 // A cloud picture that can't load falls back to the bundled default, so the screen is never blank.
 //
-// Cold start with a cloud picture (a fixed one or a shuffle): the picture the next launch will show is chosen and downloaded while Lumen is
+// Cold start with a cloud picture: the picture the next launch will show is chosen and downloaded while Lumen is
 // idle (lib/wpstore.ts keeps it on the TV), and its strongly blurred copy (a few KB) goes into the boot record, so index.html paints that
 // blur before the script has loaded. The app then draws, and the sharp picture, read from the TV rather than the internet, fades in over it.
 // Immich (immich:<source>): the same, except that the sharp picture comes from the Immich server on the home network and the blurred copies
@@ -32,31 +32,37 @@ export function resized (url: string, width: number): string {
 	return `${PROXY}?url=${encodeURIComponent(url.replace(/^https?:\/\//, ''))}&w=${width}&h=${Math.round(width * 9 / 16)}&fit=cover&q=${width > 800 ? 82 : 70}&output=jpg`;
 }
 
-let favorites: string[] = [];
-/** the favourite cloud ids, for the 'shuffle:Favorites' choice */
-export function setFavorites (ids: string[]): void { favorites = ids; }
-
-function group (sel: string) {
-	// 'shuffle' = anything from the cloud library; 'shuffle:<category>' = only that category
-	if (sel === 'shuffle:Favorites') return WALLPAPERS.filter((w) => favorites.indexOf(w.id) !== -1);
-	if (sel.indexOf('shuffle:') === 0) return WALLPAPERS.filter((w) => w.category === sel.slice(8));
-	return WALLPAPERS;
+let picks: string[] = [];
+let newOnLaunch = true;
+/** the pictures 'pick' chooses from (cloud:<id>, local:N), and whether each launch opens on a new one */
+export function setPicks (keys: string[], fresh: boolean): void {
+	picks = keys.filter((k) => k.indexOf('local:') === 0 ? !!LOCAL_WALLPAPERS[Number(k.slice(6))] : WALLPAPERS.some((w) => w.id === k.slice(6)));
+	newOnLaunch = fresh;
+	// the picture on screen was just taken out of the picks: show one that is still in
+	if (currentSel === 'pick' && shownKey && picks.indexOf(shownKey) === -1) setWallpaper('pick');
 }
 
-let shownId = '';     // the cloud id on screen, if any
+let shownId = '';     // the cloud or Immich id on screen, if any
+let shownKey = '';    // for 'pick': the picture on screen (cloud:<id> or local:N)
 
-/** The cloud id to show for a choice: a fixed one, or for a shuffle the one prepared by the last launch (else a random one). */
-function cloudIdFor (sel: string): string {
-	if (sel.indexOf('cloud:') === 0) return sel.slice(6);
-	if (sel.indexOf('shuffle') !== 0) return '';
-	const list = group(sel);
-	if (list.length === 0) return '';
+const randomOf = (list: string[]) => list[Math.floor(Math.random() * list.length)];
+
+/** The picture to show for 'pick': the one the last launch prepared (else a random one). A later change in this launch takes another. */
+function keyFor (sel: string): string {
+	if (sel !== 'pick') return sel;
+	if (picks.length === 0) return '';
 	const boot = readCache<BootWallpaper>(BOOT_WALLPAPER_KEY);
-	if (boot && boot.sel === sel && boot.next && boot.next !== shownId && list.some((w) => w.id === boot.next)) return boot.next;
-	return list[Math.floor(Math.random() * list.length)].id;
+	if (boot && boot.sel === sel && boot.next && (!shownKey || boot.next !== shownKey) && picks.indexOf(boot.next) !== -1) return boot.next;
+	const others = picks.filter((k) => k !== shownKey);
+	return randomOf(others.length > 0 ? others : picks);
 }
 
-interface Candidate { src: string; id?: string; caption?: PictureCaption }
+/** Art pictures get the Print look, so a painting reads as a canvas on the wall rather than a lit screen. */
+function isArt (key: string): boolean {
+	return key.indexOf('cloud:') === 0 && WALLPAPERS.some((w) => w.id === key.slice(6) && w.category === 'Art');
+}
+
+interface Candidate { src: string; id?: string; key?: string; caption?: PictureCaption }
 
 export interface PictureCaption { title: string; credit?: string }
 let caption: PictureCaption | null = null;
@@ -67,16 +73,18 @@ function setCaption (c: PictureCaption | null): void { caption = c; window.dispa
 function candidates (sel: string): Candidate[] {
 	const fallback: Candidate[] = LOCAL_WALLPAPERS.length > 0 ? [{src: LOCAL_WALLPAPERS[0].file}] : [];
 	if (sel === 'none') return [];
-	if (sel.indexOf('local:') === 0) {
-		const item = LOCAL_WALLPAPERS[Number(sel.slice(6))];
-		return item ? ([{src: item.file}] as Candidate[]).concat(fallback) : fallback;
+	if (sel.indexOf('immich:') === 0) return fallback;
+	const key = keyFor(sel);
+	if (key.indexOf('local:') === 0) {
+		const item = LOCAL_WALLPAPERS[Number(key.slice(6))];
+		return item ? ([{src: item.file, key}] as Candidate[]).concat(fallback) : fallback;
 	}
-	const id = cloudIdFor(sel);
+	const id = key.slice(6);
 	const item = WALLPAPERS.filter((w) => w.id === id)[0];
 	if (!item) return fallback;
 	const url = cloudUrl(item);
 	const cap = item.title ? {title: item.title, credit: item.credit} : undefined;
-	return ([{src: resized(url, 1920), id, caption: cap}, {src: url, id, caption: cap}] as Candidate[]).concat(fallback);
+	return ([{src: resized(url, 1920), id, key, caption: cap}, {src: url, id, key, caption: cap}] as Candidate[]).concat(fallback);
 }
 
 /** The light blurred copy the glass shapes show: bundled defaults have a -blur.jpg beside them; cloud pictures get one from the resizer. */
@@ -142,19 +150,24 @@ function saveBoot (): void {
 let currentSel = '';
 let prepareTimer = 0;
 
-/** Chooses the picture the next launch opens on (the same one for a fixed choice, another one for a shuffle), stores it on the TV, and puts
+/** Chooses the picture the next launch opens on (another of the picks, or the same one when a new one each launch is off), stores it on the TV, and puts
  *  its strongly blurred copy in the boot record for index.html. */
 function prepareNext (sel: string): void {
 	window.clearTimeout(prepareTimer);
 	if (sel.indexOf('immich:') === 0) { prepareTimer = window.setTimeout(() => prepareImmich(sel), PREPARE_DELAY_MS); return; }
-	if (sel.indexOf('cloud:') !== 0 && sel.indexOf('shuffle') !== 0) return;
+	if (sel !== 'pick') return;
 	prepareTimer = window.setTimeout(() => {
-		if (sel !== currentSel) return;
-		let id = shownId;
-		if (sel.indexOf('shuffle') === 0) {
-			const others = group(sel).filter((w) => w.id !== shownId);
-			if (others.length > 0) id = others[Math.floor(Math.random() * others.length)].id;
+		if (sel !== currentSel || !shownKey) return;
+		const others = picks.filter((k) => k !== shownKey);
+		const next = newOnLaunch && others.length > 0 ? randomOf(others) : shownKey;
+		if (next.indexOf('local:') === 0) {
+			// a bundled picture: index.html paints it sharp, with its blurred copies beside it
+			const item = LOCAL_WALLPAPERS[Number(next.slice(6))];
+			const light = item && lightFor(item.file);
+			if (light) writeCache(BOOT_WALLPAPER_KEY, {sel, next, url: item.file, blur: `url("${light}")`, bg: `url("${strongFor(light)}")`} as BootWallpaper);
+			return;
 		}
+		const id = next.slice(6);
 		const item = WALLPAPERS.filter((w) => w.id === id)[0];
 		if (!item) return;
 		const full = resized(cloudUrl(item), 1920);
@@ -165,7 +178,7 @@ function prepareNext (sel: string): void {
 			.then((pics) => blobToDataUrl(pics.strong))
 			.then((bg) => {
 				if (sel !== currentSel) return;
-				writeCache(BOOT_WALLPAPER_KEY, {sel, next: id, bg} as BootWallpaper);
+				writeCache(BOOT_WALLPAPER_KEY, {sel, next, bg} as BootWallpaper);
 				const keep = [full];
 				if (shown && shown.indexOf(PROXY) === 0) keep.push(shown);
 				return keepOnly(keep);
@@ -264,11 +277,13 @@ export function setWallpaper (sel: string): void {
 	currentSel = sel;
 	const list = candidates(sel);
 	const root = document.documentElement.classList;
-	if (list.length === 0) { root.remove(HTML_CLASS); el.style.backgroundImage = 'none'; shown = null; shownId = ''; setCaption(null); useLocal(null); setBlur(null); writeCache(BOOT_WALLPAPER_KEY, null); markShown(); return; }
+	if (list.length === 0) { root.remove(HTML_CLASS); root.remove('wp-art'); el.style.backgroundImage = 'none'; shown = null; shownId = ''; shownKey = ''; setCaption(null); useLocal(null); setBlur(null); writeCache(BOOT_WALLPAPER_KEY, null); markShown(); return; }
 	const show = (c: Candidate, imgs: HTMLImageElement[], src: string) => {
 		shown = c.src;
 		shownId = c.id || '';
+		shownKey = c.key || '';
 		setCaption(c.caption || null);
+		root.toggle('wp-art', isArt(shownKey));
 		decoded.imgs = imgs;
 		released = false;
 		paint(el, src);

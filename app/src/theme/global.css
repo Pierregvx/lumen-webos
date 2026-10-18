@@ -646,6 +646,11 @@ html, body {
 /* ---------- wallpaper favourites, night dimming ---------- */
 .wp__fav { position: absolute; left: 12px; top: 12px; width: 38px; height: 38px; border-radius: 50%; background: rgba(0, 0, 0, 0.55); color: #ffd60a; text-align: center; line-height: 38px; font-size: 22px; }
 html.night #wpimage { opacity: 0.55; }
+/* Art pictures: the screensaver's Print look (.ambient__print) over the painting, above the fade layer so a new one gets it as it fades in */
+html.wp-art #wpimage::after {
+	content: ''; position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;
+	background: linear-gradient(rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.14)), linear-gradient(rgba(236, 228, 212, 0.09), rgba(236, 228, 212, 0.09)), radial-gradient(ellipse 85% 95% at 24% 6%, rgba(255, 244, 222, 0.07) 0%, rgba(0, 0, 0, 0) 38%, rgba(0, 0, 0, 0.36) 100%);
+}
 /* the glass and the lower backdrop show a blurred copy of the wallpaper, which has to dim with it: multiplying the copy by a grey of 55%
    matches the picture at opacity 0.55 over black. Not over the video (night dimming only dims the still picture), not in the light look. */
 html.night:not(.light):not(.wp-video):not(.liveblur) .row:not(.row--dock)::before, html.night:not(.light):not(.wp-video):not(.liveblur) .topcap,

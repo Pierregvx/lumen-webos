@@ -23,12 +23,13 @@ export interface SettingsTab {
 }
 
 export interface WallpaperTab {
+	/** empty: the wallpaper type has nothing to choose (Plain) */
 	categories: string[];
 	entries: WallpaperEntry[];
-	current: string;
+	/** OK on a tile: pick or unpick it (a Select all tile does its whole category) */
 	onPick: (key: string) => void;
-	/** hold OK on a picture: add or remove it from Favorites */
-	onFavorite: (key: string) => void;
+	/** under Choose wallpaper: what is picked now */
+	summary?: string;
 }
 
 interface Props {
@@ -82,7 +83,7 @@ const HINT = {
 	select: 'OK adds or removes an item · Hold OK to re-order · Back returns',
 	reorder: 'OK picks up an item · Hold OK or choose Done to finish',
 	holding: 'Arrows move it · OK puts it down · Back cancels',
-	wallpaper: 'Left and right change category · OK sets the wallpaper · hold OK adds it to Favorites · Back returns'
+	wallpaper: 'Left and right change category · OK picks or unpicks · Back returns'
 } as const;
 
 /** What a list page shows, and what OK on each row does. */
@@ -175,7 +176,7 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 		if (page.kind === 'group') {
 			const g = GROUPS.filter((x) => x.id === page.id)[0];
 			const list = options.filter((o) => o.group === page.id);
-			const link = page.id === 'wallpaper';
+			const link = page.id === 'wallpaper' && wallpaper.categories.length > 0;
 			const rows = list.map((o): ListRow => ({
 				key: o.id,
 				label: o.label,
@@ -186,7 +187,7 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 				title: g.label,
 				glyph: g.glyph,
 				rows: link ? [{key: CHOOSE_WALLPAPER, label: 'Choose wallpaper', chevron: true} as ListRow].concat(rows) : rows,
-				descriptions: (link ? ['A picture, a shuffle, your photos or a video.'] : []).concat(list.map((o) => o.description)),
+				descriptions: (link ? [wallpaper.summary || ''] : []).concat(list.map((o) => o.description)),
 				activate: (i) => {
 					if (link && i === 0) { push({kind: 'wallpaper'}); return; }
 					const o = list[link ? i - 1 : i];
@@ -256,7 +257,6 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 	};
 
 	const onLongPress = () => {
-		if (onWallpaper) { if (zone === 'content' && wpList[wpIndex]) wallpaper.onFavorite(wpList[wpIndex].key); return; }
 		if (tab) setMode(!reordering);
 	};
 
@@ -379,15 +379,13 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 						categories={wallpaper.categories}
 						categoryIndex={wpCat}
 						entries={wpList}
-						current={wallpaper.current}
 						chipsFocused={zone === 'chips'}
 						gridFocused={zone === 'content'}
 						selected={wpIndex}
 						onCategory={(i) => { setZone('chips'); changeCategory(i); }}
 						onSelect={(i) => { setZone('content'); setWpIndex(i); }}
 						onActivate={(i) => { setZone('content'); if (wpList[i]) wallpaper.onPick(wpList[i].key); }}
-						onHold={(i) => { if (wpList[i]) wallpaper.onFavorite(wpList[i].key); }}
-						note={wpName === 'Video' ? tr('Pick one or more places and the video wallpaper plays them in random order. Shuffle all places plays everything: aerial videos and free stock videos of European countries. Videos stream from the internet (up to about 3 GB an hour) and take a few seconds to start. Settings > Wallpaper > Video wallpaper hours limits when they play.') : undefined}
+						note={wpName === 'Video' ? tr('Pick one or more places and the video wallpaper plays them in random order. All places plays everything: aerial videos and free stock videos of European countries. Videos stream from the internet (up to about 3 GB an hour) and take a few seconds to start. Settings > Wallpaper > Video wallpaper hours limits when they play.') : undefined}
 					/>
 				)}
 				{reordering && items.length === 0 && <p class="settings__hint">{tr('Nothing on the home screen yet.')}</p>}

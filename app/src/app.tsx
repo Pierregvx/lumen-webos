@@ -13,13 +13,13 @@ import {listInputs, MOCK_INPUTS, type InputSource} from './lib/inputs';
 import {launchApp, launchLgHome} from './lib/launch';
 import {isWebOS} from './lib/luna';
 import {hidePointerOnForeground} from './lib/pointer';
-import {DEFAULT_CONFIG, IDLE_SECONDS, hasSavedConfig, loadConfig, saveConfig, toggleId, type UserConfig} from './lib/storage';
+import {DEFAULT_CONFIG, IDLE_SECONDS, hasSavedConfig, loadConfig, saveConfig, toggleId, withWallpaper, type UserConfig} from './lib/storage';
 import {readBackup, scheduleBackup} from './lib/backup';
 import {onRelaunch, startParams, type LaunchParams} from './lib/launchParams';
 import {appTile, inputTile, pickInOrder} from './lib/tiles';
 import {TIMING} from './config/constants';
 import {LOCAL_WALLPAPERS, WALLPAPERS, WALLPAPER_CATEGORIES, cloudUrl} from './config/wallpapers';
-import {resized, setFavorites, setLiveBlur, setWallpaper, shownWallpaper} from './lib/wallpaper';
+import {resized, setLiveBlur, setPicks, setWallpaper, shownWallpaper} from './lib/wallpaper';
 import {restoreLeftoverBacklight} from './lib/tvcontrols';
 import {albums as immichAlbums, cachedServer, IMMICH_SOURCES, loadServer} from './lib/immich';
 import {Ambient} from './components/Ambient';
@@ -45,7 +45,7 @@ const LIVE_INFO_W = 660;
 /** how much higher the Live TV row sits when focused, so its now/next block fits on screen */
 const LIVE_BELOW = 150;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', ambientPrint: 'ambient-print', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
+const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', ambientPrint: 'ambient-print', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', wpType: 'wp-type', wpNew: 'wp-new', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 0.5, 1, 5, 15, 30, 60];   // minutes
 /** when the video wallpaper plays (Settings > Wallpaper > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
 const VIDEO_HOURS: Record<string, [number, number]> = {day: [7, 19], evening: [17, 23], night: [19, 7]};
@@ -191,8 +191,8 @@ export function App () {
 		return () => { cancel(); document.removeEventListener('visibilitychange', onVisibility); };
 	}, [showToast]);
 
-	useEffect(() => { setFavorites(config.favoriteWallpapers); setWallpaper(config.wallpaper); }, [config.wallpaper]);
-	useEffect(() => setFavorites(config.favoriteWallpapers), [config.favoriteWallpapers]);
+	useEffect(() => { setPicks(config.wallpaperPicks, config.wpNewOnLaunch); setWallpaper(config.wallpaper); }, [config.wallpaper]);
+	useEffect(() => setPicks(config.wallpaperPicks, config.wpNewOnLaunch), [config.wallpaperPicks, config.wpNewOnLaunch]);
 
 	// the weather under the clock at the top left
 	const weatherCity = (c: UserConfig) => (c.weatherCity === AUTO_PLACE ? null : CITIES.filter((x) => x.name === c.weatherCity)[0] || null);
@@ -209,9 +209,9 @@ export function App () {
 		return () => { cancel(); window.clearInterval(id); };
 	}, [config.showWeather, config.weatherCity]);
 
-	// a new wallpaper every N minutes (only for a shuffle or Immich photos: a fixed picture has nothing to change to)
+	// a new wallpaper every N minutes, from the picks or the Immich sources
 	useEffect(() => {
-		if (!config.wpAutoMinutes || (config.wallpaper.indexOf('shuffle') !== 0 && config.wallpaper.indexOf('immich:') !== 0)) return;
+		if (!config.wpAutoMinutes || (config.wallpaper !== 'pick' && config.wallpaper.indexOf('immich:') !== 0)) return;
 		const id = window.setInterval(() => { if (!document.hidden) setWallpaper(config.wallpaper); }, config.wpAutoMinutes * 60000);
 		return () => window.clearInterval(id);
 	}, [config.wpAutoMinutes, config.wallpaper]);
@@ -261,7 +261,7 @@ export function App () {
 	const lastScreen = useRef(screen);
 	useEffect(() => { if (lastScreen.current !== screen) navMark(`${lastScreen.current}>${screen}`); lastScreen.current = screen; }, [screen]);
 
-	const updateConfig = (next: UserConfig) => { configRef.current = next; setConfig(next); saveConfig(next); scheduleBackup(next); };
+	const updateConfig = (c: UserConfig) => { const next = withWallpaper(c); configRef.current = next; setConfig(next); saveConfig(next); scheduleBackup(next); };
 
 	// first run: put the installed apps on the home screen (the catalogue's favourites first)
 	useEffect(() => {
@@ -372,6 +372,7 @@ export function App () {
 		return {
 			[OPTION.country]: {labels: ['Any'].concat(COUNTRIES.map((c) => c.name)), values: [''].concat(COUNTRIES.map((c) => c.code)), now: config.weatherCountry},
 			[OPTION.city]: {labels: ['Not set', 'Auto'].concat(cities), values: ['', AUTO_PLACE].concat(cities), now: config.weatherCity},
+			[OPTION.wpType]: {labels: ['Pictures', 'Video', 'Immich photos', 'Plain'], values: ['pictures', 'video', 'immich', 'plain'], now: config.wallpaperType},
 			[OPTION.wpAuto]: {labels: ['Off', '30 sec', '1 min', '5 min', '15 min', '30 min', '60 min'], values: WP_AUTO_CHOICES, now: config.wpAutoMinutes},
 			[OPTION.dockHide]: {labels: ['Off', 'Down arrow', 'After idle', 'Both'], values: ['off', 'down', 'idle', 'both'], now: config.dockHide},
 			[OPTION.idle]: {labels: ['Never', '30 seconds', '1 minute', '2 minutes', '5 minutes'], values: IDLE_SECONDS, now: config.idleSeconds},
@@ -439,10 +440,25 @@ export function App () {
 			...listed(OPTION.city, config.weatherCity)
 		},
 		{
+			id: OPTION.wpType,
+			group: 'wallpaper' as const,
+			label: 'Wallpaper type',
+			description: 'Pictures from the library, a video, your photos from Immich, or a plain background. Choose wallpaper then picks which ones.',
+			value: true,
+			...listed(OPTION.wpType)
+		},
+		{
+			id: OPTION.wpNew,
+			group: 'wallpaper' as const,
+			label: 'New picture each time Lumen opens',
+			description: 'Opens on another of your pictures or photos each time. Off, it opens on the last one it showed.',
+			value: config.wpNewOnLaunch
+		},
+		{
 			id: OPTION.wpAuto,
 			group: 'wallpaper' as const,
 			label: 'Change wallpaper automatically',
-			description: 'With a Shuffle or Photos wallpaper chosen, show a new picture every 30 seconds to 60 minutes.',
+			description: 'Shows another of your pictures or photos every 30 seconds to 60 minutes.',
 			value: config.wpAutoMinutes > 0,
 			...listed(OPTION.wpAuto)
 		},
@@ -598,45 +614,73 @@ export function App () {
 			description: 'Frames drawn in the last second and the longest frame, in the top-left corner. Only in dev builds.',
 			value: config.fpsCounter
 		}] : [])
-	], [config.liveTvRow, config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleSeconds, config.wpAutoMinutes, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur, config.ambient, config.ambientOn, config.ambientSeconds, config.ambientBrightness, config.ambientPrint, immich.ready]);
+	], [config.liveTvRow, config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleSeconds, config.wpAutoMinutes, config.wallpaperType, config.wpNewOnLaunch, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.reduceMotion, config.liveBlur, config.ambient, config.ambientOn, config.ambientSeconds, config.ambientBrightness, config.ambientPrint, immich.ready]);
 
 	const wallpaper: WallpaperTab = useMemo(() => {
-		if (!inSettings) return {categories: [], entries: [], current: '', onPick: () => undefined, onFavorite: () => undefined};
-		const entries: WallpaperEntry[] = [
-			{key: 'shuffle', title: 'Shuffle (a new one each time)', category: 'Defaults'},
-			{key: 'none', title: 'Plain background', category: 'Defaults'}
-		];
-		LOCAL_WALLPAPERS.forEach((w, i) => entries.push({key: `local:${i}`, title: w.title, category: 'Defaults', thumb: w.file}));
-		WALLPAPER_CATEGORIES.forEach((c) => entries.push({key: `shuffle:${c}`, title: `Shuffle ${c}`, category: c}));
-		entries.push({key: 'shuffle:Favorites', title: 'Shuffle my favorites', category: 'Favorites'});
-		if (immich.ready) {
-			IMMICH_SOURCES.forEach((src) => entries.push({key: src.key, title: src.title, category: 'Photos'}));
-			immich.albums.forEach((a) => entries.push({key: `immich:album:${a.id}`, title: a.title, category: 'Photos'}));
-		} else {
-			entries.push({key: 'immich:setup', title: 'Set up Immich', category: 'Photos'});
+		if (!inSettings) return {categories: [], entries: [], onPick: () => undefined};
+		const entries: WallpaperEntry[] = [];
+		const type = config.wallpaperType;
+		if (type === 'video') {
+			const tint = (i: number) => `linear-gradient(150deg, ${["#e9a15b,#6d3d4a", "#d8b46a,#3e5a78", "#9fc2d6,#2d4a6b", "#7fc79a,#1e4a52", "#e07f8a,#4a2d5e", "#c9a0dc,#2f2f6b", "#f0c16a,#8a4a2a", "#8ab0e0,#1d2f5a", "#d6a07a,#4a3430", "#86c5c0,#27495a"][i % 10]})`;
+			entries.push({key: 'video:', title: 'All places', category: 'Video', tint: tint(0), on: config.videoPlaces.length === 0});
+			VIDEO_PLACES.forEach((p, i) => entries.push({key: `video:${p}`, title: p, category: 'Video', tint: tint(i + 1), on: config.videoPlaces.indexOf(p) >= 0}));
+			return {
+				categories: ['Video'],
+				entries,
+				summary: 'Pick the places the video wallpaper plays.',
+				onPick: (key: string) => {
+					const place = key.slice(6);
+					updateConfig({...config, videoPlaces: !place ? [] : config.videoPlaces.indexOf(place) >= 0 ? config.videoPlaces.filter((x) => x !== place) : config.videoPlaces.concat(place)});
+				}
+			};
 		}
-		WALLPAPERS.forEach((w) => {
-			const fav = config.favoriteWallpapers.indexOf(w.id) !== -1;
-			const e = {key: `cloud:${w.id}`, title: w.title, category: w.category, thumb: resized(cloudUrl(w), 360), fav};
-			entries.push(e);
-			if (fav) entries.push({...e, category: 'Favorites'});
+		if (type === 'immich') {
+			if (immich.ready) {
+				IMMICH_SOURCES.forEach((src) => entries.push({key: src.key, title: src.title, category: 'Photos', on: config.immichPicks.indexOf(src.key) >= 0}));
+				immich.albums.forEach((a) => entries.push({key: `immich:album:${a.id}`, title: a.title, category: 'Photos', on: config.immichPicks.indexOf(`immich:album:${a.id}`) >= 0}));
+			} else {
+				entries.push({key: 'immich:setup', title: 'Set up Immich', category: 'Photos', label: 'Set up'});
+			}
+			return {
+				categories: ['Photos'],
+				entries,
+				summary: 'Pick which of your Immich photos the home screen shows.',
+				onPick: (key: string) => {
+					if (key === 'immich:setup') { showToast('Put your Immich address and an API key in /var/lib/homehook/immich.json on the TV (see docs/immich.md), then open Settings again', 'error'); return; }
+					const has = config.immichPicks.indexOf(key) >= 0;
+					if (has && config.immichPicks.length === 1) { showToast('Keep at least one source'); return; }
+					updateConfig({...config, immichPicks: has ? config.immichPicks.filter((x) => x !== key) : config.immichPicks.concat(key)});
+				}
+			};
+		}
+		if (type === 'plain') return {categories: [], entries: [], onPick: () => undefined};
+		const picked = config.wallpaperPicks;
+		const keysIn: Record<string, string[]> = {Defaults: LOCAL_WALLPAPERS.map((_, i) => `local:${i}`)};
+		WALLPAPERS.forEach((w) => { (keysIn[w.category] || (keysIn[w.category] = [])).push(`cloud:${w.id}`); });
+		const categories = WALLPAPER_CATEGORIES.slice(0, 2).concat('Defaults', WALLPAPER_CATEGORIES.slice(2));      // Landscapes and Art first
+		categories.forEach((c) => {
+			const keys = keysIn[c] || [];
+			const all = keys.length > 0 && keys.every((k) => picked.indexOf(k) >= 0);
+			entries.push({key: `all:${c}`, title: all ? 'Deselect all' : 'Select all', category: c, label: 'All', on: all});
 		});
-		const tint = (i: number) => `linear-gradient(150deg, ${["#e9a15b,#6d3d4a", "#d8b46a,#3e5a78", "#9fc2d6,#2d4a6b", "#7fc79a,#1e4a52", "#e07f8a,#4a2d5e", "#c9a0dc,#2f2f6b", "#f0c16a,#8a4a2a", "#8ab0e0,#1d2f5a", "#d6a07a,#4a3430", "#86c5c0,#27495a"][i % 10]})`;
-		entries.push({key: 'video:', title: 'Shuffle all places', category: 'Video', tint: tint(0), on: config.videoWallpaper && config.videoPlaces.length === 0});
-		VIDEO_PLACES.forEach((p, i) => entries.push({key: `video:${p}`, title: p, category: 'Video', tint: tint(i + 1), on: config.videoWallpaper && config.videoPlaces.indexOf(p) >= 0}));
+		LOCAL_WALLPAPERS.forEach((w, i) => entries.push({key: `local:${i}`, title: w.title, category: 'Defaults', thumb: w.file, on: picked.indexOf(`local:${i}`) >= 0}));
+		WALLPAPERS.forEach((w) => entries.push({key: `cloud:${w.id}`, title: w.title, category: w.category, thumb: resized(cloudUrl(w), 360), on: picked.indexOf(`cloud:${w.id}`) >= 0}));
 		return {
-			categories: ['Defaults', 'Photos', 'Favorites', 'Video'].concat(WALLPAPER_CATEGORIES, 'All'),
+			categories,
 			entries,
-			current: config.videoWallpaper ? 'video' : config.wallpaper,
-			onPick: (key: string) => key === 'immich:setup'
-				? showToast('Put your Immich address and an API key in /var/lib/homehook/immich.json on the TV (see docs/immich.md), then open Settings again', 'error')
-				: updateConfig(key.indexOf('video:') === 0 ? {...config, videoWallpaper: true, videoPlaces: key === 'video:' ? [] : config.videoPlaces.indexOf(key.slice(6)) >= 0 ? config.videoPlaces.filter((x) => x !== key.slice(6)) : config.videoPlaces.concat(key.slice(6))} : {...config, wallpaper: key, videoWallpaper: false}),
-			onFavorite: (key: string) => {
-				if (key.indexOf('cloud:') !== 0) return;
-				const id = key.slice(6);
-				const has = config.favoriteWallpapers.indexOf(id) !== -1;
-				updateConfig({...config, favoriteWallpapers: has ? config.favoriteWallpapers.filter((x) => x !== id) : config.favoriteWallpapers.concat(id)});
-				showToast(has ? 'Removed from Favorites' : 'Added to Favorites');
+			summary: `${picked.length} ${picked.length === 1 ? 'picture' : 'pictures'} picked.`,
+			onPick: (key: string) => {
+				if (key.indexOf('all:') === 0) {
+					const keys = keysIn[key.slice(4)] || [];
+					const all = keys.every((k) => picked.indexOf(k) >= 0);
+					const next = all ? picked.filter((k) => keys.indexOf(k) === -1) : picked.concat(keys.filter((k) => picked.indexOf(k) === -1));
+					if (next.length === 0) { showToast('Keep at least one picture'); return; }
+					updateConfig({...config, wallpaperPicks: next});
+					return;
+				}
+				const has = picked.indexOf(key) >= 0;
+				if (has && picked.length === 1) { showToast('Keep at least one picture'); return; }
+				updateConfig({...config, wallpaperPicks: has ? picked.filter((k) => k !== key) : picked.concat(key)});
 			}
 		};
 	}, [config, immich, inSettings]);
@@ -726,6 +770,7 @@ export function App () {
 		else if (optionId === OPTION.nightDim) updateConfig({...config, nightDim: !config.nightDim});
 		else if (optionId === OPTION.ambientOn) updateConfig({...config, ambientOn: !config.ambientOn});
 		else if (optionId === OPTION.ambientPrint) updateConfig({...config, ambientPrint: !config.ambientPrint});
+		else if (optionId === OPTION.wpNew) updateConfig({...config, wpNewOnLaunch: !config.wpNewOnLaunch});
 	}, [config]);
 
 	/** a value picked from an option's pop-up list */
@@ -743,6 +788,7 @@ export function App () {
 			updateConfig({...c, weatherCity: v, weatherCountry: c.weatherCountry || (owner ? owner.code : '')});
 		}
 		else if (optionId === OPTION.wpAuto) updateConfig({...c, wpAutoMinutes: Number(value)});
+		else if (optionId === OPTION.wpType) updateConfig({...c, wallpaperType: v});
 		else if (optionId === OPTION.dockHide) updateConfig({...c, dockHide: v});
 		else if (optionId === OPTION.idle) updateConfig({...c, idleSeconds: Number(value)});
 		else if (optionId === OPTION.darkMode) updateConfig({...c, darkMode: v});
