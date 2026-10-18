@@ -1084,7 +1084,7 @@ html.liveblur .cc__mod {
    classes hold the states between. The pill stands in for the tile: its focused glass, a dark fill over it, and the tile's text on top. */
 .cc__grid--leaving { opacity: 0; pointer-events: none; }
 .cc__mod--gone { opacity: 0; }
-.cc__list { position: absolute; left: 0; top: 0; width: 100%; opacity: 0; transform-origin: 50% 0; }
+.cc__list { position: absolute; left: 0; top: 0; width: 100%; opacity: 0; transform-origin: 0 0; }
 .cc__list--shown { opacity: 1; }
 .cc__list:not(.cc__list--shown) { pointer-events: none; }
 .panel--cc .cc__morph { position: absolute; transform-origin: 0 0; pointer-events: none; }

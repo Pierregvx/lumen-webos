@@ -53,8 +53,6 @@ const STEPS = 20;
 const DARK = 0.85;
 /** how far the rest of the grid shrinks toward the tile */
 const GRID_SHRINK = 0.15;
-/** how much the list grows while it fades in */
-const LIST_GROW = 0.1;
 /** how far past the tile the pill shrinks when closing, before it settles */
 const OVERSHOOT = 1.15;
 /** how far the pill has grown at each video frame (every 33 ms) of tvOS's open, measured off the frames */
@@ -80,7 +78,7 @@ const OPT_GAP = 12;
 const listHeight = (count: number) => count * OPT_H + (count - 1) * OPT_GAP;
 
 type Phase = 'grid' | 'opening' | 'list' | 'closing';
-interface Morph {kind: 'open' | 'close'; cell: MenuCell; geo: {x: number; y: number; w: number; h: number; tile: End; over: End; list: End}}
+interface Morph {kind: 'open' | 'close'; cell: MenuCell; geo: {x: number; y: number; w: number; h: number; fw: number; fh: number; tile: End; over: End; list: End}}
 
 /** Control Center (opened from the round button top right): sound, picture mode, appearance, clock, LG Home, Art mode (your photos), screen off,
  *  restart, backlight and Eye Comfort. Volume is left to the remote's own buttons. Arrows move between controls, OK presses one, Left/Right on
@@ -187,7 +185,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 		const full = panel.current ? panel.current.offsetWidth : w;
 		const grown = (s: number): End => ({tx: ((1 - s) * w) / 2, ty: ((1 - s) * h) / 2, sx: s, sy: s, r: (h / 2) * s});
 		return {
-			x, y, w, h,
+			x, y, w, h, fw: full, fh: listHeight(count),
 			tile: grown(1.1), // focused tiles are drawn at 1.1
 			over: grown(1.1 * OVERSHOOT),
 			list: {tx: -x, ty: -y, sx: full / w, sy: listHeight(count) / h, r: OPT_H / 2}
@@ -212,9 +210,12 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			text.push({transform: `translate(${dx}px, ${dy}px) scale(1.1)`, opacity: open ? 1 - ramp(t, 0.06, 0.27) : ramp(t, 0.42, 0.6)});
 			glass.push({opacity: open ? 1 - ramp(t, 0, 0.25) : ramp(t, 0.39, 0.62)});
 			dark.push({opacity: DARK * (open ? ramp(t, 0.05, 0.3) - ramp(t, 0.4, 0.65) : ramp(t, 0, 0.23) - ramp(t, 0.39, 0.62))});
-			list.push(open
-				? {opacity: ramp(t, 0.3, 0.6), transform: `scale(${1 - LIST_GROW + LIST_GROW * easeOut(ramp(t, 0.3, 1))})`}
-				: {opacity: 1 - ramp(t, 0.05, 0.47), transform: `scale(${1 - LIST_GROW * ramp(t, 0, 0.47)})`});
+			// the list sits inside the pill at the pill's size, as tvOS's does, scaled evenly to fit and centred across it
+			const pw = g.w * at.sx;
+			const fit = Math.min(1, pw / g.fw, (g.h * at.sy) / g.fh);
+			const lx = g.x + at.tx + (pw - fit * g.fw) / 2;
+			const ly = g.y + at.ty;
+			list.push({opacity: open ? ramp(t, 0.3, 0.6) : 1 - ramp(t, 0.05, 0.47), transform: `translate(${lx}px, ${ly}px) scale(${fit})`});
 			grid.push(open
 				? {opacity: 1 - ramp(t, 0.15, 0.5), transform: `scale(${1 - GRID_SHRINK * easeOut(ramp(t, 0, 0.5))})`}
 				: {opacity: ramp(t, 0.2, 0.42), transform: `scale(${1 - GRID_SHRINK + GRID_SHRINK * easeOut(ramp(t, 0.15, 0.55))})`});
