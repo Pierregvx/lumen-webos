@@ -2,14 +2,16 @@ import {render} from 'preact';
 import {App} from './app';
 import {applyTokens} from './theme/tokens';
 import {bootMark, startLog} from './lib/log';
+import {HOMEHOOK} from './lib/root';
 import './theme/global.css';
 
 bootMark('script');
 applyTokens();
 startLog();
-// SF Pro, only when the private font file was added to this build (see tools/make_sf_font.py); otherwise nothing happens and Geist is used
+// SF Pro from this build's private folder, else the copy tools/push_sf_font.sh put on the TV (survives Channel updates); neither means Geist
 if ('FontFace' in window) {
-	new FontFace('SF Private', `url(${new URL('fonts/sf.woff2', location.href).href})`, {weight: '1 1000'}).load().then((face) => { document.fonts.add(face); }).catch(() => undefined);
+	const sf = (url: string) => new FontFace('SF Private', `url(${url})`, {weight: '1 1000'}).load();
+	sf(new URL('fonts/sf.woff2', location.href).href).catch(() => sf(`file://${HOMEHOOK}/fonts/sf.woff2`)).then((face) => { document.fonts.add(face); }).catch(() => undefined);
 }
 render(<App />, document.getElementById('root')!);
 window.requestAnimationFrame(() => bootMark('frame'));

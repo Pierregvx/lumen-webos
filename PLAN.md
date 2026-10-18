@@ -111,6 +111,9 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [x] `"keepAlive": true` in appinfo.json: tried 2026-10-16, no effect (Lumen still reloads from scratch after Plex). Removed. Cold start
       stays the thing to make fast (Phase 4).
 - [ ] Recents button: rebind it with Input Hook to launch Lumen with `{"view":"recent"}` (needs the launch-parameter check above).
+- [ ] SF font from the TV: `npm run push-font` (needs `LUMEN_TV_HOST` in `.env`), then relaunch a Channel build. The clock and text should be
+      SF Pro, not Geist. If they stay Geist, webOS 25 does not let the app read `file:///var/lib/homehook/`, and the font has to go in a
+      sideloaded build (`npm run deploy`) instead. (verify)
 - [ ] Guide button: rebind it with Input Hook to run `luna-send -n 1 luna://com.webos.applicationManager/launch '{"id":"com.samrenfrew.lumen","params":{"view":"guide"}}'`.
       With Lumen closed and with it in front, it should open the Guide (or the Full guide, by Settings). Needs the Live TV row on. (verify)
 - [ ] Colour buttons: which does this remote have, and which key codes reach the app?

@@ -63,6 +63,7 @@ The default app id is `com.samrenfrew.lumen.dev` ("Home Dev"), so a dev build in
 
 Brand icons and logos of third-party apps, your own photographs and the private SF font are **not** included here. Put them in `app/private/`
 (gitignored); the build lays that folder over the app if it is there. The layout is described at the top of `app/vite.config.ts`.
+Builds from the Homebrew Channel never have the font, so `npm run push-font` copies it to `/var/lib/homehook/fonts/` on the TV, where every build looks for it.
 `tools/gen_iconpack.py` builds icon tiles into it from logos you put in `tools/logos/` and from your own TV's app icons.
 `npm run release` builds the public `.ipk` (stable id, no `app/private/`) into `release/`.
 
