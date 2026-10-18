@@ -2,16 +2,18 @@ import {render} from 'preact';
 import {App} from './app';
 import {applyTokens} from './theme/tokens';
 import {bootMark, startLog} from './lib/log';
-import {HOMEHOOK} from './lib/root';
+import {copyFontIn} from './lib/root';
 import './theme/global.css';
 
 bootMark('script');
 applyTokens();
 startLog();
-// SF Pro from this build's private folder, else the copy tools/push_sf_font.sh put on the TV (survives Channel updates); neither means Geist
+// SF Pro from the app's folder: put there by a private build, or copied in from the TV's copy (tools/push_sf_font.sh); neither means Geist
 if ('FontFace' in window) {
-	const sf = (url: string) => new FontFace('SF Private', `url(${url})`, {weight: '1 1000'}).load();
-	sf(new URL('fonts/sf.woff2', location.href).href).catch(() => sf(`file://${HOMEHOOK}/fonts/sf.woff2`)).then((face) => { document.fonts.add(face); }).catch(() => undefined);
+	const url = new URL('fonts/sf.woff2', location.href).href;
+	const sf = () => new FontFace('SF Private', `url(${url})`, {weight: '1 1000'}).load().then((face) => { document.fonts.add(face); });
+	// the app can't read outside its own folder, so the copy waits for root; 5s keeps it clear of the startup commands
+	sf().catch(() => { setTimeout(() => { copyFontIn(decodeURIComponent(location.pathname).replace(/\/[^/]*$/, '')).then((ok) => ok ? sf() : undefined).catch(() => undefined); }, 5000); });
 }
 render(<App />, document.getElementById('root')!);
 window.requestAnimationFrame(() => bootMark('frame'));

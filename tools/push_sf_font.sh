@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copies the private SF font (tools/make_sf_font.py) to /var/lib/homehook/fonts/ on the TV, where every Lumen build looks for it: npm run push-font
+# Copies the private SF font (tools/make_sf_font.py) to /var/lib/homehook/fonts/ on the TV, from where Lumen copies it into its own folder after each update: npm run push-font
 # Needs LUMEN_TV_HOST in .env, as for npm run deploy. Run it again only when the font changes; Channel updates leave it in place.
 set -e
 ROOT=$(cd "$(dirname "$0")/.." && pwd)

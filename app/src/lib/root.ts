@@ -211,6 +211,15 @@ export function immichRequest (base: string, key: string, path: string, opts: {b
 	return run(opts.as === 'base64' ? `${command} | base64 | tr -d '\\n'` : command, 20000);
 }
 
+/** Lumen's own install folder: the only place the app may read files from, and the only one copyFontIn writes to. */
+const APP_DIR = /^\/media\/developer\/apps\/usr\/palm\/applications\/com\.samrenfrew\.lumen(\.dev)?$/;
+
+/** Copies the SF font that tools/push_sf_font.sh put on the TV into the app's folder (each Channel update replaces the folder). True when copied. */
+export function copyFontIn (appDir: string): Promise<boolean> {
+	if (!APP_DIR.test(appDir)) return Promise.reject(new Error('refused: app folder'));
+	return run(`[ -f ${HOMEHOOK}/fonts/sf.woff2 ] && mkdir -p ${appDir}/fonts && cp ${HOMEHOOK}/fonts/sf.woff2 ${appDir}/fonts/sf.woff2 && echo ok; true`).then((out) => out.trim() === 'ok');
+}
+
 /** Writes text to one of FILES. The text travels as base64, so nothing in it is ever read by the shell. */
 export function writeFile (name: HomehookFile, text: string): Promise<void> {
 	if (FILES.indexOf(name) === -1) return Promise.reject(new Error('unknown file ' + name));
