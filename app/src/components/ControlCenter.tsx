@@ -242,8 +242,8 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			// opening: the glass is gone by 167 ms, while the list is still fading in and growing
 			// closing: the glass stays faint while the list fades, and fills in only as the pill nears the tile
 			glass.push({opacity: open ? 1 - ramp(t, 0.2, 0.5) : 0.25 * easeOut(ramp(t, 0.15, 0.5)) + 0.75 * ramp(t, 0.6, 0.85)});
-			// the edge highlight and shadow grow with the pill's scale, so they go before it grows and come back once it is near the tile's size
-			rim.push({opacity: open ? 1 - ramp(t, 0, 0.1) : ramp(t, 0.55, 0.75)});
+			// the edge highlight and shadow grow with the pill's scale: opening, they go before it grows; closing, the button forms, so they come back as it nears the tile's size
+			rim.push({opacity: open ? 1 - ramp(t, 0, 0.1) : ramp(t, 0.3, 0.6)});
 			// the list sits inside the pill at the pill's size, as tvOS's does: scaled evenly to fit inside its padding, and centred
 			const pw = g.w * at.sx;
 			const ph = g.h * at.sy;
