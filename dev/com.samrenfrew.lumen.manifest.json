@@ -1,15 +1,15 @@
 {
   "id": "com.samrenfrew.lumen",
-  "version": "1.0.9116",
+  "version": "1.0.9117",
   "type": "web",
   "title": "Home",
   "appDescription": "Minimalist home screen: apps, inputs and a way back to LG's home.",
   "iconUri": "https://raw.githubusercontent.com/samrenfrew/lumen-webos/hbc-repo/dev/icon.png",
   "sourceUrl": "https://github.com/samrenfrew/lumen-webos",
   "rootRequired": true,
-  "ipkUrl": "https://github.com/samrenfrew/lumen-webos/releases/download/dev/com.samrenfrew.lumen_1.0.9116_all.ipk",
+  "ipkUrl": "https://github.com/samrenfrew/lumen-webos/releases/download/dev/com.samrenfrew.lumen_1.0.9117_all.ipk",
   "ipkHash": {
-    "sha256": "5761c627ae14e3510adcba97c926caf41e99318d53b1a1e06307bb6204cb2021"
+    "sha256": "4e8f6863c61050d52f5d32225da1edce9781e8dbb922a040477df7330d6ec771"
   },
-  "ipkSize": 3019202
+  "ipkSize": 3019130
 }
