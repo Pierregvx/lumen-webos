@@ -45,13 +45,11 @@ const BACKLIGHT_DELAY_MS = 300;
 /** Opening a list, timed off the tvOS 26 Control Center frame by frame (30 fps): the tile grows into a glass pill the list's size while its text
  *  fades and the rest of the grid shrinks toward it and fades; the list fades in inside the pill, then the pill's glass clears. tvOS also
  *  darkens the pill on the way, which looked jarring here, so this keeps the tile's glass. Closing has no pill, since a big pill shrinking
- *  is heavy on the TV: the list fades out where it is and the grid fades back in, growing back from GRID_SHRINK. */
+ *  is heavy on the TV: the list shrinks back toward the tile as it fades out, and the grid fades back in, growing back from GRID_SHRINK. */
 const OPEN_MS = 330;
 const CLOSE_MS = 300;
 /** keyframes per animation; enough that the pill's corners stay round between them */
 const STEPS = 20;
-/** how far the list shrinks as it fades out on closing */
-const LIST_SHRINK = 0.1;
 /** how far the rest of the grid shrinks toward the tile */
 const GRID_SHRINK = 0.15;
 /** the space round the list inside the pill, so the options never touch its edge */
@@ -230,8 +228,8 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 		for (let i = 0; i <= STEPS; i++) {
 			const t = i / STEPS;
 			const open = m.kind === 'open';
-			// closing has no pill: the list fades where it is and the grid fades back in round the tile
-			const at = open ? opening(g, t) : g.list;
+			// closing has no pill: the list shrinks back toward the tile as it fades, and the grid, tile included, fades back in
+			const at = open ? opening(g, t) : opening(g, 1 - easeOut(ramp(t, 0, 0.7)));
 			// the corners ease from the tile's round ends to an option's radius as the pill grows
 			const r = at.r;
 			pill.push({transform: `translate(${at.tx}px, ${at.ty}px) scale(${at.sx}, ${at.sy})`, borderRadius: `${r / at.sx}px / ${r / at.sy}px`});
@@ -246,13 +244,12 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			// the list sits inside the pill at the pill's size, as tvOS's does: scaled evenly to fit inside its padding, and centred
 			const pw = g.w * at.sx;
 			const ph = g.h * at.sy;
-			// closing, the list also shrinks a little about its centre as it fades
-			const fit = Math.max(0, Math.min(1, (pw - 2 * PILL_PAD) / g.fw, (ph - 2 * PILL_PAD) / g.fh)) * (open ? 1 : 1 - LIST_SHRINK * easeOut(ramp(t, 0, 0.6)));
+			const fit = Math.max(0, Math.min(1, (pw - 2 * PILL_PAD) / g.fw, (ph - 2 * PILL_PAD) / g.fh));
 			const lx = g.x + at.tx + (pw - fit * g.fw) / 2;
 			const ly = g.y + at.ty + (ph - fit * g.fh) / 2;
 			// opacity goes on each piece of glass, not the list or grid: a fading parent would cut its live blur off from the wallpaper
 			list.push({transform: `translate(${lx}px, ${ly}px) scale(${fit})`});
-			listFade.push({opacity: open ? easeOut(ramp(t, 0.08, 0.8)) : 1 - ramp(t, 0, 0.55)});
+			listFade.push({opacity: open ? easeOut(ramp(t, 0.08, 0.8)) : 1 - ramp(t, 0.1, 0.7)});
 			grid.push({transform: open ? `scale(${1 - GRID_SHRINK * easeOut(ramp(t, 0, 0.4))})` : `scale(${1 - GRID_SHRINK + GRID_SHRINK * easeOut(ramp(t, 0.2, 1))})`});
 			gridFade.push({opacity: open ? 1 - ramp(t, 0.08, 0.4) : ramp(t, 0.25, 0.85)});
 		}
