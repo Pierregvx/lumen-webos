@@ -50,6 +50,8 @@ const OPEN_MS = 330;
 const CLOSE_MS = 300;
 /** keyframes per animation; enough that the pill's corners stay round between them */
 const STEPS = 20;
+/** how far the list shrinks as it fades out on closing */
+const LIST_SHRINK = 0.1;
 /** how far the rest of the grid shrinks toward the tile */
 const GRID_SHRINK = 0.15;
 /** the space round the list inside the pill, so the options never touch its edge */
@@ -85,7 +87,10 @@ export function growFrom (panel: HTMLElement | null, key: string): void {
 	const b = button.getBoundingClientRect();
 	const p = panel.getBoundingClientRect();
 	panel.style.transformOrigin = `${b.left + b.width / 2 - p.left}px ${b.top + b.height / 2 - p.top}px`;
-	panel.animate([{opacity: 0, transform: 'scale(0.6)'}, {opacity: 1, transform: 'none'}], {duration: 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)'});
+	const opts = {duration: 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)'};
+	panel.animate([{transform: 'scale(0.6)'}, {transform: 'none'}], opts);
+	// each control fades on its own: fading the panel would cut their live blur off from the wallpaper
+	Array.from(panel.querySelectorAll<HTMLElement>('.cc__mod, .cc__caption')).forEach((el) => el.animate([{opacity: 0}, {opacity: 1}], opts));
 }
 
 /** Control Center (opened from the round button top right): sound, picture mode, appearance, clock, LG Home, Art mode (your photos), screen off,
@@ -241,7 +246,8 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			// the list sits inside the pill at the pill's size, as tvOS's does: scaled evenly to fit inside its padding, and centred
 			const pw = g.w * at.sx;
 			const ph = g.h * at.sy;
-			const fit = Math.max(0, Math.min(1, (pw - 2 * PILL_PAD) / g.fw, (ph - 2 * PILL_PAD) / g.fh));
+			// closing, the list also shrinks a little about its centre as it fades
+			const fit = Math.max(0, Math.min(1, (pw - 2 * PILL_PAD) / g.fw, (ph - 2 * PILL_PAD) / g.fh)) * (open ? 1 : 1 - LIST_SHRINK * easeOut(ramp(t, 0, 0.6)));
 			const lx = g.x + at.tx + (pw - fit * g.fw) / 2;
 			const ly = g.y + at.ty + (ph - fit * g.fh) / 2;
 			// opacity goes on each piece of glass, not the list or grid: a fading parent would cut its live blur off from the wallpaper
