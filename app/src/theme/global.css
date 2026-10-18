@@ -1091,26 +1091,17 @@ html.liveblur .cc__mod {
 /* the pill's fill without its edge highlight and shadow, which would swell as it scales; .cc__morph__rim draws those and fades early */
 html body .panel--cc .cc__morph__glass { box-shadow: none !important; }
 .cc__morph__rim { box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25); }
-/* the white focus over the pill's glass at its ends; the light look's focus is dark, so it has none */
-.cc__morph__white { background: #fff; }
-html.light .cc__morph__white { display: none; }
 html.light .cc__morph__rim { box-shadow: 0 8px 18px rgba(20, 24, 40, 0.30); }
-.panel--cc .cc__morph__text { position: absolute; pointer-events: none; color: #111; }
+.panel--cc .cc__morph__text { position: absolute; pointer-events: none; color: #fff; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35); }
 .cc__morph__text svg { position: static; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.cc__morph__text:not(.cc__mod--on) svg { stroke: #111; }
-html.light .cc__morph__text { color: #fff; }
-html.light .cc__morph__text:not(.cc__mod--on) svg { stroke: #fff; }
+.cc__morph__text:not(.cc__mod--on) svg { stroke: rgba(255, 255, 255, 0.9); }
+html.light .cc__morph__text { text-shadow: none; }
 /* height and gap match OPT_H and OPT_GAP in ControlCenter.tsx */
 .panel--cc .cc__opt { width: 100%; height: 72px; border-radius: 36px; margin-bottom: 12px; }
 .panel--cc .cc__opt.cc__mod--focused { transform: scale(1.05); }
 .cc__opt .cc__icon svg { width: 34px; height: 34px; }
 
 .cc__caption { height: 30px; line-height: 30px; text-align: center; font-size: 20px; font-weight: 600; color: #fff; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); }
-
-/* focus is the backlight bar's focused fill: solid white with dark text (the light look's dark focus is below) */
-html:not(.light) body .panel--cc .cc__mod--focused:not(.cc__slider):not(.cc__morph__glass) { background: #fff !important; color: #111; text-shadow: none; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25); -webkit-backdrop-filter: none; backdrop-filter: none; }
-html:not(.light) .panel--cc .cc__mod--focused:not(.cc__slider):not(.cc__mod--on) svg { stroke: #111; }
-html:not(.light) .cc__mod--focused .cc__inputicon { filter: brightness(0) opacity(0.85); }
 
 /* light look: the top buttons' light glass, and focus turns dark as theirs does */
 html.light .cc__mod { color: #14151b; text-shadow: none; background-color: rgb(120, 128, 148); background-blend-mode: normal, screen; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.8), 0 4px 12px rgba(20, 24, 40, 0.12); }
