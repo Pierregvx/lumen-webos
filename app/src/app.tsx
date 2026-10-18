@@ -19,7 +19,7 @@ import {onRelaunch, startParams, type LaunchParams} from './lib/launchParams';
 import {appTile, inputTile, pickInOrder} from './lib/tiles';
 import {TIMING} from './config/constants';
 import {LOCAL_WALLPAPERS, WALLPAPERS, WALLPAPER_CATEGORIES, cloudUrl} from './config/wallpapers';
-import {resized, setFavorites, setLiveBlur, setWallpaper} from './lib/wallpaper';
+import {resized, setFavorites, setLiveBlur, setWallpaper, shownWallpaper} from './lib/wallpaper';
 import {restoreLeftoverBacklight} from './lib/tvcontrols';
 import {albums as immichAlbums, cachedServer, IMMICH_SOURCES, loadServer} from './lib/immich';
 import {Ambient} from './components/Ambient';
@@ -140,7 +140,7 @@ export function App () {
 		const apply = (p: LaunchParams) => {
 			if (p.view === 'recent') setFocusRow({id: ROW.dock, seq: ++seq});
 			// watch.sh opens Lumen with {"view":"ambient"} when the TV's screensaver starts (Settings > Screensaver)
-			if (p.view === 'ambient' && configRef.current.ambientOn) setScreen('ambient');
+			if (p.view === 'ambient' && configRef.current.ambientOn) { ambientOpening.current = null; setScreen('ambient'); }
 			// a plain relaunch is the remote's Home button: back to the home screen from Settings, the Guide, the screensaver or Control Center
 			if (!p.view) { setScreen('home'); setControls(false); }
 		};
@@ -244,6 +244,10 @@ export function App () {
 		return () => window.clearInterval(id);
 	}, [config.videoHours]);
 	const videoOn = config.videoWallpaper && videoTime;
+	const videoOnRef = useRef(videoOn);
+	videoOnRef.current = videoOn;
+	// the wallpaper the screensaver opens on when started from the home screen; none when the TV's screensaver opens it
+	const ambientOpening = useRef<ReturnType<typeof shownWallpaper>>(null);
 	useEffect(() => setVideoWallpaper(videoOn), [videoOn]);
 	useEffect(() => {
 		const root = document.documentElement.classList;
@@ -270,7 +274,7 @@ export function App () {
 
 	/** Your photos straight away, without LG's screensaver showing first; LG's own when the photos are not turned on (unless forced, for Art mode). */
 	const showScreensaver = (photos = configRef.current.ambientOn) => {
-		if (photos && cachedServer()) { setScreen('ambient'); return; }
+		if (photos && cachedServer()) { ambientOpening.current = videoOnRef.current ? null : shownWallpaper(); setScreen('ambient'); return; }
 		if (photos) { showToast('Set up Immich first (Settings > Wallpaper > Choose wallpaper > Photos)', 'error'); return; }
 		startScreensaver().catch(() => showToast("Couldn't start the screensaver (it needs the Homebrew Channel)", 'error'));
 	};
@@ -761,7 +765,7 @@ export function App () {
 		<>
 			{/* Home stays mounted under Settings so it keeps its focus position. */}
 			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} menuItems={MENU_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} dockHide={config.dockHide} focusRow={focusRow} />
-			{screen === 'ambient' && <Ambient source={config.ambient} seconds={config.ambientSeconds} backlight={AMBIENT_BACKLIGHT[config.ambientBrightness]} weather={weather} showPeriod={config.showAmPm} print={config.ambientPrint} onExit={() => setScreen('home')} />}
+			{screen === 'ambient' && <Ambient source={config.ambient} seconds={config.ambientSeconds} backlight={AMBIENT_BACKLIGHT[config.ambientBrightness]} weather={weather} showPeriod={config.showAmPm} print={config.ambientPrint} opening={ambientOpening.current} onExit={() => setScreen('home')} />}
 			{screen === 'guide' && <Guide channels={live.channels} listings={live.listings} logos={live.logos} now={live.now} schedule={live.schedule} full={config.guideFull} onMode={(full) => { if (configRef.current.guideFull !== full) updateConfig({...configRef.current, guideFull: full}); }} active={!controls} onOpen={watchChannel} onClose={() => setScreen('home')} />}
 			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onChoose={onChoose} onClose={() => setScreen('home')} />}
 			{controls && <ControlCenter

@@ -238,6 +238,13 @@ function paint (el: HTMLElement, src: string): void {
 	fadeTimer = window.setTimeout(() => { el.style.backgroundImage = next; el.classList.toggle('wp-pair', pair); layer.remove(); }, FADE_MS + 60);
 }
 
+/** The sharp picture on screen now (one URL, or two for a portrait pair) and its Immich id, or null when none is painted. */
+export function shownWallpaper (): {urls: string[]; id: string} | null {
+	const src = local ? local.full : shown;
+	if (!src || released || !element || element.style.backgroundImage === 'none') return null;
+	return {urls: src.split(PAIR_SEP), id: shownId};
+}
+
 /** Resolves once the first wallpaper of this launch is on screen (or there is none to show), so heavier work can wait for it. */
 let markShown: () => void = () => undefined;
 export const wallpaperShown: Promise<void> = new Promise((resolve) => { markShown = resolve; });
