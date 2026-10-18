@@ -51,6 +51,10 @@ const CLOSE_MS = 430;
 const STEPS = 20;
 /** how far the rest of the grid shrinks toward the tile */
 const GRID_SHRINK = 0.15;
+/** the space round the list inside the pill, so the options never touch its edge */
+const PILL_PAD = 18;
+/** how soon in the open the pill takes the list's shape (its height grows faster than its width), as a share of OPEN_MS */
+const SHAPE_BY = 0.35;
 /** how far past the tile the pill shrinks when closing, before it settles */
 const OVERSHOOT = 1.15;
 /** how far the pill has grown at each video frame (every 33 ms) of tvOS's open, measured off the frames */
@@ -186,8 +190,25 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			x, y, w, h, fw: full, fh: listHeight(count),
 			tile: grown(1.1), // focused tiles are drawn at 1.1
 			over: grown(1.1 * OVERSHOOT),
-			list: {tx: -x, ty: -y, sx: full / w, sy: listHeight(count) / h, r: OPT_H / 2}
+			// the pill ends PILL_PAD bigger than the list all round
+			list: {tx: -x - PILL_PAD, ty: -y - PILL_PAD, sx: (full + 2 * PILL_PAD) / w, sy: (listHeight(count) + 2 * PILL_PAD) / h, r: OPT_H / 2 + PILL_PAD}
 		};
+	};
+
+	/** The pill partway through opening. Its size follows tvOS's measured growth, but its height grows faster than its width, so it has the
+	 *  list's shape by SHAPE_BY and the list fills it from early on. Each edge moves in step with its own growth, so the pill stays between the
+	 *  tile and the list. */
+	const opening = (g: Morph['geo'], t: number): End => {
+		const k = track(GROW, t);
+		const l0 = g.x + g.tile.tx, t0 = g.y + g.tile.ty, w0 = g.w * g.tile.sx, h0 = g.h * g.tile.sy;
+		const l1 = g.x + g.list.tx, t1 = g.y + g.list.ty, w1 = g.w * g.list.sx, h1 = g.h * g.list.sy;
+		const h = h0 + (h1 - h0) * k;
+		const shape = w0 / h0 + (w1 / h1 - w0 / h0) * easeOut(ramp(t, 0, SHAPE_BY));
+		const w = Math.max(Math.min(w0, w1), Math.min(Math.max(w0, w1), h * shape));
+		const px = w1 === w0 ? k : (w - w0) / (w1 - w0);
+		const left = l0 + (l1 - l0) * px;
+		const top = t0 + (t1 - t0) * k;
+		return {tx: left - g.x, ty: top - g.y, sx: w / g.w, sy: h / g.h, r: g.tile.r + (g.list.r - g.tile.r) * k};
 	};
 
 	/** Every layer's keyframes for one open or close, sampled from the same timeline. */
@@ -197,7 +218,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 		for (let i = 0; i <= STEPS; i++) {
 			const t = i / STEPS;
 			const open = m.kind === 'open';
-			const at = open ? mix(g.tile, g.list, track(GROW, t))
+			const at = open ? opening(g, t)
 				: t < SHRINK_END ? mix(g.list, g.over, track(SHRINK, t / SHRINK_END)) : mix(g.over, g.tile, easeOut(ramp(t, SHRINK_END, 1)));
 			// the corners reach the list's radius early, as tvOS's pill turns square-ish soon after it starts to grow
 			const r = open ? g.tile.r + (g.list.r - g.tile.r) * Math.min(1, track(GROW, t) * 1.5) : at.r;
@@ -208,11 +229,12 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			text.push({transform: `translate(${dx}px, ${dy}px) scale(1.1)`, opacity: open ? 1 - ramp(t, 0.06, 0.27) : ramp(t, 0.42, 0.6)});
 			// opening: the glass is gone by 167 ms, while the list is still fading in and growing
 			glass.push({opacity: open ? 1 - ramp(t, 0.2, 0.5) : ramp(t, 0, 0.23)});
-			// the list sits inside the pill at the pill's size, as tvOS's does, scaled evenly to fit and centred across it
+			// the list sits inside the pill at the pill's size, as tvOS's does: scaled evenly to fit inside its padding, and centred
 			const pw = g.w * at.sx;
-			const fit = Math.min(1, pw / g.fw, (g.h * at.sy) / g.fh);
+			const ph = g.h * at.sy;
+			const fit = Math.max(0, Math.min(1, (pw - 2 * PILL_PAD) / g.fw, (ph - 2 * PILL_PAD) / g.fh));
 			const lx = g.x + at.tx + (pw - fit * g.fw) / 2;
-			const ly = g.y + at.ty;
+			const ly = g.y + at.ty + (ph - fit * g.fh) / 2;
 			list.push({opacity: open ? easeOut(ramp(t, 0.08, 0.8)) : 1 - ramp(t, 0.05, 0.47), transform: `translate(${lx}px, ${ly}px) scale(${fit})`});
 			grid.push(open
 				? {opacity: 1 - ramp(t, 0.08, 0.4), transform: `scale(${1 - GRID_SHRINK * easeOut(ramp(t, 0, 0.4))})`}
