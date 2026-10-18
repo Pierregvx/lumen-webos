@@ -13,6 +13,8 @@ interface Props {
 	from: number;
 	/** the schedule could not be read, so only now and next are in the grid */
 	thin: boolean;
+	/** still reading: a row with nothing yet says so rather than "No guide data" */
+	loading: boolean;
 	logos: Record<string, string>;
 	/** the current minute, ms */
 	now: number;
@@ -54,7 +56,7 @@ function pick (list: Programme[], a: number, winEnd: number): Programme | undefi
  *  between channels and keep the time the focus is at, so the focus stays on what is on now as it moves; Left/Right move between programmes
  *  and scroll the grid half an hour at a time, as far back as the half hour now is in and as far on as the schedule was read. OK opens Live TV
  *  on the channel. Only the rows near the view are drawn, and only the programmes inside the two hours. */
-export function FullGuide ({channels, listings, from, thin, logos, now, at, onAt, active, onOpen, onTop, onClose}: Props) {
+export function FullGuide ({channels, listings, from, thin, loading, logos, now, at, onAt, active, onOpen, onTop, onClose}: Props) {
 	const base = halfHour(now);
 	const lastWin = Math.max(base, from + SCHEDULE_HOURS * 3600000 - SPAN);
 	const [winState, setWin] = useState(base);
@@ -135,7 +137,7 @@ export function FullGuide ({channels, listings, from, thin, logos, now, at, onAt
 									<span class="fg__name">{c.name}</span>
 								</div>
 								<div class="fg__line">
-									{shown.length === 0 && <div class={`fg__prog fg__prog--empty${isAt ? ' fg__prog--focused' : ''}`} style={{left: '0px', width: `${GRID_W - 8}px`}}><div class="fg__ptitle">{tr('No guide data')}</div></div>}
+									{shown.length === 0 && <div class={`fg__prog fg__prog--empty${isAt ? ' fg__prog--focused' : ''}`} style={{left: '0px', width: `${GRID_W - 8}px`}}><div class="fg__ptitle">{tr(loading ? 'Loading…' : 'No guide data')}</div></div>}
 									{shown.map((p) => {
 										const left = x(p.start);
 										const width = x(p.end) - left - 8;

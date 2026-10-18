@@ -2,7 +2,7 @@
 // (lib/root.ts). A cold start draws the last answer from localStorage at once (lib/boot.ts); the TV is asked again after the first frame.
 
 import {isWebOS} from './luna';
-import {channelList, nowNext, readIcons, schedule} from './root';
+import {channelList, eventList, EVENT_BATCH, nowNext, readIcons, schedule} from './root';
 import {logError} from './log';
 import {readCache, writeCache} from './boot';
 import {timeParts} from './clock';
@@ -210,6 +210,80 @@ export function readSchedule (from: number, to: number, onPart?: (l: Listings) =
 		logError('guide', e.message);
 		throw e;
 	});
+}
+
+// ---------- the guide service (iepg/getEventList): what LG's own Guide reads ----------
+
+/** ms as the guide service's local-time stamp */
+function localStamp (ms: number): string {
+	const d = new Date(ms);
+	const two = (n: number) => String(n).padStart(2, '0');
+	return `${d.getFullYear()},${two(d.getMonth() + 1)},${two(d.getDate())},${two(d.getHours())},${two(d.getMinutes())},${two(d.getSeconds())}`;
+}
+
+interface RawEvent extends RawProgramme { description?: string }
+
+/** The programmes overlapping `from` to `to` on up to EVENT_BATCH channels. The reply's startTime and endTime are UTC like the database's
+ *  (its DST* times are local), so groupListings reads them as before. Rejects when the TV refuses the call. */
+export function readEvents (channels: Channel[], from: number, to: number): Promise<Listings> {
+	if (!isWebOS()) {
+		const all = import.meta.env.DEV ? mockSchedule(from, to) : {};
+		const out: Listings = {};
+		for (const c of channels) if (all[c.signal]) out[c.signal] = all[c.signal];
+		return Promise.resolve(out);
+	}
+	return eventList(channels.map((c) => c.id), localStamp(from), localStamp(to)).then((text) => {
+		const reply = JSON.parse(text) as {returnValue?: boolean; programList?: RawEvent[]; errorText?: string};
+		if (reply.returnValue === false) throw new Error(`events refused: ${reply.errorText || ''}`);
+		// no subtitle flag seen in the reply yet: the description carries "[S]"
+		const rows = (reply.programList || []).map((r) => r.isSubtitle === undefined && /\[S\]/.test(r.description || '') ? {...r, isSubtitle: true} : r);
+		return groupListings(rows.filter((r) => utcTime(r.endTime) > from && utcTime(r.startTime) < to));
+	});
+}
+
+/** rows above the focus when the Full guide is scrolled (keep in step with FOCUS_AT in screens/FullGuide.tsx) */
+const ROWS_ABOVE_FOCUS = 3;
+
+/** The next channels to read: from the top row in view down, then upward from just above it, skipping those read already. */
+function nextBatch (channels: Channel[], done: boolean[], focus: number): number[] {
+	const out: number[] = [];
+	const start = Math.max(0, Math.min(channels.length - 1, focus - ROWS_ABOVE_FOCUS));
+	for (let i = start; i < channels.length && out.length < EVENT_BATCH; i++) if (!done[i]) out.push(i);
+	for (let i = start - 1; i >= 0 && out.length < EVENT_BATCH; i--) if (!done[i]) out.push(i);
+	return out;
+}
+
+/** Every channel's programmes from `from` to `to`, read from the guide service ten channels a call, nearest the focus first: the rows in view
+ *  and the three under them, then on down, then up. `focus()` is asked before each call, so a jump down the list moves the reading with it.
+ *  `onPart` gets everything read so far after each call; `stopped` ends the reading early. Rejects if the first call fails or finds
+ *  nothing, so the caller can fall back to reading the database. One line goes to the TV's log per reading. */
+export function readEventsNear (channels: Channel[], from: number, to: number, focus: () => number, onPart?: (l: Listings) => void, stopped?: () => boolean): Promise<Listings> {
+	const began = Date.now();
+	const done = channels.map(() => false);
+	const out: Listings = {};
+	let calls = 0;
+	let programmes = 0;
+	const step = (): Promise<Listings> => {
+		const batch = stopped && stopped() ? [] : nextBatch(channels, done, focus());
+		if (batch.length === 0) {
+			logError('guide', `events: ${calls} calls, ${programmes} programmes, ${Date.now() - began} ms${stopped && stopped() ? ', stopped early' : ''}`);
+			return Promise.resolve(out);
+		}
+		batch.forEach((i) => { done[i] = true; });
+		const first = calls === 0;
+		calls++;
+		return readEvents(batch.map((i) => channels[i]), from, to).then((got) => {
+			for (const k in got) { out[k] = got[k]; programmes += got[k].length; }
+			if (first && programmes === 0) throw new Error('events: the first call found nothing');
+			if (onPart) onPart({...out});
+			return step();
+		}, (e: Error) => {
+			if (first) throw e;
+			logError('guide', e.message);     // one batch lost: carry on with the rest
+			return step();
+		});
+	};
+	return step().catch((e: Error) => { logError('guide', e.message); throw e; });
 }
 
 /** Each channel's Now and Next listings, with the schedule's programmes added around them. The schedule kind does not hold what is on

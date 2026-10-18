@@ -48,6 +48,8 @@ export function Guide ({channels, listings, logos, now, schedule, full, onMode, 
 	const last = channels.length - 1;
 	const at = clamp(focus, 0, Math.max(0, last));
 	const gridKeys = active && full && !onSwitch;
+	// the Full guide reads the channels near the focus first
+	useEffect(() => { schedule.focus(at); }, [at]);
 
 	const handleKey = useCallback((key: NavKey): boolean => {
 		if (key === 'back') onClose();
@@ -101,7 +103,7 @@ export function Guide ({channels, listings, logos, now, schedule, full, onMode, 
 					<span class={`guide__seg${full ? ' guide__seg--on' : ''}`} onClick={() => onMode(true)}>{tr('Full guide')}</span>
 				</div>
 			</div>
-			{full && <FullGuide channels={channels} listings={schedule.listings} from={schedule.from} thin={schedule.state === 'pf'} logos={logos} now={now} at={at} onAt={setFocus} active={gridKeys} onOpen={onOpen} onTop={() => setOnSwitch(true)} onClose={onClose} />}
+			{full && <FullGuide channels={channels} listings={schedule.listings} from={schedule.from} thin={schedule.state === 'pf'} loading={schedule.state === 'loading'} logos={logos} now={now} at={at} onAt={setFocus} active={gridKeys} onOpen={onOpen} onTop={() => setOnSwitch(true)} onClose={onClose} />}
 			{!full && <>
 			<div class="guide__cols">
 				<span class="guide__col guide__col--now">{tr('Now')} · {clockText(now)}</span>

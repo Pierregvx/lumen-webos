@@ -153,6 +153,26 @@ All commands so far are read-only and run as root over SSH on the TV.
   `luna-send -n 1 luna://com.webos.service.apiadapter/tv/openChannel '{"channelId":"1_41_104_104_16522_17664_9018"}'` opened Live TV on
   Channel 4 HD (seen on the TV; the reply itself was not posted). No broadcast id or pairing needed. Not tried: from the app without
   root, and with Live TV already open on another channel (it should behave like Home Assistant's `set_channel`, which does both).
+- **Step 2a (2026-10-18): the TV clears its guide at switch-on.** Lumen's log: at 21:47 the schedule kind had 31,006 rows; at 05:10 after
+  switch-on it had 0, and now and next listed 0 channels at 05:23. Both fill again only while Live TV is tuned in. Lead: `iepg` may serve
+  an online guide (Freeview Play) that does not need the tuner. Its methods include `getEpgStatus`, `getCurrentNextEventList`,
+  `getEventList`, `getNextEvent`, `getEventInfo`, `getSearchEventList`, `getSeriesEventList`, `getProgramImg`, and the notifiers
+  `notifyOnlineEventChanged` and `notifyFvpEventChanged` (FVP is Freeview Play). Next: call the `get*` ones with the guide empty.
+- **Step 2b (2026-10-18):** `iepg/getEpgStatus {"dataType":0,"channelMode":["Tuner","IP"]}` (guide full at the time):
+  `tunerOnlineEPGSupport: true`, `mergedEPGSupport: true`, `baseEpgOnline: false`, `networkStatus: true`, `tunerEpgStatus` ok,
+  `ipEpgStatus` off ("channelplus setting is off", that is LG Channels). So the TV can show an online guide for aerial channels but is
+  not using one now. `getCurrentNextEventList` and `getEventList` with those parameters (and a `channelId`): "bad parameters".
+  Next: capture the parameters LG's own Guide sends to `iepg` with `ls-monitor`.
+- **Step 2c (2026-10-18):** LG's Guide is `com.webos.app.livemenu`. On opening it calls `iepg` `getEpgStatus`, `getFavoriteGroupList`,
+  `getCurrentFavoriteGroup`, `getGenreMapTable`, `getCountryPolicy`, then `getEventList`. Payloads span several lines in `ls-monitor`, so
+  `grep` on one line shows only `«{`; read them with `grep -A`. A filter on `iepg/get` matches nothing: service and method are separate fields.
+- **Step 2d (2026-10-18): the Guide's schedule call.** LG's Guide asks `luna://com.webos.service.iepg/getEventList` with
+  `{"bFVPChannelId":true,"channelId":["1_41_1_101_16522_17546_9018", ...10 ids],"dataType":0,"fepgType":"Forward",
+  "localStartTime":"2026,10,18,06,30,00","localEndTime":"2026,10,18,08,30,00","sort":0}` (a two-hour window, ten channels a call;
+  local times, `iepg` adds the UTC ones and passes it on to `com.webos.service.pbsw`). A first call with one channel and start equal to
+  end returns what is on now. The reply is `programList`, with `programName`, `description`, `startTime`/`endTime` (local),
+  `DSTStartTime`/`DSTEndTime`, `duration`, `signalChannelId`, `isPresent`, `seriesTitle`, `fepgImgUrl`. Seen with the broadcast guide full.
+  Unknown: whether it answers (from Freeview Play online) while the broadcast guide is empty after switch-on.
 
 ## Answer
 

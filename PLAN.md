@@ -34,8 +34,12 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [ ] Night dim on the screensaver: after 7 pm with Dim the wallpaper at night on, the photos are darker too.
 - [ ] Immich wallpaper night dim: after 7 pm the Photos wallpaper shows at 55%, like a cloud one. The code path is the same; Sam saw it not dim.
 - [ ] Photos: Recent, with people (verify): only pictures with faces. If Immich leaves out `people` on /api/search/random, it falls back to Recent.
-- [ ] Guide after switch-on (verify): the row and Guide fill within a minute or two of the TV's table filling. `grep guide /var/lib/homehook/lumen.log`
+- [x] Guide after switch-on (seen 2026-10-18): the row and Guide fill once Live TV has been opened. The TV's table stays empty until then (docs/live-tv.md Step 2a). `grep guide /var/lib/homehook/lumen.log`
       shows one "now and next" line per change: how many channels are listed and how many have something on now.
+- [ ] Full guide from the guide service (verify): it opens with the seven rows in view filled almost at once, the rest follow, and a jump
+      down the list fills there first. `grep guide /var/lib/homehook/lumen.log` shows an "events: N calls" line, not a "schedule:" one.
+- [ ] Guide after switch-on, before Live TV runs: does the row fill from the guide service? The log shows "events: the first call found
+      nothing" if not; then the next idea is a hidden tune at switch-on.
 - [ ] Change wallpaper automatically at 1 min with a Photos wallpaper: a new Immich picture each minute.
 - [ ] Settings backup: change something in Lumen, wait 5 s, then `cat /var/lib/homehook/lumen-config.json` over ssh. Then uninstall and
       reinstall (or install the other id): the settings should come back with a "Settings restored from the TV" message.

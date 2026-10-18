@@ -104,6 +104,19 @@ export function schedule (page?: string): Promise<string> {
 	return run(luna('luna://com.webos.epgdb/find', {query}), 12000);
 }
 
+/** "2026,10,18,06,30,00": the guide service's local-time stamp */
+const LOCAL_TIME = /^\d{4}(,\d{2}){5}$/;
+/** channels per guide service call, as LG's own Guide asks */
+export const EVENT_BATCH = 10;
+
+/** Every programme on up to EVENT_BATCH channels between two local times, from the TV's guide service (what LG's Guide reads, which can
+ *  also draw on the online Freeview Play guide), as the TV's JSON reply. The call is copied from LG's Guide (docs/live-tv.md Step 2d). */
+export function eventList (channelIds: string[], localStart: string, localEnd: string): Promise<string> {
+	if (channelIds.length === 0 || channelIds.length > EVENT_BATCH || !channelIds.every((id) => CHANNEL_ID.test(id))) return Promise.reject(new Error('refused: channel ids'));
+	if (!LOCAL_TIME.test(localStart) || !LOCAL_TIME.test(localEnd)) return Promise.reject(new Error('refused: guide time'));
+	return run(luna('luna://com.webos.service.iepg/getEventList', {bFVPChannelId: true, channelId: channelIds, dataType: 0, fepgType: 'Forward', localStartTime: localStart, localEndTime: localEnd, sort: 0}), 12000);
+}
+
 /** Opens Live TV on a channel (from Home too). */
 export function openChannel (channelId: string): Promise<void> {
 	if (!CHANNEL_ID.test(channelId)) return Promise.reject(new Error('refused: channel id'));

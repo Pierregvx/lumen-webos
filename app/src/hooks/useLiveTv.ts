@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from 'preact/hooks';
-import {cachedLive, cachedLogos, mergeListings, readChannels, readListings, readLogos, readSchedule, rowChannels, saveLive, type Channel, type Listings, type LiveCache} from '../lib/livetv';
+import {cachedLive, cachedLogos, mergeListings, readChannels, readEventsNear, readListings, readLogos, readSchedule, rowChannels, saveLive, type Channel, type Listings, type LiveCache} from '../lib/livetv';
 import {wallpaperShown} from '../lib/wallpaper';
 import {bootMark, logError} from '../lib/log';
 
@@ -12,9 +12,11 @@ export interface LiveTv {
 	now: number;
 	/** the Full guide's listings: the schedule from `scheduleFrom` for SCHEDULE_HOURS, with Now and Next's where the schedule has nothing.
 	 *  'pf' when the schedule could not be read, so the grid holds only now and next */
-	schedule: {listings: Listings; from: number; state: 'loading' | 'ready' | 'pf'};
+	schedule: {listings: Listings; from: number; state: 'loading' | 'ready' | 'pf'; focus: (i: number) => void};
 }
 
+/** how far ahead the Now and Next read fills in from the guide service when the TV's now and next table is empty */
+const FILL_HOURS = 4;
 /** how far ahead the Full guide reads, and so how far right it scrolls */
 export const SCHEDULE_HOURS = 8;
 const HALF_HOUR = 1800000;
@@ -71,14 +73,22 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[
 		readAt.current = Date.now();
 		const channels = withChannels || !latest.current.data.channels.length ? readChannels() : Promise.resolve(latest.current.data.channels);
 		channels
-			.then((list) => readListings().then((read) => {
+			.then((list) => readListings().then((pf) => {
+				// the table is empty just after switch-on (docs/live-tv.md Step 2a): ask the guide service instead, the row's channels first
+				if (onNow(pf, Date.now()) > 0 || list.length === 0) return {list, read: pf};
+				const row = rowChannels(list, latest.current.rowIds);
+				const order = row.concat(list.filter((c) => row.indexOf(c) === -1));
+				const t = Date.now();
+				return readEventsNear(order, t, t + FILL_HOURS * 3600000, () => 0).then((ev) => ({list, read: mergeListings(ev, pf)}), () => ({list, read: pf}));
+			}))
+			.then(({list, read}) => {
 				const t = Date.now();
 				const line = `now and next: ${Object.keys(read).length} channels listed, ${onNow(read, t)} with something on now`;
 				if (line !== lastLine) { lastLine = line; logError('guide', line); }   // the retry asks every minute: log only a change
 				const next = {channels: list, listings: keepUnfinished(read, latest.current.data.listings, t)};
 				if (JSON.stringify(next) !== JSON.stringify(latest.current.data)) { setData(next); saveLive(next); }
 				return readLogos(list).then((l) => setLogos((was) => (Object.keys(l).length === Object.keys(was).length ? was : {...l})));
-			}))
+			})
 			.catch((e: Error) => logError('guide', `now and next failed: ${e.message}`))
 			.then(() => { busy.current = false; bootMark('live-read'); });
 	};
@@ -112,19 +122,24 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[
 
 	// the Full guide: the schedule from the half hour now is in, read when it opens (again if the last read is old)
 	const [sch, setSch] = useState<{listings: Listings; from: number; at: number; state: 'loading' | 'ready' | 'pf'}>({listings: {}, from: 0, at: 0, state: 'loading'});
+	const focusAt = useRef(0);
+	const hasChannels = data.channels.length > 0;
 	useEffect(() => {
-		if (!fullOpen) return undefined;
+		if (!fullOpen || !hasChannels) return undefined;
 		const t = Date.now();
 		if (sch.state !== 'loading' && t - sch.at < SCHEDULE_STALE_MS) return undefined;
 		let gone = false;
 		const from = t - (t % HALF_HOUR);
 		const part = (listings: Listings) => { if (!gone) setSch({listings, from, at: 0, state: 'loading'}); };
-		readSchedule(from, from + SCHEDULE_HOURS * 3600000, part, () => gone)
+		const to = from + SCHEDULE_HOURS * 3600000;
+		// the guide service, the rows in view first; if it fails, the old read of the TV's whole schedule table
+		readEventsNear(latest.current.data.channels, from, to, () => focusAt.current, part, () => gone)
+			.catch(() => readSchedule(from, to, part, () => gone))
 			.then((listings) => ({listings, state: 'ready' as const}), () => ({listings: {}, state: 'pf' as const}))
 			.then((r) => { if (!gone) setSch({...r, from, at: Date.now()}); });
 		return () => { gone = true; };
-	}, [fullOpen]);
-	const schedule = {listings: mergeListings(sch.listings, data.listings), from: sch.from || now - (now % HALF_HOUR), state: sch.state};
+	}, [fullOpen, hasChannels]);
+	const schedule = {listings: mergeListings(sch.listings, data.listings), from: sch.from || now - (now % HALF_HOUR), state: sch.state, focus: (i: number) => { focusAt.current = i; }};
 
 	useEffect(() => {
 		if (!enabled || !started) return undefined;
