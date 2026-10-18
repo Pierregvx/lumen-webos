@@ -58,8 +58,9 @@ is in `docs/live-tv.md`; this file only keeps what the build needs.
   a `guide` line to `lumen.log` with pages, rows and time.
 - The schedule kind does not hold the programmes on now and next, so Now and Next's rows always stay in the grid and the schedule's
   rows fill in around them (`mergeListings`). **(verify)** that the current slot is filled on every channel.
-- Not done: the programme description from the mock. Rows carry a description block, but reading it for every row is heavy; reading
-  it for the focused programme alone needs a way to ask db8 for one row, which is not tried yet.
+- The programme description shows under the focused programme's time in the Full guide, two lines at most. It comes from the guide
+  service (`getEventList` replies carry `description`), with Freeview's trailing flags such as "[S]" taken off. The schedule-table fallback
+  does not select it, since reading it for every row is heavy, so then no blurb shows. Blurbs are left out of the Live TV cache.
 
 ## Mockups
 

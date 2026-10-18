@@ -28,6 +28,8 @@ export interface Programme {
 	/** subtitles and audio description, when the schedule says so (Now and Next does not read them) */
 	subs?: boolean;
 	ad?: boolean;
+	/** the blurb, from the guide service or the schedule (Now and Next does not read it) */
+	desc?: string;
 }
 
 /** The listings read for each channel (about two: now and next), by signal id, earliest first. */
@@ -134,6 +136,7 @@ interface RawProgramme {
 	endTime?: string;
 	isSubtitle?: boolean;
 	isAD?: boolean;
+	description?: string;
 }
 
 /** db8 returns up to 500 rows a page; about two per channel, so one page is expected. More than this many pages is a reply gone wrong. */
@@ -162,6 +165,11 @@ export function utcTime (text: string | undefined): number {
 	return Date.UTC(p[0], p[1] - 1, p[2], p[3], p[4], p[5]);
 }
 
+/** A description without Freeview's trailing flags ("[S]", "[AD,S]", "[HD]"). */
+function blurb (text: string | undefined): string {
+	return (text || '').replace(/(\s*\[[A-Z,\s]{1,12}\])+\s*$/, '').trim();
+}
+
 export function groupListings (rows: RawProgramme[]): Listings {
 	const out: Listings = {};
 	for (const r of rows) {
@@ -171,6 +179,8 @@ export function groupListings (rows: RawProgramme[]): Listings {
 		const p: Programme = {title: r.programName || '', start, end};
 		if (r.isSubtitle) p.subs = true;
 		if (r.isAD) p.ad = true;
+		const desc = blurb(r.description);
+		if (desc) p.desc = desc;
 		(out[r.signalChannelId] || (out[r.signalChannelId] = [])).push(p);
 	}
 	for (const k in out) out[k].sort((a, b) => a.start - b.start);
@@ -221,8 +231,6 @@ function localStamp (ms: number): string {
 	return `${d.getFullYear()},${two(d.getMonth() + 1)},${two(d.getDate())},${two(d.getHours())},${two(d.getMinutes())},${two(d.getSeconds())}`;
 }
 
-interface RawEvent extends RawProgramme { description?: string }
-
 /** The programmes overlapping `from` to `to` on up to EVENT_BATCH channels. The reply's startTime and endTime are UTC like the database's
  *  (its DST* times are local), so groupListings reads them as before. Rejects when the TV refuses the call. */
 export function readEvents (channels: Channel[], from: number, to: number): Promise<Listings> {
@@ -233,7 +241,7 @@ export function readEvents (channels: Channel[], from: number, to: number): Prom
 		return Promise.resolve(out);
 	}
 	return eventList(channels.map((c) => c.id), localStamp(from), localStamp(to)).then((text) => {
-		const reply = JSON.parse(text) as {returnValue?: boolean; programList?: RawEvent[]; errorText?: string};
+		const reply = JSON.parse(text) as {returnValue?: boolean; programList?: RawProgramme[]; errorText?: string};
 		if (reply.returnValue === false) throw new Error(`events refused: ${reply.errorText || ''}`);
 		// no subtitle flag seen in the reply yet: the description carries "[S]"
 		const rows = (reply.programList || []).map((r) => r.isSubtitle === undefined && /\[S\]/.test(r.description || '') ? {...r, isSubtitle: true} : r);
@@ -291,7 +299,8 @@ export function readEventsNear (channels: Channel[], from: number, to: number, f
 export function mergeListings (sch: Listings, pf: Listings): Listings {
 	const out: Listings = {...pf};
 	for (const k in sch) {
-		const keep = (pf[k] || []).slice();
+		// Now and Next has no blurb: take the schedule's for the same programme
+		const keep = (pf[k] || []).map((q) => { const s = q.desc ? null : sch[k].find((p) => p.start === q.start && p.desc); return s ? {...q, desc: s.desc} : q; });
 		for (const p of sch[k]) if (!keep.some((q) => p.start < q.end && q.start < p.end)) keep.push(p);
 		out[k] = keep.sort((a, b) => a.start - b.start);
 	}
@@ -369,7 +378,10 @@ export function cachedLive (): LiveCache {
 }
 
 export function saveLive (value: LiveCache): void {
-	writeCache(CACHE_KEY, value);
+	// blurbs are for the Full guide, which reads its own: keep the cache small for start-up
+	const listings: Listings = {};
+	for (const k in value.listings) listings[k] = value.listings[k].map(({desc, ...p}) => p);
+	writeCache(CACHE_KEY, {...value, listings});
 }
 
 // ---------- dev preview (not on a TV) ----------
@@ -387,6 +399,13 @@ const MOCK_TITLES = [
 ];
 
 /** Made-up programmes of 25 to 70 minutes for every mock channel, enough to fill the grid. */
+const MOCK_BLURBS = [
+	'Rick visits the fishing villages of the north coast, cooks crab on the harbour wall and meets the family who have smoked mackerel in the same shed for four generations.',
+	'The latest national and international news, with reports from around the region.',
+	'Three couples who have never met take turns to host a dinner party, and the winner takes home a thousand pounds. Tonight, the competition heads to Bristol.',
+	'Kevin McCloud follows a couple in Somerset who plan to turn a derelict water tower into a family home in under a year, on a budget that leaves no room for mistakes.'
+];
+
 function mockSchedule (from: number, to: number): Listings {
 	const out: Listings = {};
 	const words = MOCK_TITLES.reduce<string[]>((all, pair) => all.concat(pair.filter(Boolean)), []);
@@ -395,7 +414,7 @@ function mockSchedule (from: number, to: number): Listings {
 		let t = from - (i % 3) * 20 * 60000;
 		for (let k = 0; t < to; k++) {
 			const len = (25 + ((i * 7 + k * 13) % 4) * 15) * 60000;
-			if (!(i === 8 && k === 0)) list.push({title: words[(i * 3 + k) % words.length], start: t, end: t + len, subs: k % 2 === 0, ad: k % 3 === 0});
+			if (!(i === 8 && k === 0)) list.push({title: words[(i * 3 + k) % words.length], start: t, end: t + len, subs: k % 2 === 0, ad: k % 3 === 0, desc: k % 4 === 3 ? undefined : MOCK_BLURBS[(i + k) % MOCK_BLURBS.length]});
 			t += len;
 		}
 		out[c.signal] = list;

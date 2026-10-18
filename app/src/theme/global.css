@@ -1252,8 +1252,12 @@ html.light .guide__switch--focused .guide__seg--on { background: #14151b; color:
    rows 70px tall every 80px (ROW_STEP). Programmes are faint glass, the focused one the white capsule; the line at now runs down the grid. */
 .fg__detail { position: absolute; left: var(--layout-rows-edge); width: 1300px; top: 150px; }
 .fg__chan { font-size: 26px; font-weight: 500; opacity: 0.8; white-space: nowrap; }
-.fg__title { margin-top: 8px; font-size: 68px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fg__title { margin-top: 6px; font-size: 56px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fg__meta { display: flex; flex-direction: row; align-items: center; margin-top: 14px; font-size: 26px; font-weight: 500; opacity: 0.9; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fg__desc {
+	margin-top: 14px; max-width: 1300px; font-size: 24px; font-weight: 450; line-height: 1.35; opacity: 0.8;
+	display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}
 .fg__meter { flex: 0 0 200px; }
 .fg__in { margin-left: 16px; }
 .fg__flag { margin-left: 14px; padding: 1px 9px; border: 2px solid currentColor; border-radius: 8px; font-size: 18px; font-weight: 650; opacity: 0.85; }

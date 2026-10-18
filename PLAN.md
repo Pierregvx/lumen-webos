@@ -30,6 +30,7 @@ Every push to a branch other than `main` reaches the TV as a Homebrew Channel up
 ### Verify on the TV (built, not yet seen working)
 
 Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or later).
+- [ ] Full guide blurb (verify): the focused programme's description shows under its time, two lines at most, without the "[S]" flags. Comes from the guide service; the fallback (the TV's schedule table) has none, so then nothing shows.
 - [ ] Lighter live blur (verify): the glass bar, top buttons and panels blur 10px, not 30px. Text on the glass still reads from the sofa; if not, try 14px (`--live-glass` in global.css).
 - [ ] Screensaver from the home screen opens on the wallpaper (verify): Art mode, or the home screen idle timer, fades the home screen away over the wallpaper already showing, slides the clock from top left to bottom left, and fades in the first new photo a few seconds later. No pause or stutter at the start. The TV's own screensaver (watch.sh) still opens on black and loads a photo.
 - [ ] Screensaver Print look (verify): with Settings > Screensaver > Print look on, photos have softer blacks, slightly greyer whites and a darker bottom-right corner, and the crossfade stays smooth.

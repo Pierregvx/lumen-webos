@@ -116,6 +116,7 @@ export function FullGuide ({channels, listings, from, thin, loading, logos, now,
 						{focused.ad && <span class="fg__flag">AD</span>}
 					</div>
 				)}
+				{focused && focused.desc && <div class="fg__desc">{focused.desc}</div>}
 			</div>
 			<div class="fg__times">
 				{[0, 1, 2, 3].map((k) => <span key={k} style={{left: `${k * GRID_W / 4}px`}}>{clockText(win + k * HALF_HOUR)}</span>)}
