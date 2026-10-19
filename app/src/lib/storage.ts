@@ -72,7 +72,7 @@ export interface UserConfig {
 	liquidDock: boolean;
 	/** the Immich source the ambient screen shows (immich:recent, immich:album:<id>, ...) */
 	ambient: string;
-	/** your photos replace LG's screensaver (Art mode in Control Center shows them either way) */
+	/** your photos replace LG's screensaver (Screensaver in Control Center shows them either way) */
 	ambientOn: boolean;
 	/** seconds each photo stays on the ambient screen */
 	ambientSeconds: number;

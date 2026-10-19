@@ -276,7 +276,7 @@ export function App () {
 	}, [apps, restoring]);
 	const allApps = useMemo(() => withBuiltins(apps), [apps]);
 
-	/** Your photos straight away, without LG's screensaver showing first; LG's own when the photos are not turned on (unless forced, for Art mode). */
+	/** Your photos straight away, without LG's screensaver showing first; LG's own when the photos are not turned on (unless forced, from Control Center). */
 	const showScreensaver = (photos = configRef.current.ambientOn) => {
 		if (photos && cachedServer()) { ambientOpening.current = videoOnRef.current ? null : shownWallpaper(); setScreen('ambient'); return; }
 		if (photos) { showToast('Set up Immich first (Settings > Wallpaper > Choose wallpaper > Photos)', 'error'); return; }
@@ -478,7 +478,7 @@ export function App () {
 			group: 'screensaver' as const,
 			label: 'Use my photos',
 			description: immich.ready
-				? 'When the TV\'s screensaver starts, show your photos from Immich instead of LG\'s: a slow crossfade, with the clock. Any key returns to the home screen. Art mode in Control Center shows them either way.'
+				? 'When the TV\'s screensaver starts, show your photos from Immich instead of LG\'s: a slow crossfade, with the clock. Any key returns to the home screen. Screensaver in Control Center shows them either way.'
 				: 'Your photos from Immich instead of LG\'s screensaver. Set up Immich first (Settings > Wallpaper > Choose wallpaper > Photos).',
 			value: config.ambientOn
 		},
@@ -486,7 +486,7 @@ export function App () {
 			id: OPTION.ambient,
 			group: 'screensaver' as const,
 			label: 'Photos',
-			description: 'Which photos the screensaver and Art mode show.',
+			description: 'Which photos the screensaver shows.',
 			value: true,
 			...listed(OPTION.ambient)
 		}] : []),

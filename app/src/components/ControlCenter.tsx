@@ -29,7 +29,7 @@ const MENU_GLYPH: Record<MenuCell, GlyphName> = {sound: 'speaker', picture: 'pic
 const GRID: {id: CellId; span: number}[][] = [
 	[{id: 'sound', span: 2}, {id: 'picture', span: 2}],
 	[{id: 'dark', span: 2}, {id: 'clock', span: 2}],
-	[{id: 'home', span: 1}, {id: 'art', span: 1}, {id: 'screenoff', span: 1}, {id: 'restart', span: 1}],
+	[{id: 'art', span: 1}, {id: 'home', span: 1}, {id: 'screenoff', span: 1}, {id: 'restart', span: 1}],
 	[{id: 'backlight', span: 3}, {id: 'eye', span: 1}]
 ];
 
@@ -96,7 +96,7 @@ export function growFrom (panel: HTMLElement | null, key: string): void {
 	Array.from(panel.querySelectorAll<HTMLElement>('.cc__mod, .cc__caption')).forEach((el) => el.animate([{opacity: 0}, {opacity: 1}], opts));
 }
 
-/** Control Center (opened from the round button top right): sound, picture mode, appearance, clock, LG Home, Art mode (your photos), screen off,
+/** Control Center (opened from the round button top right): sound, picture mode, appearance, clock, the screensaver (your photos), LG Home, screen off,
  *  restart, backlight and Eye Comfort. Volume is left to the remote's own buttons. Arrows move between controls, OK presses one, Left/Right on
  *  the backlight bar change it, Back closes, and Down twice on the bottom row closes and goes to the glass bar. */
 export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMode, clockFormat, onDarkMode, onClockFormat}: Props) {
@@ -372,7 +372,7 @@ export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMod
 	};
 	// icon-only circles, as on tvOS; the focused one is named in the caption under the panel
 	const CIRCLES: {cell: CellId; glyph: GlyphName; label: string}[] = [
-		{cell: 'home', glyph: 'house', label: 'LG Home'}, {cell: 'art', glyph: 'image', label: 'Art mode'},
+		{cell: 'home', glyph: 'house', label: 'LG Home'}, {cell: 'art', glyph: 'image', label: 'Screensaver'},
 		{cell: 'screenoff', glyph: 'power', label: 'Screen off'}, {cell: 'restart', glyph: 'restart', label: 'Restart'},
 		{cell: 'eye', glyph: 'eye', label: 'Eye Comfort'}
 	];
@@ -398,7 +398,7 @@ export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMod
 					{wide('dark')}
 					{wide('clock')}
 				</div>
-				<div class="cc__row">{circle('home')}{circle('art')}{circle('screenoff')}{circle('restart')}</div>
+				<div class="cc__row">{circle('art')}{circle('home')}{circle('screenoff')}{circle('restart')}</div>
 				<div class="cc__row">
 					<div
 						class={`cc__mod cc__slider${current === 'backlight' ? ' cc__mod--focused' : ''}`}
