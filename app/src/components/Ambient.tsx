@@ -13,7 +13,7 @@ const WARM_DELAY_MS = 3000;
 
 /** Screensaver with your own photos (Immich). Opened by watch.sh with {"view":"ambient"} when the TV's screensaver starts, instead of LG's.
  *  Two full-screen layers: the next photo is loaded and decoded on the hidden one, then they swap with a crossfade (opacity only) every `seconds` (Settings > Screensaver > Time on each photo, 30 by default); each photo
- *  zooms in very slowly (transform only). The clock, date and weather sit bottom left. Any key or a click goes back to the home screen.
+ *  zooms in very slowly (transform only). The clock sits bottom left, the weather and date bottom right. Any key or a click goes back to the home screen.
  *  Started from the home screen (Art mode, or the idle timer), it opens on the wallpaper already there (`opening`): the home screen fades away, the clock
  *  slides from its place top left to bottom left, and the first new photo loads only after that, so nothing heavy runs while the screen changes. */
 export function Ambient ({source, seconds = 30, backlight, weather, showPeriod, print, opening, onExit}: {source: string; seconds?: number; backlight?: number; weather?: Weather | null; showPeriod?: boolean; print?: boolean; opening?: {urls: string[]; id: string} | null; onExit: () => void}) {
@@ -26,16 +26,19 @@ export function Ambient ({source, seconds = 30, backlight, weather, showPeriod, 
 
 	// the clock slides from where the home screen shows it to its place here (transform only)
 	useLayoutEffect(() => {
-		const home = document.querySelector('.screen:not(.ambient__status) > .pill.status');
-		const pill = status.current && status.current.querySelector<HTMLElement>('.pill.status');
-		if (!warm || !home || !pill || document.documentElement.classList.contains('reduce-motion')) return;
-		const a = home.getBoundingClientRect(), b = pill.getBoundingClientRect();
+		const home = document.querySelector('.screen:not(.ambient__status) > .pill.status .clock');
+		const clock = status.current && status.current.querySelector<HTMLElement>('.pill.status .clock');
+		if (!warm || !home || !clock || document.documentElement.classList.contains('reduce-motion')) return;
+		const a = home.getBoundingClientRect(), b = clock.getBoundingClientRect();
 		// the home clock is smaller: it grows to the screensaver's size as it slides
-		pill.style.transformOrigin = '0 0';
-		pill.style.transform = `translate(${a.left - b.left}px, ${a.top - b.top}px) scale(${b.width ? a.width / b.width : 1})`;
-		void pill.offsetWidth;
-		pill.style.transition = 'transform 900ms cubic-bezier(0.4, 0, 0.2, 1)';
-		pill.style.transform = '';
+		clock.style.transformOrigin = '0 0';
+		clock.style.transform = `translate(${a.left - b.left}px, ${a.top - b.top}px) scale(${b.width ? a.width / b.width : 1})`;
+		void clock.offsetWidth;
+		clock.style.transition = 'transform 900ms cubic-bezier(0.4, 0, 0.2, 1)';
+		clock.style.transform = '';
+		// the date and weather sit on the other side here, so they fade in rather than slide
+		const row = status.current && status.current.querySelector<HTMLElement>('.status__row');
+		if (row && row.animate) row.animate([{opacity: 0}, {opacity: 1}], {duration: 600, delay: 300, easing: 'ease-out', fill: 'backwards'});
 	}, []);
 
 	// the TV's backlight goes down while the screensaver shows (Settings > Screensaver > Brightness) and back up when it ends

@@ -30,6 +30,7 @@ Every push to a branch other than `main` reaches the TV as a Homebrew Channel up
 ### Verify on the TV (built, not yet seen working)
 
 Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or later).
+- [ ] Screensaver layout (verify, branch `home/dock-names`): the clock stays bottom left; the weather, with the date under it, sits bottom right, aligned right. Opened from the home screen, the clock still slides into place and the date and weather fade in.
 - [ ] Cold start glass (verify, branch `home/dock-names`): after a restart, the glass bar and top buttons appear with the light live blur at once, with no change a moment later.
 - [ ] Glass bar names and Control Center exit (verify, branch `home/dock-names`): the focused bar app's name shows above the glass, centred on it, and is not cut off at the top. The bar's focus grows 1.18x (1.1 subtle, 1.2 strong). In Control Center, Down twice within a second on the bottom row (backlight or Eye Comfort) closes it and focuses the first app on the bar.
 - [ ] Immich crop on faces (verify): add `face.read` to the Immich API key first. A photo with people keeps the faces in view, a little above the middle, on the wallpaper and the screensaver, pairs too. A photo with no faces keeps more of its top. Without `face.read`, every photo is placed as if it had no faces.
