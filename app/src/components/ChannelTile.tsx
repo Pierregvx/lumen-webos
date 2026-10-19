@@ -9,6 +9,8 @@ export interface LiveTile extends NowNext {
 	logo?: string;
 	/** the current minute, ms */
 	at: number;
+	/** the guide service has still to answer for this channel */
+	loading?: boolean;
 }
 
 interface Props {
@@ -45,7 +47,7 @@ export function ChannelTile ({live, classes, onHover, onActivate}: Props) {
 					</>
 				) : (
 					<>
-						<div class="chan__title">{tr(next ? 'Off air' : 'No guide data')}</div>
+						<div class="chan__title">{tr(next ? 'Off air' : live.loading ? 'Loading…' : 'No guide data')}</div>
 						{next && <div class="chan__times"><span>{tr('Starts at')} {clockText(next.start)}</span></div>}
 					</>
 				)}

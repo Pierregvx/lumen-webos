@@ -51,7 +51,11 @@ is in `docs/live-tv.md`; this file only keeps what the build needs.
 - The Full guide follows `4-full-guide.jpg`: the focused programme's details on top (channel, title, times, progress, S and AD), then
   two hours across in half-hour columns, seven channels down, a line at now. Up/Down keep the time the focus is at; Left/Right move a
   programme at a time and scroll the grid. It goes back as far as the half hour now is in, and on as far as the schedule was read (8 hours).
-- The schedule is read when the Full guide opens (again after 10 minutes), from `programSCH:4` with six fields (`root.ts` `schedule()`).
+- One guide service read feeds the row, Now and Next and the Full guide, 8 hours ahead (`useLiveTv`). At start-up it asks only for the
+  row's channels and the first 10 in the list (two calls). When the Guide opens, in either mode, it asks for the rest, nearest the focus
+  first. A channel's read lasts 30 minutes. A channel still waiting shows "Loading…". The TV's now and next table is still read, as one
+  quick call, and wins where both have a programme. The cache keeps the first read's next 4 hours, so a cold start draws from it.
+- If the guide service refuses while the Guide is open, the schedule is read from `programSCH:4` with six fields (`root.ts` `schedule()`).
   Seen on the TV 2026-10-17: the kind has no index on `startTime` or `endTime`, so db8 refuses any time filter ("no index for query",
   -3965). Lumen reads every page with no filter and keeps what overlaps the next 8 hours. The kind holds about a week: over 20,000 rows,
   more than 40 pages, at about 155 ms a page. The grid shows Now and Next's listings at first and fills in every 3 pages. Each read writes
@@ -107,7 +111,7 @@ white capsule with dark text.
 | Logos | read the file at `imgUrl` | PNGs, 2 to 3 KB, under `/tmp/gibbips/logo/`. 176 of 188 channels have one. `/tmp` is cleared on reboot and the TV refetches them, probably when Live TV runs; cache them in Lumen and fall back to a text tile. `readIcons()` in `lib/root.ts` already returns files as base64. |
 | Now and next | `luna://com.webos.epgdb/find` on `com.webos.service.legacybroadcast.programPF:4` | See the spike above. Join to channels on `signalChannelId`. |
 | Full schedule (phase 2) | same, on `com.webos.service.legacybroadcast.programSCH:4` | Read works (`limit:1` returned a programme). No index on the times, so no time filter: read every page and keep the window. |
-| Guide service (used first) | `luna://com.webos.service.iepg/getEventList` `{"bFVPChannelId":true,"channelId":[up to 10 ids],"dataType":0,"fepgType":"Forward","localStartTime":"2026,10,18,06,30,00","localEndTime":...,"sort":0}` | What LG's Guide reads (`docs/live-tv.md` Step 2d). Takes a time window and ten channels a call. The Full guide reads the rows in view first, then the rest; the schedule table above is the fallback. Now and Next uses it only when its table is empty. |
+| Guide service (used first) | `luna://com.webos.service.iepg/getEventList` `{"bFVPChannelId":true,"channelId":[up to 10 ids],"dataType":0,"fepgType":"Forward","localStartTime":"2026,10,18,06,30,00","localEndTime":...,"sort":0}` | What LG's Guide reads (`docs/live-tv.md` Step 2d). Takes a time window and ten channels a call. The Full guide reads the rows in view first, then the rest; the schedule table above is the fallback. The row's channels and the first 10 at start-up, every channel when the Guide opens. |
 | Switch channel | `luna://com.webos.service.apiadapter/tv/openChannel` `{"channelId":"1_41_104_104_16522_17664_9018"}` | Opens Live TV on that channel, also from Home. Not tried without root, or with Live TV already open on another channel. |
 
 Don't use: `utp.broadcast/changeChannel` (needs Live TV's broadcast id, which changes every time Live TV starts), launching Live TV with a

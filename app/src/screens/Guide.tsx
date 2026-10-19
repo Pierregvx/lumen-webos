@@ -14,6 +14,8 @@ interface Props {
 	now: number;
 	/** the Full guide's listings (useLiveTv) */
 	schedule: LiveTv['schedule'];
+	/** channels the guide service has still to answer for */
+	pending: LiveTv['pending'];
 	/** showing the Full guide rather than Now and Next */
 	full: boolean;
 	onMode: (full: boolean) => void;
@@ -42,7 +44,7 @@ const digitOf = (e: KeyboardEvent) => (e.keyCode >= 48 && e.keyCode <= 57 ? e.ke
  *  Left/Right or OK on it switch, Down goes back to the channels. The choice is kept for next time. Up/Down move, OK opens Live TV on the
  *  channel, Back returns home. The number keys type a channel number and the list follows each digit (1 goes to 1, then 0 to 10, then 1 to
  *  101); the digits show at the top and clear a moment after the last one. Only the rows near the view are drawn. */
-export function Guide ({channels, listings, logos, now, schedule, full, onMode, active, onOpen, onClose}: Props) {
+export function Guide ({channels, listings, logos, now, schedule, pending, full, onMode, active, onOpen, onClose}: Props) {
 	const [focus, setFocus] = useState(0);
 	const [onSwitch, setOnSwitch] = useState(false);
 	const last = channels.length - 1;
@@ -128,7 +130,7 @@ export function Guide ({channels, listings, logos, now, schedule, full, onMode, 
 								<div class="guide__num">{c.number}</div>
 								<div class="guide__logo" style={color ? {backgroundColor: color} : undefined}>{logo ? <img src={logo} alt="" decoding="async" /> : <span>{c.name}</span>}</div>
 								<div class="guide__now">
-									<div class="guide__prog">{on ? on.title : tr(next ? 'Off air' : 'No guide data')}</div>
+									<div class="guide__prog">{on ? on.title : tr(next ? 'Off air' : pending[c.signal] ? 'Loading…' : 'No guide data')}</div>
 									<div class="guide__meta">
 										{on
 											? <><span>{clockText(on.start)} – {clockText(on.end)}</span><span class="guide__meter"><span style={{transform: `scaleX(${progress(on, t)})`}} /></span>{i === at && <span>{timeLeft(on, t)}</span>}</>

@@ -105,7 +105,7 @@ export function App () {
 	// a fresh install first looks for the settings backup on the TV (lib/backup.ts); nothing is seeded until that has answered
 	const [restoring, setRestoring] = useState(() => !hasSavedConfig());
 	const [focusRow, setFocusRow] = useState<{id: string; seq: number} | undefined>(undefined);
-	const live = useLiveTv(config.liveTvRow, screen === 'guide', config.liveChannels, screen === 'guide' && config.guideFull);
+	const live = useLiveTv(config.liveTvRow, screen === 'guide', config.liveChannels);
 
 	const showToast = useCallback((text: string, kind: ToastMessage['kind'] = 'info') => {
 		window.clearTimeout(toastTimer.current);
@@ -332,7 +332,7 @@ export function App () {
 		return [guide].concat(rowChannels(live.channels, config.liveChannels).map((c): TileModel => ({
 			key: LIVE.prefix + c.id,
 			label: c.name,
-			live: {number: c.number, name: c.name, logo: c.logoPath && live.logos[c.logoPath], at: live.now, ...nowNextAt(live.listings[c.signal], live.now)}
+			live: {number: c.number, name: c.name, logo: c.logoPath && live.logos[c.logoPath], at: live.now, loading: !!live.pending[c.signal], ...nowNextAt(live.listings[c.signal], live.now)}
 		})));
 	}, [config.liveTvRow, config.liveChannels, live, config.language]);
 	/** the furthest along the row a focused channel may sit with its now/next block still on the row (Row's slot) */
@@ -834,7 +834,7 @@ export function App () {
 			{/* Home stays mounted under Settings so it keeps its focus position. */}
 			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} menuItems={MENU_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} dockHide={config.dockHide} focusRow={focusRow} />
 			{screen === 'ambient' && <Ambient source={config.ambient} seconds={config.ambientSeconds} backlight={AMBIENT_BACKLIGHT[config.ambientBrightness]} weather={weather} showPeriod={config.showAmPm} print={config.ambientPrint} opening={ambientOpening.current} onExit={() => setScreen('home')} />}
-			{screen === 'guide' && <Guide channels={live.channels} listings={live.listings} logos={live.logos} now={live.now} schedule={live.schedule} full={config.guideFull} onMode={(full) => { if (configRef.current.guideFull !== full) updateConfig({...configRef.current, guideFull: full}); }} active={!controls} onOpen={watchChannel} onClose={() => setScreen('home')} />}
+			{screen === 'guide' && <Guide channels={live.channels} listings={live.listings} logos={live.logos} now={live.now} schedule={live.schedule} pending={live.pending} full={config.guideFull} onMode={(full) => { if (configRef.current.guideFull !== full) updateConfig({...configRef.current, guideFull: full}); }} active={!controls} onOpen={watchChannel} onClose={() => setScreen('home')} />}
 			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onChoose={onChoose} onClose={() => setScreen('home')} />}
 			{controls && <ControlCenter
 				darkMode={config.darkMode}

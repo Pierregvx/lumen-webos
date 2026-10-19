@@ -5,23 +5,29 @@ import {bootMark, logError} from '../lib/log';
 
 export interface LiveTv {
 	channels: Channel[];
+	/** what the guide service read, with the TV's now and next table where it has nothing */
 	listings: Listings;
 	/** logos as data: URIs, by path on the TV */
 	logos: Record<string, string>;
 	/** the current minute (ms), for progress and what is on now */
 	now: number;
-	/** the Full guide's listings: the schedule from `scheduleFrom` for SCHEDULE_HOURS, with Now and Next's where the schedule has nothing.
-	 *  'pf' when the schedule could not be read, so the grid holds only now and next */
+	/** channels (by signal) the guide service is still to answer for in the read under way: they show "Loading…" rather than "No guide data" */
+	pending: Record<string, true>;
+	/** the Full guide: the grid starts at `from`. 'pf' when neither the guide service nor the schedule table could be read, so the grid holds only now and next */
 	schedule: {listings: Listings; from: number; state: 'loading' | 'ready' | 'pf'; focus: (i: number) => void};
 }
 
-/** how far ahead the Now and Next read fills in from the guide service when the TV's now and next table is empty */
-const FILL_HOURS = 4;
-/** how far ahead the Full guide reads, and so how far right it scrolls */
+/** how far ahead the guide service is read, and so how far right the Full guide scrolls */
 export const SCHEDULE_HOURS = 8;
+/** read straight after start-up, with the row's channels: the first channels in the list, which the Guide shows when it opens */
+const FIRST_CHANNELS = 10;
 const HALF_HOUR = 1800000;
-/** the schedule is read again when the Full guide opens this long after the last read */
-const SCHEDULE_STALE_MS = 10 * 60000;
+/** a channel's read is used for this long before it is read again */
+const READ_STALE_MS = 30 * 60000;
+/** after the guide service refuses, it is not asked again for this long */
+const FAILED_WAIT_MS = 5 * 60000;
+/** the cache keeps this much of the schedule, so start-up stays quick */
+const CACHE_HOURS = 4;
 
 const minute = () => { const t = Date.now(); return t - (t % 60000); };
 /** after the wallpaper is up: how long before the row is drawn from the cache, and then before the TV is asked */
@@ -32,8 +38,6 @@ const WALLPAPER_WAIT_MS = 10000;
 const NONE: LiveCache = {channels: [], listings: {}};
 /** while no channel has anything on now (just after the TV is switched on the TV's table can be empty), the TV is asked again this often */
 const EMPTY_RETRY_MS = 60000;
-/** while only some of the row's channels have nothing on now (the table can be part filled, seen on the TV 2026-10-19), it is asked again this often */
-const GAP_RETRY_MS = 5 * 60000;
 
 let lastLine = '';
 
@@ -42,11 +46,6 @@ function onNow (listings: Listings, t: number): number {
 	let n = 0;
 	for (const k in listings) if (listings[k].some((p) => p.start <= t && t < p.end)) n++;
 	return n;
-}
-
-/** the channels in `list` with nothing on at `t` */
-function missingNow (list: Channel[], listings: Listings, t: number): Channel[] {
-	return list.filter((c) => !(listings[c.signal] || []).some((p) => p.start <= t && t < p.end));
 }
 
 /** The new read, plus the last one's programmes not yet over for any channel the new read left out, so a thin read never blanks the row. */
@@ -60,19 +59,92 @@ function keepUnfinished (fresh: Listings, old: Listings, t: number): Listings {
 	return out;
 }
 
+/** The row's channels, then the first FIRST_CHANNELS in the list: what is read before the Guide is opened. */
+function firstRead (list: Channel[], rowIds: string[] | null): Channel[] {
+	const row = rowChannels(list, rowIds);
+	return row.concat(list.slice(0, FIRST_CHANNELS).filter((c) => row.indexOf(c) === -1));
+}
+
+/** `l` cut to programmes on between `t` and CACHE_HOURS on, for the channels in `keep` */
+function forCache (l: Listings, keep: Channel[], t: number): Listings {
+	const out: Listings = {};
+	for (const c of keep) {
+		const left = (l[c.signal] || []).filter((p) => p.end > t && p.start < t + CACHE_HOURS * 3600000);
+		if (left.length > 0) out[c.signal] = left;
+	}
+	return out;
+}
+
 /** The Live TV row's and the Guide's data. Nothing happens until the wallpaper is on screen, so a cold start draws the wallpaper and the
- *  apps first: then the last answer (and its logos) comes out of localStorage, and a moment later the TV is asked again. After that it is asked
- *  whenever the Guide opens, and when a programme on one of the row's channels (`rowIds`, see rowChannels) ends. No timer reads the TV:
- *  the once-a-minute tick only moves the progress bars. */
-export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[] | null, fullOpen: boolean): LiveTv {
+ *  apps first: then the last answer (and its logos) comes out of localStorage, and a moment later the TV is asked again. Two sources: the
+ *  TV's now and next table (one quick call, but empty or part filled after switch-on), and the guide service, read SCHEDULE_HOURS ahead.
+ *  The guide service is read for the row's channels and the first channels in the list at start-up, and for every channel when the Guide
+ *  opens, nearest the focus first. Each channel's read lasts READ_STALE_MS. */
+export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[] | null): LiveTv {
 	const [data, setData] = useState(NONE);
 	const [logos, setLogos] = useState<Record<string, string>>({});
 	const [started, setStarted] = useState(false);
 	const [now, setNow] = useState(minute);
 	const readAt = useRef(0);
 	const busy = useRef(false);
-	const latest = useRef({data, rowIds});
-	latest.current = {data, rowIds};
+	const latest = useRef({data, rowIds, guideOpen});
+	latest.current = {data, rowIds, guideOpen};
+
+	// what the guide service read: listings by signal, and when each channel was last asked
+	const [sch, setSch] = useState<{listings: Listings; state: 'loading' | 'ready' | 'pf'}>({listings: {}, state: 'loading'});
+	const [pending, setPending] = useState<Record<string, true>>({});
+	const askedAt = useRef<Record<string, number>>({});
+	const schBusy = useRef(false);
+	const failedAt = useRef(0);
+	const focusAt = useRef(0);
+	const schLatest = useRef(sch.listings);
+	schLatest.current = sch.listings;
+
+	const save = (d: LiveCache, l: Listings) => saveLive({...d, schedule: forCache(l, firstRead(d.channels, latest.current.rowIds), Date.now())});
+
+	/** Ask the guide service for the channels whose read is old: every channel while the Guide is open, else the first read's. */
+	const readGuide = () => {
+		const {data: d, guideOpen: all} = latest.current;
+		if (d.channels.length === 0 || document.hidden) return;
+		const t = Date.now();
+		// the Guide always asks, as it falls back to the schedule table
+		if (!all && t - failedAt.current < FAILED_WAIT_MS) return;
+		const list = all ? d.channels : firstRead(d.channels, latest.current.rowIds);
+		const fresh = list.map((c) => t - (askedAt.current[c.signal] || 0) < READ_STALE_MS);
+		if (fresh.every(Boolean)) return;
+		const wait: Record<string, true> = {};
+		list.forEach((c, i) => { if (!fresh[i]) wait[c.signal] = true; });
+		// the Guide opened during the first read: its channels show as loading until the full read that follows
+		if (schBusy.current) { if (all) setPending((p) => ({...wait, ...p})); return; }
+		schBusy.current = true;
+		setPending(wait);
+		setSch((s) => ({...s, state: 'loading'}));
+		const from = t - (t % HALF_HOUR);
+		const to = from + SCHEDULE_HOURS * 3600000;
+		const got = (l: Listings) => setSch((s) => ({...s, listings: {...s.listings, ...l}}));
+		const part = (l: Listings, batch: Channel[]) => {
+			const at = Date.now();
+			batch.forEach((c) => { askedAt.current[c.signal] = at; });
+			got(l);
+			setPending((p) => { const out = {...p}; batch.forEach((c) => { delete out[c.signal]; }); return out; });
+		};
+		// the Guide closed during a full read: the rest waits for the next time it opens
+		const stopped = () => all && !latest.current.guideOpen;
+		readEventsNear(list, from, to, () => (all ? focusAt.current : 0), part, stopped, fresh)
+			.then(() => 'ready' as const, () => {
+				failedAt.current = Date.now();
+				if (!all) return 'ready' as const;
+				// the guide service refused: the TV's own schedule table, which is often empty after switch-on
+				return readSchedule(from, to, got, stopped).then(() => 'ready' as const, () => 'pf' as const);
+			})
+			.then((state) => {
+				schBusy.current = false;
+				setPending({});
+				setSch((s) => { save(latest.current.data, s.listings); return {...s, state}; });
+				// the Guide may have opened while the first read ran
+				if (latest.current.guideOpen && !all) readGuide();
+			});
+	};
 
 	const refresh = (withChannels: boolean) => {
 		if (busy.current) return;
@@ -80,24 +152,15 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[
 		readAt.current = Date.now();
 		const channels = withChannels || !latest.current.data.channels.length ? readChannels() : Promise.resolve(latest.current.data.channels);
 		channels
-			.then((list) => readListings().then((pf) => {
-				// the table is empty just after switch-on, or only part filled (docs/live-tv.md Step 2a): ask the guide service for the row's gaps,
-				// or for every channel when the table has nothing, the row's channels first
-				const t = Date.now();
-				if (list.length === 0) return {list, read: pf};
-				const row = rowChannels(list, latest.current.rowIds);
-				const ask = onNow(pf, t) === 0 ? row.concat(list.filter((c) => row.indexOf(c) === -1)) : missingNow(row, pf, t);
-				if (ask.length === 0) return {list, read: pf};
-				return readEventsNear(ask, t, t + FILL_HOURS * 3600000, () => 0).then((ev) => ({list, read: mergeListings(ev, pf)}), () => ({list, read: pf}));
-			}))
-			.then(({list, read}) => {
+			.then((list) => readListings().then((read) => {
 				const t = Date.now();
 				const line = `now and next: ${Object.keys(read).length} channels listed, ${onNow(read, t)} with something on now`;
 				if (line !== lastLine) { lastLine = line; logError('guide', line); }   // the retry asks every minute: log only a change
 				const next = {channels: list, listings: keepUnfinished(read, latest.current.data.listings, t)};
-				if (JSON.stringify(next) !== JSON.stringify(latest.current.data)) { setData(next); saveLive(next); }
+				if (JSON.stringify(next) !== JSON.stringify(latest.current.data)) { setData(next); latest.current.data = next; save(next, schLatest.current); }
+				readGuide();
 				return readLogos(list).then((l) => setLogos((was) => (Object.keys(l).length === Object.keys(was).length ? was : {...l})));
-			})
+			}))
 			.catch((e: Error) => logError('guide', `now and next failed: ${e.message}`))
 			.then(() => { busy.current = false; bootMark('live-read'); });
 	};
@@ -116,7 +179,9 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[
 					const cached = cachedLive();
 					const l = cachedLogos();
 					bootMark('live-cache', `${cached.channels.length}ch ${Object.keys(l).length}logos ${Math.round(performance.now() - t)}ms`);
-					setData(cached); setLogos(l); setStarted(true);
+					setData({channels: cached.channels, listings: cached.listings});
+					if (cached.schedule) setSch((s) => ({...s, listings: cached.schedule as Listings}));
+					setLogos(l); setStarted(true);
 				}
 				timers.push(window.setTimeout(() => refresh(true), READ_AFTER_MS));
 			}, DRAW_AFTER_MS));
@@ -127,47 +192,25 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[
 	}, [enabled]);
 
 	useEffect(() => { if (started) bootMark('live-drawn'); }, [started]);
-	useEffect(() => { if (guideOpen && started) refresh(false); }, [guideOpen]);
-
-	// the Full guide: the schedule from the half hour now is in, read when it opens (again if the last read is old)
-	const [sch, setSch] = useState<{listings: Listings; from: number; at: number; state: 'loading' | 'ready' | 'pf'}>({listings: {}, from: 0, at: 0, state: 'loading'});
-	const focusAt = useRef(0);
-	const hasChannels = data.channels.length > 0;
-	useEffect(() => {
-		if (!fullOpen || !hasChannels) return undefined;
-		const t = Date.now();
-		if (sch.state !== 'loading' && t - sch.at < SCHEDULE_STALE_MS) return undefined;
-		let gone = false;
-		const from = t - (t % HALF_HOUR);
-		const part = (listings: Listings) => { if (!gone) setSch({listings, from, at: 0, state: 'loading'}); };
-		const to = from + SCHEDULE_HOURS * 3600000;
-		// the guide service, the rows in view first; if it fails, the old read of the TV's whole schedule table
-		readEventsNear(latest.current.data.channels, from, to, () => focusAt.current, part, () => gone)
-			.catch(() => readSchedule(from, to, part, () => gone))
-			.then((listings) => ({listings, state: 'ready' as const}), () => ({listings: {}, state: 'pf' as const}))
-			.then((r) => { if (!gone) setSch({...r, from, at: Date.now()}); });
-		return () => { gone = true; };
-	}, [fullOpen, hasChannels]);
-	const merged = useMemo(() => mergeListings(sch.listings, data.listings), [sch.listings, data.listings]);
-	const schedule = {listings: merged, from: sch.from || now - (now % HALF_HOUR), state: sch.state, focus: (i: number) => { focusAt.current = i; }};
+	useEffect(() => { if (guideOpen && started) { refresh(false); readGuide(); } }, [guideOpen]);
 
 	useEffect(() => {
 		if (!enabled || !started) return undefined;
 		const id = window.setInterval(() => {
 			const t = minute();
 			setNow(t);
-			// a programme on a row channel ended since the last read: read the guide again
 			const {data: d, rowIds: ids} = latest.current;
+			// a programme on a row channel ended since the last read of the now and next table: read it again
 			const ended = rowChannels(d.channels, ids).some((c) => (d.listings[c.signal] || []).some((p) => p.end > readAt.current && p.end <= Date.now()));
 			// or nothing is on anywhere (an empty table just after switch-on, or a read that failed): ask again every minute until something is
 			const empty = (d.channels.length === 0 || onNow(d.listings, Date.now()) === 0) && Date.now() - readAt.current >= EMPTY_RETRY_MS;
-			// or a row channel has nothing on now: ask less often, as some channels never have guide data
-			const gap = missingNow(rowChannels(d.channels, ids), d.listings, Date.now()).length > 0 && Date.now() - readAt.current >= GAP_RETRY_MS;
-			if ((ended || empty || gap) && !document.hidden) refresh(d.channels.length === 0);
+			if ((ended || empty) && !document.hidden) refresh(d.channels.length === 0);
+			else readGuide();     // reads only the channels whose read is old
 		}, 15000);
 		return () => window.clearInterval(id);
 	}, [enabled, started]);
 
-	// the row and the Guide also show what the Full guide read, as the TV's now and next table can lack channels the guide service has
-	return {channels: data.channels, listings: schedule.listings, logos, now, schedule};
+	const listings = useMemo(() => mergeListings(sch.listings, data.listings), [sch.listings, data.listings]);
+	const schedule = {listings, from: now - (now % HALF_HOUR), state: sch.state, focus: (i: number) => { focusAt.current = i; }};
+	return {channels: data.channels, listings, logos, now, pending, schedule};
 }

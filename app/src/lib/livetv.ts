@@ -263,11 +263,11 @@ function nextBatch (channels: Channel[], done: boolean[], focus: number): number
 
 /** Every channel's programmes from `from` to `to`, read from the guide service ten channels a call, nearest the focus first: the rows in view
  *  and the three under them, then on down, then up. `focus()` is asked before each call, so a jump down the list moves the reading with it.
- *  `onPart` gets everything read so far after each call; `stopped` ends the reading early. Rejects if the first call fails or finds
+ *  `onPart` gets everything read so far and the channels just asked after each call; `stopped` ends the reading early; `skip` marks channels not to ask. Rejects if the first call fails or finds
  *  nothing, so the caller can fall back to reading the database. One line goes to the TV's log per reading. */
-export function readEventsNear (channels: Channel[], from: number, to: number, focus: () => number, onPart?: (l: Listings) => void, stopped?: () => boolean): Promise<Listings> {
+export function readEventsNear (channels: Channel[], from: number, to: number, focus: () => number, onPart?: (l: Listings, batch: Channel[]) => void, stopped?: () => boolean, skip?: boolean[]): Promise<Listings> {
 	const began = Date.now();
-	const done = channels.map(() => false);
+	const done = channels.map((_, i) => !!(skip && skip[i]));
 	const out: Listings = {};
 	let calls = 0;
 	let programmes = 0;
@@ -283,7 +283,7 @@ export function readEventsNear (channels: Channel[], from: number, to: number, f
 		return readEvents(batch.map((i) => channels[i]), from, to).then((got) => {
 			for (const k in got) { out[k] = got[k]; programmes += got[k].length; }
 			if (first && programmes === 0) throw new Error('events: the first call found nothing');
-			if (onPart) onPart({...out});
+			if (onPart) onPart({...out}, batch.map((i) => channels[i]));
 			return step();
 		}, (e: Error) => {
 			if (first) throw e;
@@ -409,6 +409,8 @@ const CACHE_KEY = 'lumen-boot-livetv-v1';
 export interface LiveCache {
 	channels: Channel[];
 	listings: Listings;
+	/** what the guide service read for the row and the first channels, from now for a few hours */
+	schedule?: Listings;
 }
 
 export function cachedLive (): LiveCache {
@@ -418,9 +420,8 @@ export function cachedLive (): LiveCache {
 
 export function saveLive (value: LiveCache): void {
 	// blurbs are for the Full guide, which reads its own: keep the cache small for start-up
-	const listings: Listings = {};
-	for (const k in value.listings) listings[k] = value.listings[k].map(({desc, ...p}) => p);
-	writeCache(CACHE_KEY, {...value, listings});
+	const slim = (l: Listings) => { const out: Listings = {}; for (const k in l) out[k] = l[k].map(({desc, ...p}) => p); return out; };
+	writeCache(CACHE_KEY, {...value, listings: slim(value.listings), schedule: value.schedule && slim(value.schedule)});
 }
 
 // ---------- dev preview (not on a TV) ----------
