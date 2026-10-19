@@ -64,11 +64,11 @@ const RECENT_MAX = 8;
 /** what the last launch showed, drawn at once on a cold start (lib/boot.ts) */
 const INPUTS_CACHE_KEY = 'lumen-boot-inputs-v1';
 
-/** The top bar: Settings, Inputs and Control Center. */
+/** The top bar: Control Center, Settings and Inputs. Control Center comes first, so it has the focus the first time Up reaches the top bar. */
 const TOP_ITEMS: TileModel[] = [
+	{key: 'controls', label: 'Control Center', glyph: 'sliders'},
 	{key: MISC.settings, label: 'Settings', glyph: 'gear'},
-	{key: 'inputs', label: 'Inputs', glyph: 'inputs'},
-	{key: 'controls', label: 'Control Center', glyph: 'sliders'}
+	{key: 'inputs', label: 'Inputs', glyph: 'inputs'}
 ];
 /** What the time pill's menu lists. */
 const MENU_ITEMS: TileModel[] = [

@@ -30,6 +30,7 @@ Every push to a branch other than `main` reaches the TV as a Homebrew Channel up
 ### Verify on the TV (built, not yet seen working)
 
 Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or later).
+- [ ] Inputs exit and top bar order (verify, branch `home/dock-names`): in the Inputs list, Down twice within a second on the last input closes it and returns the focus to the glass bar. The top bar reads Control Center, Settings, Inputs, and the first Up from the bar lands on Control Center.
 - [ ] Screensaver layout (verify, branch `home/dock-names`): the clock stays bottom left; the weather, with the date under it, sits bottom right, aligned right. Opened from the home screen, the clock still slides into place and the date and weather fade in.
 - [ ] Cold start glass (verify, branch `home/dock-names`): after a restart, the glass bar and top buttons appear with the light live blur at once, with no change a moment later.
 - [ ] Glass bar focus and Control Center exit (verify, branch `home/dock-names`): the bar's focus grows 1.18x (1.1 subtle, 1.2 strong). In Control Center, Down twice within a second on the bottom row (backlight or Eye Comfort) closes it and focuses the first app on the bar.

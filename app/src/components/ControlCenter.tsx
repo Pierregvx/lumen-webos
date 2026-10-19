@@ -42,7 +42,7 @@ const cellAt = (row: number, x: number) => {
 const startOf = (row: number, i: number) => GRID[row].slice(0, i).reduce((n, c) => n + c.span, 0);
 
 /** how soon a second Down at the bottom row must follow the first to close the panel */
-const DOUBLE_DOWN_MS = 1000;
+export const DOUBLE_DOWN_MS = 1000;
 
 /** Each backlight change is a root command (a luna-send process on the TV), so a run of presses sends only the last level, this long after. */
 const BACKLIGHT_DELAY_MS = 300;

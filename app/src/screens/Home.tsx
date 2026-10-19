@@ -4,7 +4,7 @@ import {VideoCaption} from '../components/VideoCaption';
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import {Clock} from '../components/Clock';
 import {Glyph} from '../components/Glyph';
-import {growFrom} from '../components/ControlCenter';
+import {growFrom, DOUBLE_DOWN_MS} from '../components/ControlCenter';
 import {Row} from '../components/Row';
 import {Tile, type TileModel} from '../components/Tile';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
@@ -111,6 +111,8 @@ const MENU_KEY = 'menu';
  *  - The second row stays hidden until the remote goes down to it. */
 export function Home ({rows, topItems, menuItems, inputs, active, onActivate, showPeriod, onEdit, folders, weather, dockHide, focusRow, tiles, perRow = 6}: Props) {
 	const nav = useRef<Nav>({engaged: false, zone: 'rows', rowIndex: 0, columns: {}, topIndex: 0, panelIndex: 0, menuIndex: 0, ctxIndex: 0, moving: null, swallowOk: false, suppressClick: false, folder: '', folderIndex: 0, ctxFrom: 'rows', mode: 'key', dockHidden: false, panelFrom: 'top'});
+	// when Down was last pressed at the last input, with nowhere lower to go
+	const bottomDown = useRef(0);
 	const latest = useRef({rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide});
 	latest.current = {rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide};
 	const [late, setLate] = useState(false);   // the rows below the first are drawn a moment after launch
@@ -305,7 +307,12 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 			const last = ins.length - 1;
 			switch (key) {
 				case 'up': if (n.panelIndex === 0) n.zone = n.panelFrom; else n.panelIndex--; break;   // Up past the first input closes the list
-				case 'down': n.panelIndex = clamp(n.panelIndex + 1, 0, last); break;
+				case 'down':
+					if (n.panelIndex < last) { n.panelIndex++; bottomDown.current = 0; }
+					// a second Down at the last input soon after the first closes the list and goes to the glass bar, as in Control Center
+					else if (Date.now() - bottomDown.current < DOUBLE_DOWN_MS) { n.zone = 'rows'; n.rowIndex = 0; bottomDown.current = 0; }
+					else bottomDown.current = Date.now();
+					break;
 				case 'back': n.zone = n.panelFrom; break;
 			}
 			render();
