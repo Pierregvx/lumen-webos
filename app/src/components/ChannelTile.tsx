@@ -29,7 +29,8 @@ export function ChannelTile ({live, classes, onHover, onActivate}: Props) {
 				{live.logo
 					? <img class="chan__logo" src={live.logo} alt="" decoding="async" />
 					: <div class="chan__name">{live.name}</div>}
-				{now && <div class="chan__bar"><span style={{transform: `scaleX(${progress(now, at)})`}} /></div>}
+				{/* empty with no programme on, so every tile keeps the same shape */}
+				<div class="chan__bar"><span style={{transform: `scaleX(${now ? progress(now, at) : 0})`}} /></div>
 			</div>
 			<div class="chan__info">
 				<div class="chan__line">{live.number} · {live.name}</div>
