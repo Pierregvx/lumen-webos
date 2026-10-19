@@ -5,8 +5,8 @@ Settings > Wallpaper > Photos shows your own photos from an Immich server on the
 ## Set up (once, over ssh to the TV)
 
 1. In Immich: Account Settings > API Keys > New API Key. Give it only these permissions: `album.read`, `asset.read`, `asset.view`,
-   `memory.read`, `face.read`. It can then read photos and nothing else. Without `face.read` everything still works, but photos are
-   not placed on their faces (see below).
+   `memory.read`, `face.read`, `stack.read`. It can then read photos and nothing else. Without `face.read` everything still works, but photos are
+   not placed on their faces (see below). Without `stack.read`, every photo in a stack can show, not only its cover.
 2. On the TV:
 
    ```sh
@@ -21,7 +21,9 @@ Settings > Wallpaper > Photos shows your own photos from an Immich server on the
 
 ## Sources
 
-- **Recent**: random photos taken in the last 90 days.
+A stack shows as its cover photo only. Lumen reads the list of stacks from Immich every 6 hours and leaves the other photos in each stack out.
+
+- **Recent**: random photos taken in the last 6 months. Settings > Wallpaper > Recent photos from changes this to the last month, 3 months or year.
 - **On this day**: Immich's memories for today (photos from this date in past years); Recent when there are none.
 - **Favourites**: random from the photos marked as favourites.
 - **All my photos**: random from everything.

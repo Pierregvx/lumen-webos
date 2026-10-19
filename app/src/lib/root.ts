@@ -212,6 +212,14 @@ export function immichRequest (base: string, key: string, path: string, opts: {b
 	return run(opts.as === 'base64' ? `${command} | base64 | tr -d '\\n'` : command, 20000);
 }
 
+/** The ids in every stack on an Immich server, as '<primaryAssetId>' or '=<id>' lines (the stacks' own ids are among the second kind).
+ *  Only the ids leave the TV, since the full answer carries every photo in every stack. Needs the API key to have stack.read. */
+export function immichStackIds (base: string, key: string): Promise<string> {
+	if (!IMMICH_BASE.test(base) || !IMMICH_KEY.test(key)) return Promise.reject(new Error('refused: immich request'));
+	const curl = `curl -sf -m 15 -H ${shellQuote('x-api-key: ' + key)} -H 'accept: application/json'`;
+	return run(`${curl} ${shellQuote(base + '/api/stacks')} | grep -oE '"(primaryAssetId|id)":"[0-9a-f-]{36}"' | sed -e 's/^"primaryAssetId":"//' -e 's/^"id":"/=/' -e 's/"$//'`, 20000);
+}
+
 /** Lumen's own install folder: the only place the app may read files from, and the only one copyFontIn writes to. */
 const APP_DIR = /^\/media\/developer\/apps\/usr\/palm\/applications\/com\.samrenfrew\.lumen(\.dev)?$/;
 

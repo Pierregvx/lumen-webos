@@ -5,20 +5,23 @@
 // ordinary <img>/background URL with the key as a query parameter, which needs no CORS. The blurred copies the glass and the lower rows show
 // are made here, once per picture, from Immich's small thumbnail (fetched as base64, so the canvas is never tainted).
 
-import {readFile, immichRequest} from './root';
+import {readFile, immichRequest, immichStackIds} from './root';
 import {readCache, writeCache} from './boot';
+import {loadConfig} from './storage';
 
 export interface ImmichServer { url: string; key: string }
 
 /** The choices offered in Settings > Wallpaper > Choose wallpaper > Photos. */
 export const IMMICH_SOURCES: {key: string; title: string}[] = [
-	{key: 'immich:recent', title: 'Recent (last 90 days)'},
+	{key: 'immich:recent', title: 'Recent'},
 	{key: 'immich:recent-people', title: 'Recent, with people'},
 	{key: 'immich:memories', title: 'On this day'},
 	{key: 'immich:favorites', title: 'Favourites'},
 	{key: 'immich:all', title: 'All my photos'}
 ];
-const RECENT_DAYS = 90;
+
+/** The start of the Recent window (Settings > Wallpaper > Recent photos from). */
+function recentSince (): string { return new Date(Date.now() - loadConfig().immichRecentDays * 864e5).toISOString(); }
 
 const SERVER_KEY = 'lumen-immich-server-v1';
 const POOL_KEY = 'lumen-immich-pool-v1';
@@ -194,12 +197,40 @@ function today (): string {
 	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** The photos in a stack other than its cover, which a search leaves out so a stack shows as one photo. Read once every few hours. */
+const STACKS_KEY = 'lumen-immich-stacks-v1';
+const STACKS_EVERY = 6 * 3600e3;
+let stacksRead: Promise<Record<string, true>> | null = null;
+
+function stackedAway (server: ImmichServer): Promise<Record<string, true>> {
+	const saved = readCache<{at: number; ids: string[]}>(STACKS_KEY);
+	const asSet = (ids: string[]) => { const set: Record<string, true> = {}; ids.forEach((x) => { set[x] = true; }); return set; };
+	if (saved && Date.now() - saved.at < STACKS_EVERY) return Promise.resolve(asSet(saved.ids));
+	if (stacksRead) return stacksRead;
+	stacksRead = immichStackIds(server.url, server.key).then((text) => {
+		const covers: Record<string, true> = {};
+		const all: string[] = [];
+		text.split('\n').forEach((line) => { if (line.charAt(0) === '=') all.push(line.slice(1)); else if (line) covers[line] = true; });
+		const ids = all.filter((x) => !covers[x]);
+		writeCache(STACKS_KEY, {at: Date.now(), ids});
+		return asSet(ids);
+	// without stack.read (or with no stacks) nothing is left out; asked again after STACKS_EVERY
+	}).catch(() => { writeCache(STACKS_KEY, {at: Date.now(), ids: []}); return {} as Record<string, true>; });
+	const done = () => { stacksRead = null; };
+	stacksRead.then(done, done);
+	return stacksRead;
+}
+
 /** A batch of candidate pictures for a source, already filtered. */
 function search (server: ImmichServer, sel: string): Promise<Batch> {
+	return stackedAway(server).then((away) => searchIn(server, sel, away));
+}
+
+function searchIn (server: ImmichServer, sel: string, away: Record<string, true>): Promise<Batch> {
 	// several sources picked (immich:recent|immich:album:<id>): each search draws from one of them
 	const parts = sel.split('|');
-	if (parts.length > 1) return search(server, parts[Math.floor(Math.random() * parts.length)]);
-	const keep = (list: Asset[], broad: boolean) => arrange(list.filter((a) => (!a.type || a.type === 'IMAGE') && (!broad || camera(a))));
+	if (parts.length > 1) return searchIn(server, parts[Math.floor(Math.random() * parts.length)], away);
+	const keep = (list: Asset[], broad: boolean) => arrange(list.filter((a) => (!a.type || a.type === 'IMAGE') && (!broad || camera(a)) && !away[a.id]));
 	const random = (body: object, broad: boolean) =>
 		immichRequest(server.url, server.key, '/api/search/random', {body: {type: 'IMAGE', withExif: true, withPeople: true, size: 40, ...body}})
 			.then((text) => keep(JSON.parse(text) as Asset[], broad));
@@ -207,18 +238,18 @@ function search (server: ImmichServer, sel: string): Promise<Batch> {
 		return immichRequest(server.url, server.key, `/api/memories?for=${today()}`).then((text) => {
 			const memories = JSON.parse(text) as {assets?: Asset[]}[];
 			const batch = keep(memories.reduce((all, m) => all.concat(m.assets || []), [] as Asset[]), false);
-			return batch.ids.length > 0 ? batch : random({takenAfter: new Date(Date.now() - RECENT_DAYS * 864e5).toISOString()}, true);   // no memories today
+			return batch.ids.length > 0 ? batch : random({takenAfter: recentSince()}, true);   // no memories today
 		});
 	}
 	if (sel === 'immich:favorites') return random({isFavorite: true}, false);
-	if (sel === 'immich:recent') return random({takenAfter: new Date(Date.now() - RECENT_DAYS * 864e5).toISOString()}, true);
+	if (sel === 'immich:recent') return random({takenAfter: recentSince()}, true);
 	if (sel === 'immich:recent-people') {
 		// a bigger batch, since only some have people in them; if none do (or the server leaves people out) it falls back to plain Recent
-		const body = {type: 'IMAGE', withExif: true, withPeople: true, size: 120, takenAfter: new Date(Date.now() - RECENT_DAYS * 864e5).toISOString()};
+		const body = {type: 'IMAGE', withExif: true, withPeople: true, size: 120, takenAfter: recentSince()};
 		return immichRequest(server.url, server.key, '/api/search/random', {body}).then((text) => {
 			const list = (JSON.parse(text) as Asset[]).filter((a) => !!a.people && a.people.length > 0);
 			const batch = keep(list, true);
-			return batch.ids.length > 0 ? batch : search(server, 'immich:recent');
+			return batch.ids.length > 0 ? batch : searchIn(server, 'immich:recent', away);
 		});
 	}
 	if (sel.indexOf('immich:album:') === 0) return random({albumIds: [sel.slice(13)]}, false);
@@ -232,7 +263,9 @@ interface Pool { sel: string; ids: string[]; shown: string[]; days?: Record<stri
  *  prefers one taken on other days than the last picture, searching again for one before giving that up. */
 export function nextAsset (server: ImmichServer, sel: string, avoid: string): Promise<string | null> {
 	const saved = readCache<Pool>(POOL_KEY);
-	const pool: Pool = saved && saved.sel === sel ? saved : {sel, ids: [], shown: []};
+	// a new Recent window starts a new pool, so the next picture already comes from it
+	const tag = sel.indexOf('immich:recent') !== -1 ? `${sel}@${loadConfig().immichRecentDays}` : sel;
+	const pool: Pool = saved && saved.sel === tag ? saved : {sel: tag, ids: [], shown: []};
 	const days = pool.days || {};
 	const last = pool.last || [];
 	// shown and avoid are kept per photo, since the same portrait can turn up in a different pair after the next search

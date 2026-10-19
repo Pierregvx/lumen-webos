@@ -46,7 +46,7 @@ const LIVE_INFO_W = 660;
 /** how much higher the Live TV row sits when focused, so its now/next block fits on screen */
 const LIVE_BELOW = 150;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', ambientPrint: 'ambient-print', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', liquidDock: 'liquid-dock', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', wpType: 'wp-type', wpNew: 'wp-new', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
+const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', ambientPrint: 'ambient-print', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', liquidDock: 'liquid-dock', reduceMotion: 'reduce-motion', hideNames: 'hide-names', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', immichDays: 'immich-recent-days', wpType: 'wp-type', wpNew: 'wp-new', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 0.5, 1, 5, 15, 30, 60];   // minutes
 /** when the video wallpaper plays (Settings > Wallpaper > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
 const VIDEO_HOURS: Record<string, [number, number]> = {day: [7, 19], evening: [17, 23], night: [19, 7]};
@@ -375,6 +375,7 @@ export function App () {
 			[OPTION.country]: {labels: ['Any'].concat(COUNTRIES.map((c) => c.name)), values: [''].concat(COUNTRIES.map((c) => c.code)), now: config.weatherCountry},
 			[OPTION.city]: {labels: ['Not set', 'Auto'].concat(cities), values: ['', AUTO_PLACE].concat(cities), now: config.weatherCity},
 			[OPTION.wpType]: {labels: ['Pictures', 'Video', 'Immich photos', 'Plain'], values: ['pictures', 'video', 'immich', 'plain'], now: config.wallpaperType},
+			[OPTION.immichDays]: {labels: ['Last month', 'Last 3 months', 'Last 6 months', 'Last year'], values: [30, 90, 180, 365], now: config.immichRecentDays},
 			[OPTION.wpAuto]: {labels: ['Off', '30 sec', '1 min', '5 min', '15 min', '30 min', '60 min'], values: WP_AUTO_CHOICES, now: config.wpAutoMinutes},
 			[OPTION.dockHide]: {labels: ['Off', 'Down arrow', 'After idle', 'Both'], values: ['off', 'down', 'idle', 'both'], now: config.dockHide},
 			[OPTION.idle]: {labels: ['Never', '30 seconds', '1 minute', '2 minutes', '5 minutes'], values: IDLE_SECONDS, now: config.idleSeconds},
@@ -449,6 +450,14 @@ export function App () {
 			value: true,
 			...listed(OPTION.wpType)
 		},
+		...(immich.ready ? [{
+			id: OPTION.immichDays,
+			group: 'wallpaper' as const,
+			label: 'Recent photos from',
+			description: 'How far back the Recent and Recent, with people photos reach, for the wallpaper and the screensaver.',
+			value: true,
+			...listed(OPTION.immichDays)
+		}] : []),
 		{
 			id: OPTION.wpNew,
 			group: 'wallpaper' as const,
@@ -797,6 +806,7 @@ export function App () {
 			const owner = COUNTRIES.filter((x) => x.cities.some((y) => y.name === v))[0];
 			updateConfig({...c, weatherCity: v, weatherCountry: c.weatherCountry || (owner ? owner.code : '')});
 		}
+		else if (optionId === OPTION.immichDays) updateConfig({...c, immichRecentDays: Number(value)});
 		else if (optionId === OPTION.wpAuto) updateConfig({...c, wpAutoMinutes: Number(value)});
 		else if (optionId === OPTION.wpType) updateConfig({...c, wallpaperType: v});
 		else if (optionId === OPTION.dockHide) updateConfig({...c, dockHide: v});
