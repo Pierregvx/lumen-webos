@@ -8,6 +8,8 @@ export type CenterAction = 'lg-home' | 'art';
 
 interface Props {
 	onClose: () => void;
+	/** Down twice at the bottom row: close and go to the glass bar */
+	onCloseDown: () => void;
 	onError: (text: string) => void;
 	/** buttons that leave the launcher or open another screen */
 	onAction: (action: CenterAction) => void;
@@ -38,6 +40,9 @@ const cellAt = (row: number, x: number) => {
 	return {cell: GRID[row][GRID[row].length - 1].id, start: 4 - GRID[row][GRID[row].length - 1].span};
 };
 const startOf = (row: number, i: number) => GRID[row].slice(0, i).reduce((n, c) => n + c.span, 0);
+
+/** how soon a second Down at the bottom row must follow the first to close the panel */
+const DOUBLE_DOWN_MS = 1000;
 
 /** Each backlight change is a root command (a luna-send process on the TV), so a run of presses sends only the last level, this long after. */
 const BACKLIGHT_DELAY_MS = 300;
@@ -93,8 +98,8 @@ export function growFrom (panel: HTMLElement | null, key: string): void {
 
 /** Control Center (opened from the round button top right): sound, picture mode, appearance, clock, LG Home, Art mode (your photos), screen off,
  *  restart, backlight and Eye Comfort. Volume is left to the remote's own buttons. Arrows move between controls, OK presses one, Left/Right on
- *  the backlight bar change it, Back closes. */
-export function ControlCenter ({onClose, onError, onAction, darkMode, clockFormat, onDarkMode, onClockFormat}: Props) {
+ *  the backlight bar change it, Back closes, and Down twice on the bottom row closes and goes to the glass bar. */
+export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMode, clockFormat, onDarkMode, onClockFormat}: Props) {
 	const outer = useRef({darkMode, clockFormat, onDarkMode, onClockFormat});
 	outer.current = {darkMode, clockFormat, onDarkMode, onClockFormat};
 	const [values, setValues] = useState<Controls>({volume: 0, muted: false, picture: 'normal', sound: 'standard', backlight: 100, eyeComfort: false});
@@ -108,6 +113,8 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 	const [morph, setMorph] = useState<Morph | null>(null);
 	const state = useRef({values, pos, confirm, menu, phase});
 	state.current = {values, pos, confirm, menu, phase};
+	// when Down was last pressed with nowhere lower to go
+	const bottomDown = useRef(0);
 	const tiles = useRef<Partial<Record<CellId, HTMLElement | null>>>({});
 	const panel = useRef<HTMLDivElement>(null);
 	const timers = useRef<number[]>([]);
@@ -302,7 +309,7 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 		setMorph({kind: 'close', cell: m.cell, geo: geometry(m.cell, options(m.cell).length)});
 	};
 
-	const move = (row: number, x: number) => { setPos({row, x}); setConfirm(false); };
+	const move = (row: number, x: number) => { setPos({row, x}); setConfirm(false); bottomDown.current = 0; };
 
 	const handleKey = useCallback((key: NavKey): boolean => {
 		const {pos: p, values: v, menu: m, phase: ph} = state.current;
@@ -323,6 +330,12 @@ export function ControlCenter ({onClose, onError, onAction, darkMode, clockForma
 			if (j !== i) move(p.row, startOf(p.row, j));
 		}
 		else if (key === 'up' && p.row === 0) onClose();   // Up past the top row closes, back to the top buttons
+		else if (key === 'down' && p.row === GRID.length - 1) {
+			// someone heading for the glass bar may not see the panel is open, so a second Down here soon after the first takes them there
+			const now = Date.now();
+			if (now - bottomDown.current < DOUBLE_DOWN_MS) onCloseDown();
+			else bottomDown.current = now;
+		}
 		else if (key === 'up' || key === 'down') move(clamp(p.row + (key === 'up' ? -1 : 1), 0, GRID.length - 1), start);
 		return true;
 	}, []);

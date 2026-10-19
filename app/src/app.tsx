@@ -832,6 +832,7 @@ export function App () {
 				onDarkMode={(darkMode) => updateConfig({...configRef.current, darkMode})}
 				onClockFormat={(clockFormat) => updateConfig({...configRef.current, clockFormat})}
 				onClose={() => setControls(false)}
+				onCloseDown={() => { setControls(false); setFocusRow({id: ROW.apps, seq: Date.now()}); }}
 				onError={(text) => showToast(text, 'error')}
 				onAction={(a: CenterAction) => { setControls(false); if (a === 'art') showScreensaver(true); else onActivate('menu', {key: MISC.lgHome, label: 'LG Home'}); }}
 			/>}
