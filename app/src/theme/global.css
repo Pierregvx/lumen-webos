@@ -1057,7 +1057,7 @@ html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.1; }
 }
 /* the bar's name is taken out of the flow so it can't move the icons; the tile keeps its full height so the grid stays put */
 .rows > .row:first-child .tile { position: relative; min-height: calc(var(--layout-tile-height) + 68px); }
-.rows > .row:first-child .tile__label { position: absolute; left: 50%; top: calc(var(--layout-tile-height) + 10px); width: auto; height: auto; margin: 0; transform: translateX(-50%); white-space: nowrap; }
+.rows > .row:first-child .tile__label { position: absolute; left: 50%; top: calc(var(--layout-tile-height) + 14px); width: auto; height: auto; margin: 0; transform: translateX(-50%); white-space: nowrap; }
 .rows > .row:nth-child(n+3) { margin-top: -132px; }
 
 /* app icons fill more of their tile, as on tvOS: the small square icons at the tile's full height (their own colour runs into the tile's),
