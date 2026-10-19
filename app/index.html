@@ -20,9 +20,11 @@
       // The keys are BOOT_WALLPAPER_KEY (lib/boot.ts) and STORAGE_KEY (config/constants.ts); lib/wallpaper.ts takes this element over.
       (function () {
         try {
+          var config = JSON.parse(localStorage.getItem('launcher-config-v2') || '{}');
+          // Live blur (on unless turned off, as lib/storage.ts reads it) from the first frame, or the glass first shows the heavier blurred copy
+          if (config.liveBlur !== false) document.documentElement.classList.add('liveblur');
           var boot = JSON.parse(localStorage.getItem('lumen-boot-wallpaper-v1') || 'null');
           if (!boot || !(boot.url || boot.bg)) return;
-          var config = JSON.parse(localStorage.getItem('launcher-config-v2') || '{}');
           if (boot.sel && config.wallpaper && boot.sel !== config.wallpaper) return;
           var root = document.documentElement;
           var hour = new Date().getHours();
