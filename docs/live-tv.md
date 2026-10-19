@@ -173,6 +173,9 @@ All commands so far are read-only and run as root over SSH on the TV.
   end returns what is on now. The reply is `programList`, with `programName`, `description`, `startTime`/`endTime` (local),
   `DSTStartTime`/`DSTEndTime`, `duration`, `signalChannelId`, `isPresent`, `seriesTitle`, `fepgImgUrl`. Seen with the broadcast guide full.
   Unknown: whether it answers (from Freeview Play online) while the broadcast guide is empty after switch-on.
+- **Step 2e (2026-10-19): the now and next table can be part filled.** Lumen's log: 211 channels listed, only 28 with something on now, and
+  every channel on the row empty, while the guide service had them all. Lumen now asks the guide service for any row channel with nothing on
+  now (every 5 minutes while one stays empty), and the row also uses what the Full guide read.
 
 ## Answer
 

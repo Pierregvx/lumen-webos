@@ -1,4 +1,4 @@
-import {useEffect, useRef, useState} from 'preact/hooks';
+import {useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {cachedLive, cachedLogos, mergeListings, readChannels, readEventsNear, readListings, readLogos, readSchedule, rowChannels, saveLive, type Channel, type Listings, type LiveCache} from '../lib/livetv';
 import {wallpaperShown} from '../lib/wallpaper';
 import {bootMark, logError} from '../lib/log';
@@ -32,6 +32,8 @@ const WALLPAPER_WAIT_MS = 10000;
 const NONE: LiveCache = {channels: [], listings: {}};
 /** while no channel has anything on now (just after the TV is switched on the TV's table can be empty), the TV is asked again this often */
 const EMPTY_RETRY_MS = 60000;
+/** while only some of the row's channels have nothing on now (the table can be part filled, seen on the TV 2026-10-19), it is asked again this often */
+const GAP_RETRY_MS = 5 * 60000;
 
 let lastLine = '';
 
@@ -40,6 +42,11 @@ function onNow (listings: Listings, t: number): number {
 	let n = 0;
 	for (const k in listings) if (listings[k].some((p) => p.start <= t && t < p.end)) n++;
 	return n;
+}
+
+/** the channels in `list` with nothing on at `t` */
+function missingNow (list: Channel[], listings: Listings, t: number): Channel[] {
+	return list.filter((c) => !(listings[c.signal] || []).some((p) => p.start <= t && t < p.end));
 }
 
 /** The new read, plus the last one's programmes not yet over for any channel the new read left out, so a thin read never blanks the row. */
@@ -74,12 +81,14 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[
 		const channels = withChannels || !latest.current.data.channels.length ? readChannels() : Promise.resolve(latest.current.data.channels);
 		channels
 			.then((list) => readListings().then((pf) => {
-				// the table is empty just after switch-on (docs/live-tv.md Step 2a): ask the guide service instead, the row's channels first
-				if (onNow(pf, Date.now()) > 0 || list.length === 0) return {list, read: pf};
-				const row = rowChannels(list, latest.current.rowIds);
-				const order = row.concat(list.filter((c) => row.indexOf(c) === -1));
+				// the table is empty just after switch-on, or only part filled (docs/live-tv.md Step 2a): ask the guide service for the row's gaps,
+				// or for every channel when the table has nothing, the row's channels first
 				const t = Date.now();
-				return readEventsNear(order, t, t + FILL_HOURS * 3600000, () => 0).then((ev) => ({list, read: mergeListings(ev, pf)}), () => ({list, read: pf}));
+				if (list.length === 0) return {list, read: pf};
+				const row = rowChannels(list, latest.current.rowIds);
+				const ask = onNow(pf, t) === 0 ? row.concat(list.filter((c) => row.indexOf(c) === -1)) : missingNow(row, pf, t);
+				if (ask.length === 0) return {list, read: pf};
+				return readEventsNear(ask, t, t + FILL_HOURS * 3600000, () => 0).then((ev) => ({list, read: mergeListings(ev, pf)}), () => ({list, read: pf}));
 			}))
 			.then(({list, read}) => {
 				const t = Date.now();
@@ -139,7 +148,8 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[
 			.then((r) => { if (!gone) setSch({...r, from, at: Date.now()}); });
 		return () => { gone = true; };
 	}, [fullOpen, hasChannels]);
-	const schedule = {listings: mergeListings(sch.listings, data.listings), from: sch.from || now - (now % HALF_HOUR), state: sch.state, focus: (i: number) => { focusAt.current = i; }};
+	const merged = useMemo(() => mergeListings(sch.listings, data.listings), [sch.listings, data.listings]);
+	const schedule = {listings: merged, from: sch.from || now - (now % HALF_HOUR), state: sch.state, focus: (i: number) => { focusAt.current = i; }};
 
 	useEffect(() => {
 		if (!enabled || !started) return undefined;
@@ -151,10 +161,13 @@ export function useLiveTv (enabled: boolean, guideOpen: boolean, rowIds: string[
 			const ended = rowChannels(d.channels, ids).some((c) => (d.listings[c.signal] || []).some((p) => p.end > readAt.current && p.end <= Date.now()));
 			// or nothing is on anywhere (an empty table just after switch-on, or a read that failed): ask again every minute until something is
 			const empty = (d.channels.length === 0 || onNow(d.listings, Date.now()) === 0) && Date.now() - readAt.current >= EMPTY_RETRY_MS;
-			if ((ended || empty) && !document.hidden) refresh(d.channels.length === 0);
+			// or a row channel has nothing on now: ask less often, as some channels never have guide data
+			const gap = missingNow(rowChannels(d.channels, ids), d.listings, Date.now()).length > 0 && Date.now() - readAt.current >= GAP_RETRY_MS;
+			if ((ended || empty || gap) && !document.hidden) refresh(d.channels.length === 0);
 		}, 15000);
 		return () => window.clearInterval(id);
 	}, [enabled, started]);
 
-	return {channels: data.channels, listings: data.listings, logos, now, schedule};
+	// the row and the Guide also show what the Full guide read, as the TV's now and next table can lack channels the guide service has
+	return {channels: data.channels, listings: schedule.listings, logos, now, schedule};
 }
