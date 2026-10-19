@@ -855,13 +855,13 @@ html.light.wp-video .screen--settings::before { background-image: linear-gradien
 .screen--dockhidden .videocap { opacity: 1; }
 html:not(.wp-video) .videocap:not(.videocap--pic), html.wp-video .videocap--pic { display: none; }
 /* a picture's caption stays up with the dock, just above its glass, and slides down with the clock when the dock goes */
-.videocap--pic { display: flex; flex-direction: column; justify-content: flex-end; height: 76px; opacity: 1; transform: translateY(-191px); transition: opacity 420ms ease, transform 600ms cubic-bezier(0.25, 0.1, 0.25, 1); }
+.videocap--pic { display: flex; flex-direction: column-reverse; justify-content: flex-start; height: 76px; opacity: 1; transform: translateY(-191px); transition: opacity 420ms ease, transform 600ms cubic-bezier(0.25, 0.1, 0.25, 1); }
 /* with the dock away its last line sits on the date's line */
 .screen--dockhidden .videocap--pic { transform: translateY(47px); }
 .screen--lower .videocap--pic { opacity: 0; }
 /* the box fits a two-line credit and fills from the bottom: with no credit the title sits on the credit's line, a long credit grows upward */
-.videocap--pic .videocap__place { font-size: 24px; line-height: 30px; font-weight: 500; }
-.videocap--pic .videocap__text { margin-top: 4px; font-size: 16px; line-height: 21px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.videocap--pic .videocap__place { font-size: 21px; line-height: 26px; font-weight: 500; }
+.videocap--pic .videocap__text { margin: 0 0 3px; font-size: 16px; line-height: 21px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .videocap__place { font-size: 36px; font-weight: 600; letter-spacing: 0.01em; color: #fff; text-shadow: 0 2px 14px rgba(0, 0, 0, 0.6); }
 .videocap__text { margin-top: 6px; font-size: 22px; line-height: 1.3; color: rgba(255, 255, 255, 0.86); text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); }
 
@@ -1049,13 +1049,15 @@ html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.1; }
 .panel { right: var(--layout-rows-edge); background-position: 0 0, calc(var(--pw) + var(--layout-rows-edge) - 1920px) calc(-1 * var(--pt)); }
 
 /* ---------- glass bar: 40px of glass round the tiles (it was 24), sitting low so the grid peeks in just under it ----------
-   The bar's tiles show no name (it would fall on the bar's edge and the row below); the grid's do. The grid rows are a little further apart
+   The bar's focused tile is named under the icon, inside the glass; the grid's are named under the tile. The grid rows are a little further apart
    than the bar and the first grid row, so the names fit. */
 .rows .row:not(.row--dock)::before {
 	left: calc(50% - var(--row-w, 1670px) / 2 - 40px); width: calc(var(--row-w, 1670px) + 80px);
 	top: 0; height: calc(var(--layout-tile-height) + 80px); border-radius: calc(var(--layout-tile-radius) + 40px);
 }
-.rows > .row:first-child .tile__label { visibility: hidden; }
+/* the bar's name is taken out of the flow so it can't move the icons; the tile keeps its full height so the grid stays put */
+.rows > .row:first-child .tile { position: relative; min-height: calc(var(--layout-tile-height) + 68px); }
+.rows > .row:first-child .tile__label { position: absolute; left: 50%; top: calc(var(--layout-tile-height) + 10px); width: auto; height: auto; margin: 0; transform: translateX(-50%); white-space: nowrap; }
 .rows > .row:nth-child(n+3) { margin-top: -132px; }
 
 /* app icons fill more of their tile, as on tvOS: the small square icons at the tile's full height (their own colour runs into the tile's),
@@ -1066,14 +1068,14 @@ html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.1; }
 
 /* ---------- peek and grid spacing, measured from tvOS ----------
    At rest only a sliver of the grid's first row shows under the bar. Down in the grid, the grid rows drop 40px further from the bar
-   (about 70px of space under the glass, as on tvOS) so the focused tile has room. The focused grid tile grows 1.175x. The bar's tiles grow 1.18x, clearly focused but well clear of the edge of the bar's 40px of glass. */
+   (about 70px of space under the glass, as on tvOS) so the focused tile has room. The focused grid tile grows 1.175x. The bar's tiles grow 1.12x, so the focused app's name fits under the icon inside the bar's 40px of glass. */
 .screen--lower .rows > .row:not(:first-child) { transform: translateY(40px); }
 .rows { --motion-focus-scale: 1.175; }
 html.focus-subtle .rows { --motion-focus-scale: 1.1; }
 html.focus-strong .rows { --motion-focus-scale: 1.235; }
-.rows > .row:first-child { --motion-focus-scale: 1.18; }
-html.focus-subtle .rows > .row:first-child { --motion-focus-scale: 1.1; }
-html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.2; }
+.rows > .row:first-child { --motion-focus-scale: 1.12; }
+html.focus-subtle .rows > .row:first-child { --motion-focus-scale: 1.06; }
+html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.16; }
 .rows > .row:not(:first-child) .tile__label { margin-top: 32px; }
 
 /* ---------- tiles lit from above, as on tvOS: a soft shadow under each tile, and over its artwork a light from the top left (20 degrees
