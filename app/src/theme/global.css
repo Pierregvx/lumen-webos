@@ -929,6 +929,8 @@ html.hide-names .rows .tile__label, html.hide-names .panel--folder .tile__label 
 html.liveblur, html.liveblur * { --wp-blur: linear-gradient(transparent, transparent) !important; }
 /* closer to tvOS 26 Liquid Glass: a very light blur so the picture reads through, extra colour and a dark tint; the rims do the rest */
 html.liveblur { --live-glass: blur(2px) saturate(1.5) brightness(1.1); --live-tint: rgba(0, 0, 0, 0.3); }
+/* the glass bar and Control Center (Inputs too) blur a little more; the top buttons stay at 2px */
+html.liveblur .rows > .row:first-child, html.liveblur .panel--cc { --live-glass: blur(3px) saturate(1.5) brightness(1.1); }
 html.liveblur .row:not(.row--dock)::before, html.liveblur .topcap, html.liveblur .topbar > .pill, html.liveblur .panel {
 	-webkit-backdrop-filter: var(--live-glass);
 	backdrop-filter: var(--live-glass);
@@ -957,11 +959,24 @@ html.liveblur:not(.light) .cc__fill {
 	box-shadow: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.6), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.3), inset 0 0 16px rgba(255, 255, 255, 0.1), 4px 0 14px rgba(0, 0, 0, 0.18) !important;
 }
 html.liveblur:not(.light) .cc__mod--focused .cc__fill { background: linear-gradient(135deg, rgba(255, 255, 255, 0.36) 0%, rgba(255, 255, 255, 0.16) 45%, rgba(255, 255, 255, 0.26) 100%) !important; }
+/* the glass bar's rim has a faint colour fringe, blue at the top left and pink at the bottom right, drawn on the glass so it costs nothing per frame
+   and shows over a video too. The pink is kept weak: stronger, it read as a coloured edge rather than light through glass. */
 html.liveblur:not(.light) .row:not(.row--dock)::before {
 	background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.13) 0, rgba(255, 255, 255, 0.03) 200px, rgba(255, 255, 255, 0.03) calc(100% - 200px), rgba(255, 255, 255, 0.08) 100%) !important;
-	box-shadow: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.55), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.25), inset 0 0 14px rgba(255, 255, 255, 0.05), 0 20px 44px rgba(0, 0, 0, 0.28) !important;
+	box-shadow: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.55), inset 3px 3px 2px -2px rgba(110, 200, 255, 0.7), inset -3px -3px 2px -2px rgba(255, 120, 190, 0.28),
+		inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.2), inset 0 0 14px rgba(255, 255, 255, 0.05), 0 20px 44px rgba(0, 0, 0, 0.28) !important;
 }
-html.liveblur:not(.light) .row:not(.row--dock)::after { opacity: 0.6; }
+/* a highlight on the glass bar's top edge sits over the focused app and slides with focus (--sel-x, Row.tsx), held clear of the rounded ends.
+   It moves by transform only, and fades out when focus leaves the bar. */
+html.liveblur:not(.light) .rows > .row:first-child::after {
+	display: block; left: 50%; right: auto; top: 0; width: 260px; height: 28px; border-radius: 0; z-index: 0;
+	background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.9) 50%, rgba(255, 255, 255, 0)) top / 100% 1.5px no-repeat,
+		radial-gradient(50% 100% at 50% 0, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)) top / 100% 28px no-repeat;
+	--sel-edge: calc(var(--row-w, 1670px) / 2 - var(--layout-tile-radius) - 130px);
+	transform: translateX(calc(clamp(-1 * var(--sel-edge), var(--sel-x, 0px), var(--sel-edge)) - 130px));
+	opacity: 0; transition: transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 200ms ease;
+}
+html.liveblur:not(.light) .rows > .row:first-child.row--focused::after { opacity: 1; }
 
 /* Settings > Liquid glass dock (lib/liquidGlass.ts): the glass bar bends the picture at its rim (SVG displacement, after nikdelvin/liquid-glass).
    Over a video it only tints: the video is on a hardware layer the page cannot read. Off while the rows are down, as the slide would redraw it each frame. */
@@ -1036,7 +1051,9 @@ html.focus-strong .rows { --motion-focus-scale: 1.24; }
 .rows > .row:first-child { --motion-focus-scale: 1.06; }
 .rows .row .tile--focused .tile__box { box-shadow: 0 26px 40px rgba(0, 0, 0, 0.42), 0 8px 14px rgba(0, 0, 0, 0.22); }
 .rows > .row:first-child .tile--focused .tile__box { box-shadow: 0 10px 18px rgba(0, 0, 0, 0.28); }
-.rows .row .tile--focused .tile__box { transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--motion-focus-scale)) translateY(-3px); }
+.rows .row .tile--focused .tile__box { transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--motion-focus-scale)) translateY(-7.5px); }
+/* the grid's name rises with its lifted tile, as the bar's does (top below) */
+.rows > .row:not(:first-child) .tile--focused .tile__label { transform: translateY(-4.5px); }
 html.focus-subtle .rows { --motion-focus-scale: 1.06; }
 html.focus-subtle .rows > .row:first-child { --motion-focus-scale: 1.03; }
 html.focus-strong .rows { --motion-focus-scale: 1.16; }
@@ -1057,7 +1074,7 @@ html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.1; }
 }
 /* the bar's name is taken out of the flow so it can't move the icons; the tile keeps its full height so the grid stays put */
 .rows > .row:first-child .tile { position: relative; min-height: calc(var(--layout-tile-height) + 68px); }
-.rows > .row:first-child .tile__label { position: absolute; left: 50%; top: calc(var(--layout-tile-height) + 14px); width: auto; height: auto; margin: 0; transform: translateX(-50%); white-space: nowrap; }
+.rows > .row:first-child .tile__label { position: absolute; left: 50%; top: calc(var(--layout-tile-height) + 8.5px); width: auto; height: auto; margin: 0; transform: translateX(-50%); white-space: nowrap; }
 .rows > .row:nth-child(n+3) { margin-top: -132px; }
 
 /* app icons fill more of their tile, as on tvOS: the small square icons at the tile's full height (their own colour runs into the tile's),

@@ -48,6 +48,14 @@ Target hardware: LG UQ80 (65UQ8040PSB), webOS 22, alpha 5 Gen5 chip, 1.5 GB RAM,
 - Refraction on the panels (Control Center, Inputs) dropped to 7 fps while moving in them. Only the dock can take it. It is a setting (Liquid glass dock), off by default.
 - The rest of the glass keeps a plain live blur, now 2px with a 30% black tint and the sheen and rims at about half strength. Sam preferred this look.
 
+- Second round (2026-10-21), tried live over DevTools. Effects drawn on the glass itself cost nothing per frame and show over video too, as they read nothing behind the glass.
+  - Kept: a colour fringe faked with coloured inset shadows (blue top left, pink bottom right at about 0.28). Sam found the pink works on the bar because some app icons are pink, so it reads as their reflection.
+  - Kept: a highlight on the bar's top edge that slides to the focused app (transform only).
+  - Rejected: the same fringe on the Control Center blocks. A fixed pink there reads as a coloured edge, not a reflection, and a strong bottom-right shadow makes a pill look inset, not rounded.
+  - Rejected: a fringe coloured from the blurred wallpaper under each corner (sampled once on a canvas). It did not read as a reflection, and it cannot work over video.
+  - Not tried: thickness shading and corner highlights (the same inset risk), grain, and bending the rim into the pre-blurred wallpaper copy.
+- Online, only SVG displacement or WebGL does real refraction. The static rim and highlight tricks are from https://dev.to/kevinbism/recreating-apples-liquid-glass-effect-with-pure-css-3gpl and https://dev.to/afif/border-with-gradient-and-radius-387f.
+
 ## Sources
 - https://webostv.developer.lge.com/develop/specifications/web-api-and-web-engine (Chromium per webOS version)
 - https://developer.samsung.com/smarttv/develop/guides/web-app-memory-optimization-guide.html (TV memory/GPU rules)

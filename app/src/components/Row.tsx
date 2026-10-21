@@ -41,9 +41,11 @@ export function Row ({label, items, focused, selected, emptyText, compact, title
 	const fits = total <= VIEWPORT_WIDTH;
 	const offset = slot !== undefined ? Math.max(0, Math.min(selected, items.length - 2) - slot) * STEP
 		: fits ? 0 : clamp(selected * STEP + size / 2 - VIEWPORT_WIDTH / 2, 0, total - VIEWPORT_WIDTH);
+	// the selected tile's centre from the row's centre, for the glass bar's sliding highlight (global.css)
+	const selX = selected * STEP + size / 2 - offset - (fits ? total : VIEWPORT_WIDTH) / 2;
 
 	return (
-		<section class={`row${focused || rest ? ' row--focused' : ''}${compact ? ' row--dock' : ''}${titled ? ' row--titled' : ''}${hidden ? ' row--hidden' : ''}${className ? ' ' + className : ''}`} style={`--row-w:${total}px`} onMouseLeave={onLeave}>
+		<section class={`row${focused || rest ? ' row--focused' : ''}${compact ? ' row--dock' : ''}${titled ? ' row--titled' : ''}${hidden ? ' row--hidden' : ''}${className ? ' ' + className : ''}`} style={`--row-w:${total}px;--sel-x:${selX}px`} onMouseLeave={onLeave}>
 			<h2 class="row__label">{label}</h2>
 			<div class="row__viewport">
 				{items.length === 0
