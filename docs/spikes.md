@@ -96,6 +96,29 @@ Stadia controller in Bluetooth mode, as `StadiaXR77-xxxx` (vid 18d1, pid 9400). 
   next to `watch.sh` that runs this when the controller drops, so a mid-game drop needs only Stadia + Y. Order matters: run
   before pairing mode, `adapter/pair` "succeeded" at once and no input device came.
 - Next test on a fresh boot: controller on, check it navigates; switch it off and on, check it breaks; run the re-pair, check navigation.
+- Retest 2026-10-22 (TV up 1 h 40 min, `bthidmanager` not restarted, controller `StadiaXR77-b138`): after a reconnect, no reports on
+  `/dev/hidraw0`. Protocol Mode (2a4e) already read 1 (report mode). Writing 1 to it and 1 (exit suspend) to the HID Control Point (2a4c)
+  through `gatt/connect` then `gatt/writeCharacteristicValue {clientId, service, characteristic, value:{bytes}}` was accepted and changed
+  nothing. Then `tools/tv/stadia-repair-test.sh` with the controller in pairing mode: 1584 bytes of reports, and the TV navigates again.
+  So the command-line re-pair is a full fix, and the watcher plan stands. Repeated once (power-cycle to break, re-pair): works again.
+- The TV has no `bluetoothctl`, `btmgmt`, `btmon`, `hcitool` or `/var/lib/bluetooth`, so BlueZ-level fixes (clearing the GATT cache or the
+  bond file) are not open from the shell. LG's supported controller list does not include Stadia.
+- Other hosts (2026-10-22 research): the same fault (reconnects, no input until re-pair) is reported for Stadia on Samsung TVs and Android
+  TV (forum snippets, unread). On Linux, switching the host adapter off and on fixed it (Lakka-LibreELEC #1824, Steam Deck posts); that
+  did not help here. Google publishes no Stadia firmware notes, and no host setting is known to fix it. The likely cause is on the
+  controller side: it keeps state from the first pairing and stops sending on a reconnect, which a new bond resets.
+- Built 2026-10-22: `tools/tv/stadia.sh`, the watcher. Only while Moonlight (`com.limelight.webos`) is in front. `device/getStatus` also
+  lists unpaired devices found by a scan, and a device's name and address are far apart in its object, so it splits per device first.
+  It tells you what to do with an LG alert (`com.webos.notification/createAlert`, title, message, an OK button), which stays up until
+  `closeAlert {alertId}`; the watcher closes it once the controller works. Toasts (`createToast`) show over apps too, and `<br>` breaks a
+  line in them. Both need `sourceId` set to an installed app id (Lumen's).
+- A factory reset of the controller (Stadia button 10 s, unplugged), done on 2026-10-21, did not stop the fault.
+- To recheck: each "no reports" result above relies on buttons being pressed during the read. A clean round, with Sam pressing and watching
+  the screen on every step, would rule out a missed press. Over Moonlight, an alert leaves Moonlight the foreground app,
+  and Moonlight reads the controller straight from `/dev/hidraw0` (and the remote from `event9`), not through window focus, so the alert
+  cannot take the controller's input away from the game (seen 2026-10-22).
+  A virtual Start press to pause the game is not built: it needs a uinput helper (`/dev/uinput` exists), and Moonlight would see it as a
+  second controller.
 
 ## Keeping apps alive (2026-10-22)
 The plan and the measure are in `docs/keep-alive.md`. Each run: reboot, wait 2 minutes, then `switchtest.sh` (13 opens) with `memwatch.sh 2`.

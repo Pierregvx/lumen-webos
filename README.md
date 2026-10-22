@@ -80,6 +80,8 @@ npx -p @webos-tools/cli ares-install --device lgtv build/*.ipk
 To make Home open Lumen, copy `tools/tv/watch.sh` to `/var/lib/homehook/` and `tools/tv/60-homehook` to `/var/lib/webosbrew/init.d/` on the TV.
 To undo it, delete the hook file and stop `watch.sh`.
 
+The same hook starts `tools/tv/stadia.sh` if it is in `/var/lib/homehook/`. While Moonlight is in front, it pairs a Stadia controller again after a drop, when you hold Stadia + Y.
+
 ## Credits
 
 Built on partridgeworks/webos-launcher (MIT). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Not affiliated with LG, Apple or any app vendor.

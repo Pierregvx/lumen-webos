@@ -1,0 +1,120 @@
+#!/bin/sh
+# Stadia controller watcher, for Moonlight. After the controller is switched off and on it reconnects but sends no input until it is paired
+# again (docs/spikes.md). While Moonlight is in front, this notices that and pairs it again as soon as you hold Stadia + Y (orange light).
+#  - A connection counts as working once a report arrives on its hidraw node. A pairing made here counts as working at once.
+#  - Broken: a connection this script did not pair sends nothing for SILENT_SECS, or a connection drops (it always comes back broken).
+#  - Repair: forget the controller, scan, pair, connect. Tried again and again until its input device appears, for up to REPAIR_SECS.
+# Log: /var/lib/homehook/stadia.log. Off: /var/lib/homehook/no-stadia. In any app, not only Moonlight: /var/lib/homehook/stadia-any-app.
+B=luna://com.webos.service.bluetooth2
+MOON=com.limelight.webos
+DIR=/var/lib/homehook
+LOG=$DIR/stadia.log
+ADDR_FILE=$DIR/stadia-address
+RAW=/tmp/stadia-raw
+SILENT_SECS=30
+REPAIR_SECS=180
+
+log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
+ls1() { luna-send -n 1 "$@" </dev/null 2>/dev/null; }
+# an LG toast; Lumen is named as the source because the notification service wants an installed app id
+toast() { ls1 luna://com.webos.notification/createToast "{\"sourceId\":\"com.samrenfrew.lumen\",\"message\":\"$1\"}" >/dev/null; }
+# an LG alert stays up until closed, so it is the one place that says what to do; LG's own toasts already cover connect and disconnect
+alert_id=""
+alert() {
+  close_alert
+  alert_id=$(ls1 luna://com.webos.notification/createAlert "{\"sourceId\":\"com.samrenfrew.lumen\",\"title\":\"$1\",\"message\":\"$2\",\"buttons\":[{\"label\":\"OK\"}]}" \
+    | sed -n 's/.*"alertId": *"\([^"]*\)".*/\1/p')
+}
+close_alert() {
+  [ -n "$alert_id" ] && ls1 luna://com.webos.notification/closeAlert "{\"alertId\":\"$alert_id\"}" >/dev/null
+  alert_id=""
+}
+HOLD_MSG="Hold Stadia + Y until the light flashes orange."
+present() { grep -q '^N: Name="Stadia' /proc/bus/input/devices; }
+# the controller's hidraw node (Google 18d1:9400)
+hidraw() {
+  for x in /sys/class/hidraw/hidraw*; do
+    readlink "$x" 2>/dev/null | grep -qi '18d1:9400' && { echo "/dev/${x##*/}"; return 0; }
+  done
+  return 1
+}
+# the controller's address: read from the paired list while it is there, else the last one seen (it is gone from the list once forgotten)
+addr() {
+  # one line per device (each starts with classOfDevice); the name and the address are far apart in it
+  a=$(ls1 $B/device/getStatus '{}' | tr -d ' \n' | sed 's/{"classOfDevice"/\n&/g' | grep '"name":"Stadia' | grep '"paired":true' \
+    | sed -n 's/.*"address":"\([0-9a-f:]*\)".*/\1/p' | head -1)
+  if printf '%s' "$a" | grep -qE '^([0-9a-f]{2}:){5}[0-9a-f]{2}$'; then
+    [ "$a" = "$(cat "$ADDR_FILE" 2>/dev/null)" ] || echo "$a" > "$ADDR_FILE"
+    echo "$a"
+  else
+    grep -E '^([0-9a-f]{2}:){5}[0-9a-f]{2}$' "$ADDR_FILE" 2>/dev/null
+  fi
+}
+stop_raw() { [ -n "$rawpid" ] && kill "$rawpid" 2>/dev/null; rawpid=""; }
+# one forget, scan, pair, connect; true when the input device came back
+repair_once() {
+  a=$(addr) || return 1
+  [ -n "$a" ] || return 1
+  stop_raw; up=0
+  ls1 $B/adapter/unpair "{\"address\":\"$a\"}" >/dev/null
+  sleep 2
+  # luna-send -i keeps the scan open while its stdin is open
+  sleep 20 | luna-send -i $B/adapter/startDiscovery '{}' >/dev/null 2>&1 &
+  sleep 4
+  r=$(timeout 15 luna-send -n 2 $B/adapter/pair "{\"address\":\"$a\",\"subscribe\":true}" </dev/null 2>&1 | tr -d ' \n')
+  sleep 2
+  present || { ls1 $B/hid/connect "{\"address\":\"$a\"}" >/dev/null; sleep 3; }
+  ls1 $B/adapter/cancelDiscovery '{}' >/dev/null
+  if present; then log "re-paired $a"; close_alert; toast "Controller paired."; return 0; fi
+  log "re-pair try failed (controller not in pairing mode yet?): $(printf '%s' "$r" | cut -c1-160)"
+  return 1
+}
+
+[ -f "$LOG" ] && tail -n 300 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+log "started"
+up=0; ok=0; fresh=0; since=0; repair_until=0; rawpid=""; active=0
+while true; do
+  sleep 2
+  now=$(date +%s)
+  on=1
+  [ -f "$DIR/no-stadia" ] && on=0
+  if [ "$on" -eq 1 ] && [ ! -f "$DIR/stadia-any-app" ]; then
+    case "$(ls1 luna://com.webos.applicationManager/getForegroundAppInfo '{}')" in *'"appId":"'$MOON'"'*) ;; *) on=0 ;; esac
+  fi
+  if [ "$on" -eq 0 ]; then
+    [ "$active" -eq 1 ] && log "Moonlight left the front: watching paused"
+    active=0; repair_until=0; up=0; stop_raw; close_alert
+    continue
+  fi
+  [ "$active" -eq 0 ] && log "Moonlight in front: watching"
+  active=1
+  if present; then
+    if [ "$up" -eq 0 ]; then
+      up=1; since=$now; ok=$fresh; fresh=0
+      log "controller connected ($([ "$ok" -eq 1 ] && echo "paired here, working" || echo "checking for input"))"
+      # a reconnect has always been dead so far, so say how to fix it now rather than after SILENT_SECS
+      [ "$ok" -eq 0 ] && alert "Controller check" "Press any button. If nothing happens, hold Stadia + Y until the light flashes orange."
+      : > "$RAW"
+    fi
+    if [ "$ok" -eq 0 ]; then
+      # the hidraw node can show up a moment after the input device
+      if [ -z "$rawpid" ] && h=$(hidraw); then cat "$h" >> "$RAW" 2>/dev/null & rawpid=$!; fi
+      if [ -s "$RAW" ]; then
+        ok=1; repair_until=0; stop_raw; close_alert; log "input seen: working"
+      elif [ $((now - since)) -ge "$SILENT_SECS" ] && [ "$repair_until" -le "$now" ]; then
+        repair_until=$((now + REPAIR_SECS)); log "no input for ${SILENT_SECS}s: broken, re-pairing on Stadia + Y"
+        alert "Controller not responding" "$HOLD_MSG"
+      fi
+    fi
+  elif [ "$up" -eq 1 ]; then
+    up=0; ok=0; stop_raw
+    repair_until=$((now + REPAIR_SECS)); log "controller dropped: re-pairing on Stadia + Y"
+    alert "Controller disconnected" "$HOLD_MSG"
+  fi
+  if [ "$repair_until" -gt "$now" ] && [ "$ok" -eq 0 ]; then
+    if repair_once; then fresh=1; repair_until=0; fi
+  elif [ "$repair_until" -gt 0 ] && [ "$repair_until" -le "$now" ]; then
+    repair_until=0; log "gave up re-pairing after ${REPAIR_SECS}s; switch the controller off and on to try again"
+    close_alert; toast "Stopped waiting for the controller.<br>Switch it off and on to try again."
+  fi
+done

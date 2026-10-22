@@ -112,6 +112,10 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [x] Home button: LG Input Hook owns it. `watch.sh` only takes over LG Home when `/var/lib/homehook/home-takeover` exists (off by default;
       it would still be useful for the cold-boot case where LG Home is the first thing on screen).
 - [x] `watch.sh` running (one copy; the boot hook now checks `/proc`, plain `ps` missed it and started duplicates).
+- [ ] Stadia watcher: `tools/tv/stadia.sh` in `/var/lib/homehook/`, started by `60-homehook` (installed and running 2026-10-22). While
+      Moonlight is in front, a controller that drops, or connects and sends nothing for 30 s, is paired again once you hold Stadia + Y
+      (orange light). **(verify)**: open Moonlight, switch the controller off and on, check it is dead, hold Stadia + Y, check it works
+      within about 15 s. Then the same from a cold start (controller off when Moonlight opens). Send `/var/lib/homehook/stadia.log`.
 - [ ] Recent row: `watch.sh` writes `/var/lib/homehook/recent` correctly (seen 2026-10-15: PlxNative, YouTube). The row was there but drawn
       below the screen (going down slid the rows a fixed 300px, enough for the second row only); now each row slides into view. **(verify)**:
       press Down twice from the glass row.
