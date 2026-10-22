@@ -127,6 +127,8 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
       logged in `/tmp/homehook.log`.
 - [x] `"keepAlive": true` in appinfo.json: tried 2026-10-16, no effect (Lumen still reloads from scratch after Plex). Removed. Cold start
       stays the thing to make fast (Phase 4).
+- [ ] Keep apps alive: Home or Recents leaves the app you were in running, and Lumen opens with no launch screen. One session of tests
+      with a memory profile, planned in `docs/keep-alive.md` (`clearBackgroundApp`, `KeepOnLaunchEx`, keep-alive lists).
 - [ ] Recents button: rebind it with Input Hook to launch Lumen with `{"view":"recent"}` (needs the launch-parameter check above).
 - [ ] SF font from the TV: `npm run push-font` (once), then update and relaunch. The first launch after each update copies the font into
       the app's folder about 5 seconds in, so the text turns from Geist to SF then; later launches start in SF. Reading straight from

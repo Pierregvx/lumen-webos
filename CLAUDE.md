@@ -25,7 +25,7 @@ Dev builds write a "boot" timeline line to `/var/lib/homehook/lumen.log` after e
 
 ## Docs
 
-Feature plans and findings live in `docs/` (`live-tv.md`, `live-tv-build.md`, `settings-redesign.md`, `startup-perf.md`, `immich.md`, `spikes.md`). Read the one for the area you touch before changing it, and update it when a finding changes.
+Feature plans and findings live in `docs/` (`live-tv.md`, `live-tv-build.md`, `settings-redesign.md`, `startup-perf.md`, `immich.md`, `spikes.md`, `keep-alive.md`). Read the one for the area you touch before changing it, and update it when a finding changes.
 
 ## Commits
 
