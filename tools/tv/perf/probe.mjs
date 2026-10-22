@@ -1,0 +1,26 @@
+// Swap cadence while a tiny square moves by transform for 2 s. usage: node probe.mjs [css to apply first]
+const pages = await fetch('http://127.0.0.1:19998/json').then((r) => r.json());
+const page = pages.find((p) => /lumen/i.test(p.url));
+const ws = new WebSocket(page.webSocketDebuggerUrl);
+await new Promise((ok) => { ws.onopen = ok; });
+let seq = 0; const waiting = new Map(); const events = []; let done;
+ws.onmessage = (m) => { const msg = JSON.parse(m.data); if (msg.method === 'Tracing.dataCollected') events.push(...msg.params.value); else if (msg.method === 'Tracing.tracingComplete') done(); else if (waiting.has(msg.id)) { waiting.get(msg.id)(msg); waiting.delete(msg.id); } };
+const send = (method, params = {}) => new Promise((ok) => { const id = ++seq; waiting.set(id, ok); ws.send(JSON.stringify({id, method, params})); });
+const ev = async (expression) => (await send('Runtime.evaluate', {expression, returnByValue: true, awaitPromise: true})).result?.result?.value;
+const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
+const css = process.argv[2] || '';
+await ev(`(() => { let s = document.getElementById('live'); if (!s) { s = document.createElement('style'); s.id = 'live'; document.head.appendChild(s); } s.textContent = ${JSON.stringify(css)}; let d = document.getElementById('probe'); if (!d) { d = document.createElement('div'); d.id = 'probe'; d.style.cssText = 'position:fixed;left:100px;top:100px;width:40px;height:40px;background:#f0f;z-index:99999;will-change:transform'; document.body.appendChild(d); } return 1; })()`);
+await sleep(600);
+await send('Tracing.start', {traceConfig: {includedCategories: ['viz', 'gpu', 'devtools.timeline'], recordMode: 'recordAsMuchAsPossible'}, transferMode: 'ReportEvents'});
+await sleep(300);
+await ev(`document.getElementById('probe').animate([{transform: 'translateX(0)'}, {transform: 'translateX(1500px)'}], {duration: 2000}).finished.then(() => 1)`);
+await sleep(200);
+const fin = new Promise((ok) => { done = ok; }); await send('Tracing.end'); await fin;
+await ev(`(() => { document.getElementById('probe').remove(); document.getElementById('live').textContent = ''; return 1; })()`);
+const sw = events.filter((e) => e.name === 'NativeViewGLSurfaceEGL:RealSwapBuffers' && e.ph === 'X');
+const ends = sw.map((e) => e.ts + e.dur).sort((a, b) => a - b);
+const g = ends.slice(1).map((t, i) => (t - ends[i]) / 1000).filter((x) => x < 200);
+const draw = events.filter((e) => e.name === 'SkiaOutputSurfaceImplOnGpu::FinishPaintCurrentFrame' && e.ph === 'X').map((e) => e.dur / 1000);
+const mean = (xs) => (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(1);
+console.log(`swaps ${sw.length} in ~2s, mean gap ${mean(g)}ms, swap blocks ${mean(sw.map((e) => e.dur / 1000))}ms, draw ${mean(draw)}ms`);
+ws.close();
