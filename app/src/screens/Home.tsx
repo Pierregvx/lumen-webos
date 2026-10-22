@@ -1,6 +1,7 @@
 import {t as tr} from '../lib/i18n';
 import type {Weather} from '../lib/weather';
 import {VideoCaption} from '../components/VideoCaption';
+import {LowerVeil} from '../components/LowerVeil';
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import {Clock} from '../components/Clock';
 import {Glyph} from '../components/Glyph';
@@ -394,7 +395,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 	const n = nav.current;
 	const rowIndex = clamp(n.rowIndex, 0, Math.max(0, rows.length - 1));
 	const lower = n.zone === 'rows' && rowIndex >= 1;
-	// the glass stays a plain tint until the rows have slid back (see .screen--plainglass in global.css)
+	// the glass stays a plain tint until the rows have slid back (see .screen--plainglass in global.css); Live blur has no picture to swap, so it skips the class and its full restyle
 	const [settling, setSettling] = useState(false);
 	const wasLower = useRef(false);
 	useEffect(() => {
@@ -424,8 +425,8 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 	const topPointer = (i: number) => () => { if (!overlay) { n.mode = 'pointer'; n.engaged = true; n.zone = 'top'; n.topIndex = i; render(); } };
 	const focusedTop = (i: number) => n.engaged && n.zone === 'top' && i === n.topIndex;
 	return (
-		<div class={`screen${active ? '' : ' screen--inactive'}${lower ? ' screen--lower' : ''}${lower || settling ? ' screen--plainglass' : ''}${n.moving ? ' screen--moving' : ''}${n.dockHidden ? ' screen--dockhidden' : ''}`}>
-			<div class="lowerveil" />
+		<div class={`screen${active ? '' : ' screen--inactive'}${lower ? ' screen--lower' : ''}${(lower || settling) && !document.documentElement.classList.contains('liveblur') ? ' screen--plainglass' : ''}${n.moving ? ' screen--moving' : ''}${n.dockHidden ? ' screen--dockhidden' : ''}`}>
+			<LowerVeil />
 			<Status weather={weather} showPeriod={showPeriod} />
 			<VideoCaption />
 			<div class="dockhint" onClick={() => { n.dockHidden = false; render(); }}><svg viewBox="0 0 48 28" aria-hidden="true"><path d="M6 22 24 6l18 16" /></svg></div>

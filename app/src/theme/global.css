@@ -913,18 +913,22 @@ html.wp-video .screen--lower::before { background-color: transparent; background
 .screen.screen--lower { --wp-blur: inherit; }
 .lowerveil {
 	position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none;
-	opacity: 0; transition: opacity 220ms ease-out;
+	opacity: 0; transition: opacity 312ms cubic-bezier(0.3, 0, 0.15, 1); will-change: opacity;
 	background-color: #10131c;
 	background-image: linear-gradient(rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.26)), var(--wp-bg, none);
 	background-size: auto, cover; background-position: 0 0, center; background-repeat: no-repeat;
 }
-.screen--lower .lowerveil { opacity: 1; }
-html:not(.settled) .screen:not(.screen--plainglass) .lowerveil, html:not(.settled) .screen:not(.screen--plainglass) .rows > .row:nth-child(n+3) { visibility: hidden; }
+.screen--lower .lowerveil { opacity: 1; transition: opacity 253ms cubic-bezier(0.55, 0, 0.75, 1); }
+html:not(.settled) .screen:not(.screen--plainglass):not(.screen--lower) .lowerveil, html:not(.settled) .screen:not(.screen--plainglass):not(.screen--lower) .rows > .row:nth-child(n+3) { visibility: hidden; }
 html.wp-video .lowerveil { background-color: transparent; background-image: linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42)); }
 .screen--dockhidden .lowerveil { display: none; }
+/* the picture is drawn in a canvas (components/LowerVeil.tsx): the veil itself draws nothing, so it is one layer with no tiles */
+.lowerveil--canvas { background: none !important; }
+.lowerveil__canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
 
-.rows, html.wp-video .rows { transition: transform 240ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 220ms ease; }
-.rows--lower, html.wp-video .rows--lower { top: var(--layout-rows-top); transform: translateY(calc(-1 * var(--lower-shift, 300px))); }
+/* both ways slowest near the dock: Down eases out of it slowly, Up eases into it long. Up is longer (340 ms against 276): Sam felt it too fast */
+.rows, html.wp-video .rows { transition: transform 340ms cubic-bezier(0.3, 0, 0.15, 1), opacity 220ms ease; }
+.rows--lower, html.wp-video .rows--lower { top: var(--layout-rows-top); transform: translateY(calc(-1 * var(--lower-shift, 300px))); transition: transform 276ms cubic-bezier(0.55, 0, 0.75, 1), opacity 220ms ease; }
 
 html:not(.wp-video) .screen--plainglass { --wp-blur: linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)); }
 html.light:not(.wp-video) .screen--plainglass { --wp-blur: linear-gradient(rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.42)); }
@@ -1106,12 +1110,14 @@ html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.1; }
 
 /* ---------- peek and grid spacing, measured from tvOS ----------
    At rest only a sliver of the grid's first row shows under the bar. Down in the grid, the grid rows drop 40px further from the bar
-   (about 70px of space under the glass, as on tvOS) so the focused tile has room. The focused grid tile grows 1.175x. The bar's tiles grow 1.12x, so the focused app's name fits under the icon inside the bar's 40px of glass. */
+   (about 70px of space under the glass, as on tvOS) so the focused tile has room. The focused grid tile grows 1.14x (1.175 left too little room for the open-app dot over it). The bar's tiles grow 1.12x, so the focused app's name fits under the icon inside the bar's 40px of glass. */
 .screen--lower .rows > .row:not(:first-child) { transform: translateY(40px); }
-.rows { --motion-focus-scale: 1.175; }
+.rows { --motion-focus-scale: 1.14; }
 html.focus-subtle .rows { --motion-focus-scale: 1.1; }
 html.focus-strong .rows { --motion-focus-scale: 1.235; }
 .rows > .row:first-child { --motion-focus-scale: 1.12; }
+/* the bar's and the first grid row's tiles keep a layer each, so a Down or Up does not re-raster the rows they sit in (docs/frame-rate.md) */
+.rows > .row:nth-child(-n+2) .tile__box { will-change: transform; }
 html.focus-subtle .rows > .row:first-child { --motion-focus-scale: 1.06; }
 html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.16; }
 .rows > .row:not(:first-child) .tile__label { margin-top: 32px; }
@@ -1160,6 +1166,11 @@ html.liveblur .cc__mod {
 	-webkit-backdrop-filter: var(--live-glass); backdrop-filter: var(--live-glass);
 	background-attachment: scroll !important; background-color: var(--live-tint) !important; background-blend-mode: normal !important;
 }
+/* only the focused or open control keeps its live blur: each one adds about 2 ms of GPU draw to every frame (docs/frame-rate.md) */
+html.liveblur .topbar > .pill:not(.pill--focused):not(.pill--open), html.liveblur .topcap:not(.topcap--focused):not(.topcap--open),
+html.liveblur .cc__mod:not(.cc__mod--focused) { -webkit-backdrop-filter: none; backdrop-filter: none; }
+/* the glass bar has no live blur (it halved the frame rate of every move); the sheen and rims keep it glass. Its own layer, so a move does not repaint it */
+html.liveblur .rows > .row:first-child::before { -webkit-backdrop-filter: none; backdrop-filter: none; will-change: transform; }
 .cc__mod svg { position: static; width: 44px; height: 44px; fill: none; stroke: rgba(255, 255, 255, 0.9); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .cc__mod--on svg { stroke: var(--cc-on); }
 
