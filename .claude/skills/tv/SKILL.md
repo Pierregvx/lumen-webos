@@ -9,7 +9,7 @@ The TV is `root@192.168.0.20` (also `LUMEN_TV_HOST` in the gitignored `.env`). K
 
 ## Consent
 
-Installing, launching, key presses and live CSS all change what is on Sam's screen, and he may be watching something. Ask before each install, the same way you ask before a commit: one yes or no line. When Sam asks for a push, read "push" as a GitHub push for a dev build unless he names the TV. Reading the log, `eval` of read-only expressions and screenshots need no ask.
+After you push a dev build, install it and launch it yourself. Do not ask Sam to update in the Homebrew Channel. Two exceptions: SSH fails (the TV is in standby or off the network), or Sam has said not to touch the TV. Then tell him the build number to update to in the Channel. Key presses and live CSS change what is on Sam's screen, so use them only in a task that needs them. Reading the log, `eval` of read-only expressions and screenshots need no ask.
 
 ## Install a build
 

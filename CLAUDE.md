@@ -13,9 +13,9 @@ The target TV is an LG 43UT91006LA on webOS 25 (Chromium 120). The repo was firs
 
 ## Getting a build onto the TV
 
-A push to any branch other than `main` runs `.github/workflows/release.yml`, which publishes a dev build (version `1.0.9xxx`) to the Homebrew Channel's dev feed. That is how Sam tests: he updates in the Channel, tries it, and reports back. A push to `main` builds nothing, so a change for Sam to check goes on a branch. A `v*` tag makes a stable release.
+A push to any branch other than `main` runs `.github/workflows/release.yml`, which publishes a dev build (version `1.0.9xxx`) to the Homebrew Channel's dev feed. You install that build on the TV over SSH (the `tv` skill), then Sam tries it and reports back. Ask Sam to update in the Channel only when SSH fails or he has said not to touch the TV. A push to `main` builds nothing, so a change for Sam to check goes on a branch. A `v*` tag makes a stable release.
 
-This Mac has SSH and DevTools access to the TV. With it you can install a build, read the log, run JS or CSS in the live page, take screenshots, or develop live while Sam watches. The `tv` skill (`.claude/skills/tv/SKILL.md`) has the steps and quirks. Ask Sam before you install on the TV, the same way you ask before a commit.
+This Mac has SSH and DevTools access to the TV. With it you can install a build, read the log, run JS or CSS in the live page, take screenshots, or develop live while Sam watches. The `tv` skill (`.claude/skills/tv/SKILL.md`) has the steps and quirks. Install each dev build you push without asking, unless Sam has said not to touch the TV.
 
 Dev builds write a "boot" timeline line to `/var/lib/homehook/lumen.log` after each launch. `docs/startup-perf.md` explains how to read it.
 
