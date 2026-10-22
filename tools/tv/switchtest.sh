@@ -9,8 +9,8 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 HOST=${LUMEN_TV_HOST:-root@192.168.0.20}
 DWELL=${1:-20}
 case "$DWELL" in ''|*[!0-9]*) echo "usage: switchtest.sh [dwell-seconds]" >&2; exit 1 ;; esac
-# Home, Plex, BBC iPlayer, YouTube, Channel 4, Channel 5: the apps in daily use, with Home between them as it is used.
-SEQ="com.samrenfrew.lumen com.beb.plxnative com.samrenfrew.lumen bbc.iplayer.3.0 com.beb.plxnative youtube.leanback.v4 com.samrenfrew.lumen com.fvp.ch4 com.beb.plxnative demand5 youtube.leanback.v4 com.samrenfrew.lumen com.beb.plxnative"
+# Home, Plex, BBC iPlayer, YouTube, Channel 4, Channel 5: the apps in daily use, with Home between them as it is used. SWITCH_SEQ replaces it.
+SEQ=${SWITCH_SEQ:-"com.samrenfrew.lumen com.beb.plxnative com.samrenfrew.lumen bbc.iplayer.3.0 com.beb.plxnative youtube.leanback.v4 com.samrenfrew.lumen com.fvp.ch4 com.beb.plxnative demand5 youtube.leanback.v4 com.samrenfrew.lumen com.beb.plxnative"}
 
 # luna-send prints nothing without a tty, hence -tt; the tty adds \r, which tr removes.
 ssh -tt -o BatchMode=yes -o LogLevel=ERROR "$HOST" "

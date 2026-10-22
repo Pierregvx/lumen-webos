@@ -1,0 +1,72 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "docs-mockups",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765",
+        "--directory",
+        "docs"
+      ],
+      "port": 8765
+    },
+    {
+      "name": "app",
+      "runtimeExecutable": "app/node_modules/.bin/vite",
+      "runtimeArgs": [
+        "app",
+        "--port",
+        "5199",
+        "--host",
+        "127.0.0.1",
+        "--strictPort"
+      ],
+      "port": 5199,
+      "url": "http://127.0.0.1:5199"
+    },
+    {
+      "name": "app-dist",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5198",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "app/dist"
+      ],
+      "port": 5198
+    },
+    {
+      "name": "app-lan",
+      "runtimeExecutable": "app/node_modules/.bin/vite",
+      "runtimeArgs": [
+        "app",
+        "--port",
+        "5200",
+        "--host",
+        "0.0.0.0",
+        "--strictPort"
+      ],
+      "port": 5200
+    },
+    {
+      "name": "app-dist-lan",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5201",
+        "--bind",
+        "0.0.0.0",
+        "--directory",
+        "app/dist"
+      ],
+      "port": 5201
+    }
+  ]
+}
