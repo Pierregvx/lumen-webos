@@ -32,7 +32,7 @@ import {CITIES, COUNTRIES} from './config/cities';
 import {AUTO_PLACE, peekWeather, readWeather, type Weather} from './lib/weather';
 import {useLiveTv} from './hooks/useLiveTv';
 import {channelColor, nowNextAt, rowChannels, type Channel} from './lib/livetv';
-import {openChannel} from './lib/root';
+import {openChannel, runningApps} from './lib/root';
 import {bootMark, navMark} from './lib/log';
 import {isDark, LANGS, setClockMode, setLang} from './lib/i18n';
 
@@ -192,6 +192,23 @@ export function App () {
 		return () => { cancel(); document.removeEventListener('visibilitychange', onVisibility); };
 	}, [showToast]);
 
+	// the apps still open in the background (docs/keep-alive.md), read again 5 s after Lumen comes to the front: the TV may close some just then
+	const [running, setRunning] = useState<string[]>([]);
+	useEffect(() => {
+		if (!isWebOS()) { setRunning(['youtube.leanback.v4', 'com.beb.plxnative']); return undefined; }
+		let again = 0;
+		const read = () => runningApps().then((ids) => setRunning((now) => (now.join() === ids.join() ? now : ids))).catch(() => undefined);
+		const onVisibility = () => {
+			window.clearTimeout(again);
+			if (document.hidden) return;
+			read();
+			again = window.setTimeout(read, 5000);
+		};
+		const cancel = afterFirstFrame(onVisibility);
+		document.addEventListener('visibilitychange', onVisibility);
+		return () => { cancel(); window.clearTimeout(again); document.removeEventListener('visibilitychange', onVisibility); };
+	}, []);
+
 	useEffect(() => { setPicks(config.wallpaperPicks, config.wpNewOnLaunch); setWallpaper(config.wallpaper); }, [config.wallpaper]);
 	useEffect(() => setPicks(config.wallpaperPicks, config.wpNewOnLaunch), [config.wallpaperPicks, config.wpNewOnLaunch]);
 
@@ -318,9 +335,10 @@ export function App () {
 	/** what the home rows show: the apps that are not in a folder, then one tile per folder */
 	const homeTiles = useMemo(() => {
 		const inFolder = config.folders.reduce((all, f) => all.concat(f.appIds), [] as string[]);
-		return shownApps.filter((a) => inFolder.indexOf(a.id) === -1).map(appTile)
-			.concat(folderTiles.map((f): TileModel => ({key: 'folder:' + f.name, label: f.name, color: '#3b4256', children: f.items.map((t) => t.imageUrl)})));
-	}, [shownApps, folderTiles, config.folders]);
+		const open = (id: string) => running.indexOf(id) !== -1;
+		return shownApps.filter((a) => inFolder.indexOf(a.id) === -1).map((a): TileModel => ({...appTile(a), running: open(a.id)}))
+			.concat(folderTiles.map((f): TileModel => ({key: 'folder:' + f.name, label: f.name, color: '#3b4256', children: f.items.map((t) => t.imageUrl), running: f.items.some((t) => open(t.key))})));
+	}, [shownApps, folderTiles, config.folders, running]);
 
 	// the first row (in the glass bar) holds config.firstRow apps; the rest make a grid of rows as wide below it, like the tvOS home screen
 	// (the grid rows are 'dock', 'dock:1', 'dock:2'...)

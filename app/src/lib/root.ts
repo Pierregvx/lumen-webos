@@ -58,6 +58,16 @@ export function listLaunchPoints (): Promise<string> {
 	return run(luna('luna://com.webos.applicationManager/listLaunchPoints', {}), 8000);
 }
 
+const APP_ID = /^[A-Za-z0-9._-]+$/;
+
+/** The ids of the apps the TV has open, Lumen too. Root because the app manager's running list is not offered to apps. */
+export function runningApps (): Promise<string[]> {
+	return run(luna('luna://com.webos.applicationManager/running', {})).then((text) => {
+		const ids = (JSON.parse(text).running || []) as {id?: string}[];
+		return ids.map((a) => a.id || '').filter((id) => APP_ID.test(id));
+	});
+}
+
 /** Icons as "<index> <base64>" lines, one per path; paths that are not plain absolute paths are skipped (their line is missing). */
 export function readIcons (paths: string[]): Promise<string> {
 	const script = paths

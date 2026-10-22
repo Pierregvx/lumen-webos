@@ -30,6 +30,7 @@ Every push to a branch other than `main` reaches the TV as a Homebrew Channel up
 ### Verify on the TV (built, not yet seen working)
 
 Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or later).
+- [ ] Running dot (verify, installed by hand 2026-10-22, not committed): a small white dot sits above each app that is open in the background, inside the glass, and rises with the app when it has focus. It is read when Lumen comes to the front and again 5 s later. A folder has a dot when an app inside it is open. Apps the TV opens itself in the background (YouTube at start-up) get a dot too.
 - [ ] Glass sheen and focus lift (verify, branch `home/dock-names`; seen live over DevTools, now in source): the glass bar's rim has a faint blue fringe top left and a weaker pink one bottom right. A highlight on the bar's top edge sits over the focused app, slides with focus, stops short of the rounded ends, and fades when focus leaves the bar. The glass bar, Control Center and Inputs blur 3px; the top buttons stay at 2px. A focused app lifts 7.5px as it grows (it was 3px), on the bar and the grid, and its name rises with it.
 - [ ] Immich Recent window and stacks (verify, branch `home/dock-names`): Settings > Wallpaper > Recent photos from offers Last month to Last year, set to Last 6 months by default, and the Recent photos change to match. Once the API key has `stack.read`, only the cover photo of a stack shows; within 6 hours of adding the permission (the empty answer is kept that long).
 - [ ] Inputs exit and top bar order (verify, branch `home/dock-names`): in the Inputs list, Down twice within a second on the last input closes it and returns the focus to the glass bar. The top bar reads Control Center, Settings, Inputs, and the first Up from the bar lands on Control Center.
@@ -129,6 +130,11 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
       stays the thing to make fast (Phase 4).
 - [ ] Keep apps alive: Home or Recents leaves the app you were in running, and Lumen opens with no launch screen. One session of tests
       with a memory profile, planned in `docs/keep-alive.md` (`clearBackgroundApp`, `KeepOnLaunchEx`, keep-alive lists).
+      Done 2026-10-22: Lumen is always kept (memchute's `KeepAlive`), and iPlayer, YouTube, Plex, Channel 4 and Channel 5 stay open until
+      the TV needs the memory (`KeepOnLaunchEx`). iPlayer needed its appinfo patched (`closeOnBackground`). Reopens are warm (under 1.5 s).
+      Results in `docs/keep-alive.md`. Sam checked at the TV: no launch screen and a much faster Lumen, and iPlayer and Plex stay open
+      long enough to go back. But Lumen's home screen lags for a moment on return. Next and untried: "Not tried yet" in
+      `docs/keep-alive.md`. **(verify)**: Plex and iPlayer go quiet in the background and carry on from the same point.
 - [ ] Recents button: rebind it with Input Hook to launch Lumen with `{"view":"recent"}` (needs the launch-parameter check above).
 - [ ] SF font from the TV: `npm run push-font` (once), then update and relaunch. The first launch after each update copies the font into
       the app's folder about 5 seconds in, so the text turns from Geist to SF then; later launches start in SF. Reading straight from

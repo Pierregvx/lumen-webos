@@ -21,6 +21,8 @@ export interface TileModel {
 	wordmark?: string;
 	/** a channel on the Live TV row: drawn by ChannelTile */
 	live?: LiveTile;
+	/** the app is open in the background, so it comes back where it was: a dot above the tile */
+	running?: boolean;
 }
 
 interface Props {
@@ -54,6 +56,7 @@ export function Tile ({model, focused, lifted, checked, dimmed, onHover, onActiv
 	};
 	return (
 		<div class={classes} onMouseEnter={onHover} onClick={onActivate} onMouseMove={focused ? tilt : undefined} onMouseLeave={untilt}>
+			<div class={model.running ? 'tile__dot tile__dot--on' : 'tile__dot'} />
 			<div class="tile__box" style={model.color && (!model.imageUrl || model.plain) ? {background: model.color} : undefined}>
 				{model.children
 					? <div class="tile__folder">{model.children.slice(0, 4).map((u, i) => <div key={i} class="tile__mini" style={u ? {backgroundImage: `url("${u}")`} : undefined} />)}</div>

@@ -217,6 +217,23 @@ html, body {
 }
 .tile__badge svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 
+/* an app open in the background: a dot above its tile. Zero height so the row does not move; it rises with the focused tile. */
+.tile__dot { position: relative; height: 0; }
+.tile__dot::before {
+	content: '';
+	position: absolute;
+	left: 50%; top: -24px;
+	width: 8px; height: 8px;
+	margin-left: -4px;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.92);
+	box-shadow: 0 0 6px rgba(0, 0, 0, 0.45);
+	opacity: 0;
+	transition: opacity var(--motion-focus-ms) ease-out, transform var(--motion-focus-ms) ease-out;
+}
+.tile__dot--on::before { opacity: 1; }
+.tile--focused .tile__dot::before { transform: translateY(-8px); }
+
 /* ---------- settings ---------- */
 
 .settings {
