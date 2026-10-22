@@ -197,7 +197,7 @@ export function App () {
 	useEffect(() => {
 		if (!isWebOS()) { setRunning(['youtube.leanback.v4', 'com.beb.plxnative']); return undefined; }
 		let again = 0;
-		const read = () => runningApps().then((ids) => setRunning((now) => (now.join() === ids.join() ? now : ids))).catch(() => undefined);
+		const read = () => runningApps().then((ids) => ids.sort()).then((ids) => setRunning((now) => (now.join() === ids.join() ? now : ids))).catch(() => undefined);
 		const onVisibility = () => {
 			window.clearTimeout(again);
 			if (document.hidden) return;

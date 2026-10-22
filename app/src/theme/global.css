@@ -229,9 +229,11 @@ html, body {
 	background: rgba(255, 255, 255, 0.92);
 	box-shadow: 0 0 6px rgba(0, 0, 0, 0.45);
 	opacity: 0;
-	transition: opacity var(--motion-focus-ms) ease-out, transform var(--motion-focus-ms) ease-out;
+	visibility: hidden;
+	transition: opacity var(--motion-focus-ms) ease-out, transform var(--motion-focus-ms) ease-out, visibility 0s linear var(--motion-focus-ms);
 }
-.tile__dot--on::before { opacity: 1; }
+/* a hidden dot is visibility: hidden, not only transparent, so it gets no drawn layer of its own (docs/keep-alive.md) */
+.tile__dot--on::before { opacity: 1; visibility: visible; transition-delay: 0s; }
 .tile--focused .tile__dot::before { transform: translateY(-8px); }
 
 /* ---------- settings ---------- */
@@ -795,9 +797,9 @@ html.dark.wp-video { --wp-blur: linear-gradient(rgba(8, 10, 18, 0.50), rgba(8, 1
 /* dock hidden: the top-right buttons go too, and a small chevron at the bottom shows the way back */
 .topbar { transition: opacity 220ms ease; }
 .screen--dockhidden .topbar { opacity: 0; pointer-events: none; }
-.dockhint { position: absolute; left: 50%; bottom: 34px; margin-left: -26px; width: 52px; height: 30px; opacity: 0; transition: opacity 260ms ease; pointer-events: none; }
+.dockhint { position: absolute; left: 50%; bottom: 34px; margin-left: -26px; width: 52px; height: 30px; opacity: 0; visibility: hidden; transition: opacity 260ms ease, visibility 0s linear 260ms; pointer-events: none; }
 .dockhint svg { width: 52px; height: 30px; fill: none; stroke: rgba(255, 255, 255, 0.62); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.25)); }
-.screen--dockhidden .dockhint { opacity: 1; pointer-events: auto; }
+.screen--dockhidden .dockhint { opacity: 1; visibility: visible; transition-delay: 0s; pointer-events: auto; }
 
 /* ---------- light look (Appearance: Light): bright frosted glass, dark text ---------- */
 html.light {
@@ -901,7 +903,8 @@ html.wp-video .screen--lower::before { background-color: transparent; background
 /* ---------- going down to the lower rows: compositor-only ----------
    Before: the rows moved with `top` (layout and repaint every frame), the full-screen blurred backdrop was created on the spot as a
    ::before with an animation, and every glass shape switched to a different picture at the same moment. Now:
-   - the backdrop is a permanent layer (.lowerveil) that is always painted and only fades;
+   - the backdrop (.lowerveil) fades; it and the rows below the screen are drawn only while lower or settling, so a return from another
+     app redraws no hidden layers (docs/keep-alive.md);
    - the rows slide with transform;
    - while lower (and for a moment after, .screen--plainglass) the glass shows a plain tint instead of the fixed-position wallpaper copy:
      a fixed background is repainted on every frame of movement, and a transformed ancestor would misplace it. Over the strongly
@@ -910,12 +913,13 @@ html.wp-video .screen--lower::before { background-color: transparent; background
 .screen.screen--lower { --wp-blur: inherit; }
 .lowerveil {
 	position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none;
-	opacity: 0; transition: opacity 220ms ease-out; will-change: opacity;
+	opacity: 0; transition: opacity 220ms ease-out;
 	background-color: #10131c;
 	background-image: linear-gradient(rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.26)), var(--wp-bg, none);
 	background-size: auto, cover; background-position: 0 0, center; background-repeat: no-repeat;
 }
 .screen--lower .lowerveil { opacity: 1; }
+.screen:not(.screen--plainglass) .lowerveil, .screen:not(.screen--plainglass) .rows > .row:nth-child(n+3) { visibility: hidden; }
 html.wp-video .lowerveil { background-color: transparent; background-image: linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42)); }
 .screen--dockhidden .lowerveil { display: none; }
 

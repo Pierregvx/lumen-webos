@@ -69,20 +69,68 @@ Sam's sequence (Lumen and iPlayer in turn, with Plex and YouTube between, 20 ope
 A warm open is 0.4 to 1.6 s to the front, against 3 to 11 s cold. Lumen's own process is about 35 MB in the background (its share of the
 shared web engine is not counted).
 
+## Lumen's memory
+
+Measured 2026-10-22, two runs: Lumen in front 30 s, then iPlayer in front with Lumen in the background (3, 13 and 73 s), then Lumen
+closed. Usable is the memory manager's figure, the one it closes apps by.
+
+| State | Usable MB | MemAvailable MB | GPU MB (web engine) | Lumen renderer PSS+swap MB |
+|---|---|---|---|---|
+| Lumen in front | 298-308 | 213-222 | 69-75 | 41+8 (old), 64+0 (fresh) |
+| Background 3 s | 269-271 | 221-223 | 111-113 | 33+8, 58+1 |
+| Background 73 s | 328-331 | 236-249 | 57 | 33+8, 58+0 |
+| Lumen closed | 393-394 | 300-305 | 23-24 | - |
+
+- Lumen in the background costs about 63 MB of usable memory. About 33 MB of it is GPU memory, the rest is its renderer.
+- The GPU memory of all web apps shows under the web engine's main process (`WebAppMgr`, GPU in process), in
+  `/sys/kernel/debug/pvr/proc_stats/live_pids_stats/process_stats`. Process figures such as RSS and PSS do not include it.
+- Lumen's GPU memory is let go slowly: 111 MB just after a switch, 57 MB after a minute, 24 MB with Lumen closed. The 33 MB still held
+  is probably drawn layers and decoded pictures. Lumen draws 37 layers, 5.9 screens of pixels, and `.lowerveil` (full screen) and the rows
+  (`will-change`) each keep a layer of their own.
+- A web renderer with little in it uses about 26 MB (iPlayer's), so Lumen's own share of its renderer is about 10 to 30 MB.
+- Inside the page: JS heap 10 MB, 268 elements, 20 images (0.8 megapixels), no canvas or video. `localStorage` holds 3.5 MB of text, of
+  which the channel logos are 3.2 MB (`lumen-livetv-logos-v2`, base64 PNG) and the icon cache 0.17 MB. The browser keeps `localStorage`
+  in the renderer's memory, so the logos cost there all the time, not only when drawn (estimate: 3 to 6 MB).
+- Hidden layers cut 2026-10-22 (verify): the running dots that are off, the dock hint, the veil and the rows fully below the screen are now
+  `visibility: hidden` until used, so they get no layer. The home screen went from 38 drawn layers (5.9 screens of pixels) to 13 (3.9).
+  Nothing on screen changes; the veil and the third row onwards draw when Down is pressed. Second run of the table above: GPU memory with
+  Lumen in front 57 to 60 MB (was 69 to 75). In the background Lumen still holds about 33 MB of GPU memory, so that part is the visible
+  layers and pictures, not the hidden ones. Usable memory could not be compared: LG Home and LG Channels were open in the second run.
+  Return lag with this build, measured 2026-10-22 by frame gaps in the page (`requestAnimationFrame` from `visibilitychange`, iPlayer
+  in front 15 s, launches over SSH): the page catches up in 1.3 to 2.1 s (was 3.1 to 3.7 s by trace, a different method). One run just
+  after a cold boot froze for about 7 s. Down pressed about 1 s after the return: one run had stutters of 100 to 320 ms as the rows came
+  up, the other was smooth.
+- How to measure again: per process, `/proc/<pid>/smaps_rollup`; GPU, the file above; the app's process id, `applicationManager/running`.
+
 ## Not tried yet
 
 Most useful first:
 
-1. Lumen's lag on return. Lumen lets go of its wallpaper 5 s after it leaves the screen (`lib/wallpaper.ts`, and the video's decoder in
-   `lib/wallpaperVideo.ts`), so each return decodes the full picture and its blurred copy again. That saved memory when Lumen was closed
-   anyway. Keeping them costs memory, so measure both. The memory manager also pushes background apps to swap on flash, and paging back in
-   is slow. A DevTools performance trace of a return (over `tools/tv/cdp.mjs`) would show which it is.
-2. Lumen's memory footprint, measured fully (with its share of the web engine), then trimmed. Sam's next benchmark.
+1. Lumen's lag on return. Traced 2026-10-22 (three returns from Plex, 3 s and 20 s away): after the first frame, the page draws almost
+   nothing for 3.1 to 3.7 s. The cause is the GPU drawing the whole page again (3.3 to 4.7 s of GPU thread work), because the browser drops
+   a hidden page's drawn tiles and decoded images. Lumen has 37 drawing layers, 5.9 screens of pixels in all, four of them full screen.
+   Not the cause: swap (Lumen had about 13 MB swapped) and Lumen's own 5 s wallpaper release (a 3 s return decoded the pictures again too).
+   Smaller parts: Lumen's return handlers run 215 to 330 ms of script before the first full frame (inputs, running apps, time format),
+   and memory pressure makes the browser decode the wallpaper a second time.
+   Live tests the same day, one return each: hiding `.lowerveil` and the lower rows (kept painted at opacity 0 so that Down is a fade) cut
+   the layers to 15 and 3.8 screens, GPU work to 2.2 s, and the freeze to about 2 s. Live blur off as well (its backdrop filter puts the
+   tiles over it on layers of their own): 10 layers, 3.2 screens, GPU 1.6 s, freeze about 1.5 s. A smaller stutter at about 5 s is the
+   second read of the open apps and the render after it.
+   Decided 2026-10-22: no visible change on return. The hidden rows built (`html.away`, rows and veil hidden for 2 s) and Sam saw it at
+   the TV: the screen is already drawn when Lumen returns, so rows that vanish and come back look broken, though the freeze is shorter.
+   iPlayer flickers the same way as it redraws. The lag only shows if a button is pressed in the first 3.5 s, so an invisible lag is
+   better than a visible change. Any fix here must cut the GPU work without changing what is on screen (fewer layers, glass baked into the
+   wallpaper copy).
+2. Trim Lumen's memory footprint. Measured 2026-10-22, see "Lumen's memory" below. The drawn layers are the biggest part, and cutting
+   them also shortens the return lag (item 1) with nothing changed on screen. Then the channel logos out of `localStorage`.
 3. Lumen at boot. `watch.sh` only swaps LG Home for Lumen after a boot or wake. When the TV boots into Live TV, nothing starts Lumen, so
    the first Home press is a cold start (about 8 s).
-4. Turn off the preloads Sam does not use (YouTube, LG Channels, AirPlay) at each boot from the boot hook, with
-   `preloadmanager/setPreloadPolicy {"application":{"id":"...","isEnabled":false}}`. The call works, but the change is lost at reboot.
-   This also stops YouTube getting a running dot before anyone opens it.
+4. Done 2026-10-22 (verify): the preloads Sam does not use (YouTube, LG Channels, AirPlay) are off. `setPreloadPolicy` returns true but
+   does not write the file and is lost at reboot. Instead, `allowedApps` in `/var/preferences/webos-preload-manager-conf.json` has
+   `false` for `com.webos.app.lgchannels`, `airplay` and `youtube.leanback.v4`. That holds across a reboot: `getPreloadPolicy` shows
+   `isAllowed: false` for the three, and none of them ran in the first 5 minutes after boot. Netflix is also `false`: it has a preload
+   entry but is not installed, so the entry only matters if it comes back. LG Home (CRIU), Live TV, HDMI 1, HDMI 3, Live Menu and Voice
+   are still allowed; LG Home stays because the power button opens it before `watch.sh` swaps in Lumen. This also stops YouTube getting a running dot before anyone opens it.
 5. Preload our own apps. Adding them to the config did not work, and `setPreloadPolicy` answers "Cannot find" for an app it does not know.
    Untried: `allowedApps` in `/var/preferences/webos-preload-manager-conf.json`, and the preload manager's own stored list.
 6. Keep the iPlayer patch after an iPlayer update: reapply it at boot when the flag is back. Unknown whether the app manager reads the
@@ -108,11 +156,13 @@ Most useful first:
 - `sh tools/tv/memwatch.sh [seconds] [count]`: read only. Per sample: time, app in front, the memory manager's level and usable MB,
   `MemAvailable`, swap used, then each open app as `id=RSS+swap` MB.
 - `sh tools/tv/variant.sh <in.ipk> '<json>' <out-dir>`: a copy of a built `.ipk` with extra appinfo keys.
-- `reboot` over SSH brings the TV back on, and it stays on. Wake-on-LAN is on (`eth0`, `00:a1:59:e8:89:08`) if it ever stays off.
+- `reboot` over SSH usually brings the TV back on. On 2026-10-22 it stayed off after the preload edit and reboot. Wake-on-LAN
+  (`eth0`, `00:a1:59:e8:89:08`, a magic packet to the broadcast address) turned it on, with a cold boot.
 
 ## Undo
 
 - A config key: `setConfigs` with its old value. The old values are in the backup above.
 - All config: copy `/var/lib/homehook/configd_db.backup.json` back to `/var/preferences/configd_db.json` and reboot.
+- Preloads: copy `/var/lib/homehook/preload-conf.backup.json` over `/var/preferences/webos-preload-manager-conf.json` and reboot.
 - iPlayer: copy the backup over `/media/cryptofs/apps/usr/palm/applications/bbc.iplayer.3.0/appinfo.json` and reboot.
 - Lumen: update it in the Homebrew Channel.
