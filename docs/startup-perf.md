@@ -113,6 +113,26 @@ Six warm relaunches on the dev build, Live blur off and on in turn, bundled stil
 - `script` itself moved from 0.7 s to 1.9 s between runs. That is before any Lumen code runs, and it is the biggest variable in these runs.
 - So removing the blur to speed up the launch, and fading it in after, buys nothing. Not built.
 
+## Down on the home screen (2026-10-22)
+
+Sam: Down to the lower rows is laggy now, not a smooth slide. Measured over DevTools, three Down presses per case, frames drawn by the page in
+the 1.2 s after the key (about 72 is smooth; standing still it holds about 60).
+
+| Case | Frames |
+|---|---|
+| As built (veil and rows 3+ hidden until Down) | 41-47 |
+| Veil and rows always drawn (before the hidden-layers change) | 46-49 |
+| Veil off | 48-50 |
+| Live blur off (glass shows the fixed wallpaper copy) | 22-36 |
+| Live blur off on the glass only while down | 23-37 |
+
+- A trace of one press: about 190 ms of style, layout, paint and commit before the first frame, then frames reach the screen 60-170 ms
+  apart. Each frame costs the GPU 15-27 ms to draw and 20-40 ms to swap. Four frames show during the 240 ms slide.
+- So the hidden-layers change costs a little (about 4 frames), but most of the lag is the GPU drawing full-screen layers (wallpaper, the
+  veil fading in, the blurred glass) on each frame. Switching the live blur off or on at Down makes it worse: the change itself is redrawn.
+- Not known: whether Down was smooth before the glass work. Next: install an older build, run the same test, and find the change that
+  slowed it.
+
 ## Still open
 
 - **Grid:** the lower rows are drawn 3.5 s after launch in one go, followed by a 0.4-1 s frozen stretch. Draw them one row at a time.
