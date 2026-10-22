@@ -100,6 +100,19 @@ still had `gap 110+400`, probably because the TV frees the drawn copy after a wh
 Opening Settings shows the key press about 200-290 ms before the switch, probably the OK press waiting for release (long press). Not
 looked at.
 
+## Live blur and launch time (2026-10-22)
+
+Six warm relaunches on the dev build, Live blur off and on in turn, bundled still wallpaper. Off shows the pre-blurred copy (`--wp-blur`).
+
+| Live blur | script | wallpaper | grid | wallpaper - script | grid - script |
+|---|---|---|---|---|---|
+| off | 1870, 1753, 1418 | 4277, 4473, 3887 | 6112, 5842, 5630 | 2407, 2720, 2469 | 4242, 4089, 4212 |
+| on | 704, 1334, 801 | 2790, 3517, 3286 | 4849, 5362, 5257 | 2086, 2183, 2485 | 4145, 4028, 4456 |
+
+- Counted from `script`, the two are the same: the grid comes about 4.2 s after the script starts either way. The live blur does not slow the launch.
+- `script` itself moved from 0.7 s to 1.9 s between runs. That is before any Lumen code runs, and it is the biggest variable in these runs.
+- So removing the blur to speed up the launch, and fading it in after, buys nothing. Not built.
+
 ## Still open
 
 - **Grid:** the lower rows are drawn 3.5 s after launch in one go, followed by a 0.4-1 s frozen stretch. Draw them one row at a time.

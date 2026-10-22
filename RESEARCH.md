@@ -54,6 +54,13 @@ Target hardware: LG UQ80 (65UQ8040PSB), webOS 22, alpha 5 Gen5 chip, 1.5 GB RAM,
   - Rejected: the same fringe on the Control Center blocks. A fixed pink there reads as a coloured edge, not a reflection, and a strong bottom-right shadow makes a pill look inset, not rounded.
   - Rejected: a fringe coloured from the blurred wallpaper under each corner (sampled once on a canvas). It did not read as a reflection, and it cannot work over video.
   - Not tried: thickness shading and corner highlights (the same inset risk), grain, and bending the rim into the pre-blurred wallpaper copy.
+- Third round (2026-10-22), with `tools/tv/glass-lab.mjs` (sliders on the Mac that restyle the glass bar live, with an fps check), still wallpaper, focus moving along the dock:
+  - Standing still, every setting holds about 60 fps. The cost only shows while something moves over the glass.
+  - Any backdrop filter halves the frame rate while moving: the 3px live blur 16-24 fps, refraction with no blur 14-27 fps. Frost only (a tint, no backdrop filter) 40-47 fps.
+  - Refraction strength (60 or 140) and bezel depth (14 or 40) make no clear difference. The cost is reading the backdrop at all, not the lens settings.
+  - The colour fringe (3 passes) drops to 4-7 fps while moving.
+  - Each layer alone, moving (3 runs each): tint, sheen and rims only 41 fps (45-47 without the focus highlight); colour boost (saturate and brightness) 33; 3px blur 25; refraction 18; refraction with the boost 19; refraction with blur and boost 15; refraction with the fringe 7. The first layer that reads the backdrop pays most of the cost.
+  - Thus the next thing to try is to bake the lens into the pre-blurred wallpaper copy once, so the glass reads nothing per frame.
 - Online, only SVG displacement or WebGL does real refraction. The static rim and highlight tricks are from https://dev.to/kevinbism/recreating-apples-liquid-glass-effect-with-pure-css-3gpl and https://dev.to/afif/border-with-gradient-and-radius-387f.
 
 ## Sources
