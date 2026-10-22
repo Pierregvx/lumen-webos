@@ -13,7 +13,9 @@ The target TV is an LG 43UT91006LA on webOS 25 (Chromium 120). The repo was firs
 
 ## Getting a build onto the TV
 
-A dev build is a local build that you install on the TV over SSH: `npm run deploy:home`. Use it for every change Sam is to try, committed or not. Install it without asking, unless Sam has said not to touch the TV. Do not push a branch only to get a build onto the TV, and do not ask Sam to update in the Homebrew Channel.
+**Hard rule: DevTools first, build last.** Put every change Sam is to try into the live page over DevTools (`cdp.mjs css` or `eval`, the `tv` skill), and let him judge it there. That includes JS changes such as a duration: patch them live with `eval`. Write the change into source as you go. Run `npm run deploy:home` only when Sam says it feels right, or tells you to build. Never install a build per try. If a change truly cannot be made live, say so and ask before building.
+
+A dev build is a local build that you install on the TV over SSH: `npm run deploy:home`. Do not push a branch only to get a build onto the TV, and do not ask Sam to update in the Homebrew Channel.
 
 A push to a branch other than `main` also publishes a Channel dev build (`1.0.9xxx`, `.github/workflows/release.yml`). That happens when Sam asks for a commit and push, not as a test step. A Channel update replaces a local install. A `v*` tag makes a stable release.
 
@@ -29,7 +31,7 @@ Dev builds write a "boot" timeline line to `/var/lib/homehook/lumen.log` after e
 
 ## Docs
 
-Feature plans and findings live in `docs/` (`live-tv.md`, `live-tv-build.md`, `settings-redesign.md`, `startup-perf.md`, `immich.md`, `spikes.md`, `keep-alive.md`). Read the one for the area you touch before changing it, and update it when a finding changes.
+Feature plans and findings live in `docs/` (`live-tv.md`, `live-tv-build.md`, `settings-redesign.md`, `startup-perf.md`, `frame-rate.md`, `immich.md`, `spikes.md`, `keep-alive.md`). Read the one for the area you touch before changing it, and update it when a finding changes.
 
 ## Commits
 
