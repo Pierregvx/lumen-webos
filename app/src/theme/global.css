@@ -950,8 +950,8 @@ html.hide-names .rows .tile__label, html.hide-names .panel--folder .tile__label 
 html.liveblur, html.liveblur * { --wp-blur: linear-gradient(transparent, transparent) !important; }
 /* closer to tvOS 26 Liquid Glass: a very light blur so the picture reads through, extra colour and a dark tint; the rims do the rest */
 html.liveblur { --live-glass: blur(2px) saturate(1.5) brightness(1.1); --live-tint: rgba(0, 0, 0, 0.3); }
-/* the glass bar and Control Center (Inputs too) blur a little more; the top buttons stay at 2px */
-html.liveblur .rows > .row:first-child, html.liveblur .panel--cc { --live-glass: blur(3px) saturate(1.5) brightness(1.1); }
+/* Control Center (Inputs too) blurs a little more; the glass bar and the top buttons stay at 2px */
+html.liveblur .panel--cc { --live-glass: blur(3px) saturate(1.5) brightness(1.1); }
 html.liveblur .row:not(.row--dock)::before, html.liveblur .topcap, html.liveblur .topbar > .pill, html.liveblur .panel {
 	-webkit-backdrop-filter: var(--live-glass);
 	backdrop-filter: var(--live-glass);
