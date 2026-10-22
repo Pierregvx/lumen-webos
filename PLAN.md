@@ -10,7 +10,7 @@ This is a personal fork. Nothing goes back to partridgeworks/webos-launcher. Fea
 
 Work is split in two: what can be built without the TV, and what needs someone at the TV. Code that needs a TV answer is still written when it
 can be written defensively (it does nothing harmful if the answer is no), and is marked **(verify)** until it has been seen working on the TV.
-Every push to a branch other than `main` reaches the TV as a Homebrew Channel update, so "verify" means: update in the Channel, try it, report back.
+The agent installs each change on the TV over SSH (`npm run deploy:home`), so "verify" means: Sam tries it on the TV and reports back.
 
 ---
 

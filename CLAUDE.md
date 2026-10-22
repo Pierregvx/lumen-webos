@@ -13,16 +13,18 @@ The target TV is an LG 43UT91006LA on webOS 25 (Chromium 120). The repo was firs
 
 ## Getting a build onto the TV
 
-A push to any branch other than `main` runs `.github/workflows/release.yml`, which publishes a dev build (version `1.0.9xxx`) to the Homebrew Channel's dev feed. You install that build on the TV over SSH (the `tv` skill), then Sam tries it and reports back. Ask Sam to update in the Channel only when SSH fails or he has said not to touch the TV. A push to `main` builds nothing, so a change for Sam to check goes on a branch. A `v*` tag makes a stable release.
+A dev build is a local build that you install on the TV over SSH: `npm run deploy:home`. Use it for every change Sam is to try, committed or not. Install it without asking, unless Sam has said not to touch the TV. Do not push a branch only to get a build onto the TV, and do not ask Sam to update in the Homebrew Channel.
 
-This Mac has SSH and DevTools access to the TV. With it you can install a build, read the log, run JS or CSS in the live page, take screenshots, or develop live while Sam watches. The `tv` skill (`.claude/skills/tv/SKILL.md`) has the steps and quirks. Install each dev build you push without asking, unless Sam has said not to touch the TV.
+A push to a branch other than `main` also publishes a Channel dev build (`1.0.9xxx`, `.github/workflows/release.yml`). That happens when Sam asks for a commit and push, not as a test step. A Channel update replaces a local install. A `v*` tag makes a stable release.
+
+This Mac has SSH and DevTools access to the TV. With it you can install a build, read the log, run JS or CSS in the live page, take screenshots, or develop live while Sam watches. The `tv` skill (`.claude/skills/tv/SKILL.md`) has the steps and quirks.
 
 Dev builds write a "boot" timeline line to `/var/lib/homehook/lumen.log` after each launch. `docs/startup-perf.md` explains how to read it.
 
 ## Checking work locally
 
 - Type check and build: `npm --prefix app run build`.
-- Preview: the `app` entry in `.claude/launch.json` (Vite on port 5199). There is no test suite; the preview and the TV are the checks.
+- Preview: build, then start the `app-dist` entry in `.claude/launch.json` (port 5198). The `app` entry (Vite) fails on this Mac with `EPERM uv_cwd`, because macOS does not let the preview start Node in Documents. There is no test suite; the preview and the TV are the checks.
 - `app/private/` (icons, wallpapers, font) is gitignored and may be absent. The app must still work without it, since the public release is built that way.
 
 ## Docs

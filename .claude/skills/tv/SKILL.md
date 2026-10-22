@@ -9,17 +9,16 @@ The TV is `root@192.168.0.20` (also `LUMEN_TV_HOST` in the gitignored `.env`). K
 
 ## Consent
 
-After you push a dev build, install it and launch it yourself. Do not ask Sam to update in the Homebrew Channel. Two exceptions: SSH fails (the TV is in standby or off the network), or Sam has said not to touch the TV. Then tell him the build number to update to in the Channel. Key presses and live CSS change what is on Sam's screen, so use them only in a task that needs them. Reading the log, `eval` of read-only expressions and screenshots need no ask.
+To put a change on the TV, build it locally and install it yourself with `npm run deploy:home`. Do not ask first, and do not ask Sam to update in the Homebrew Channel. Two exceptions: SSH fails (the TV is in standby or off the network), or Sam has said not to touch the TV. Then say the change is built and waits for the TV. Key presses and live CSS change what is on Sam's screen, so use them only in a task that needs them. Reading the log, `eval` of read-only expressions and screenshots need no ask.
 
 ## Install a build
 
-1. Push to any branch other than `main`. The dev build is `1.0.9xxx`. Check it with `gh run list -R samrenfrew/lumen-webos --limit 1 --json headSha,status,conclusion`. Without `-R`, it returns nothing.
-2. Download the build into its own scratchpad folder: `gh release download dev -R samrenfrew/lumen-webos -p 'com.samrenfrew.lumen_1.0.<n>_all.ipk' -D <dir>`.
-3. Install it with the copy and `luna-send` lines from `tools/deploy.sh`, with `<dir>/<file>` for the `.ipk`. `luna-send` prints nothing without `ssh -tt`. A final `"install has been disconnected."` after `"installed"` is normal.
-4. Check `grep version /media/developer/apps/usr/palm/applications/com.samrenfrew.lumen/appinfo.json`, then launch with `luna-send -n 1 luna://com.webos.applicationManager/launch '{"id":"com.samrenfrew.lumen"}'` (with `-tt`).
-5. Done is Lumen in front: `luna-send -n 1 luna://com.webos.applicationManager/getForegroundAppInfo '{}'` gives `com.samrenfrew.lumen`. It can take about 4 seconds. If ssh stops answering, the TV is in standby: say that Lumen starts on the new build at the next switch-on.
+1. Run `npm run deploy:home`. It type checks, builds Lumen as `com.samrenfrew.lumen` with the dev tools on, copies the `.ipk` to the TV, installs it and launches it. A final `"install has been disconnected."` after `"installed"` is normal.
+2. Done is Lumen in front: `luna-send -n 1 luna://com.webos.applicationManager/getForegroundAppInfo '{}'` (with `ssh -tt`) gives `com.samrenfrew.lumen`. It can take about 4 seconds. If ssh stops answering, the TV is in standby: say that Lumen starts on the new build at the next switch-on.
 
-`npm run deploy` builds locally and installs that build instead. Use it only when the change is not pushed.
+Plain `npm run deploy` uses the app id in `.env`, which is `com.samrenfrew.lumen.dev` ("Home Dev"). That installs a second app beside Lumen, and the Home button does not open it. Use it only when Sam asks for a side-by-side copy.
+
+A branch push publishes a Channel build (`1.0.9xxx`), and a Channel update replaces the local install. Push only when Sam asks for it.
 
 ## The log
 
@@ -51,8 +50,8 @@ Quirks:
 
 Use this for a look-and-feel change (spacing, size, position, colour), where one round trip through a dev build is slow.
 
-1. Ask Sam if he can see the TV now. If he says no, make the change in source and push a dev build.
+1. Ask Sam if he can see the TV now. If he says no, make the change in source and install it with `npm run deploy:home`.
 2. Inject the change with `css` (or `eval` for a DOM or state change). Say in one line what to look at, and wait for his reply. Make one change per round.
 3. When Sam says it looks wrong ("things moved", "can you see?"), take a `shot` and measure with `eval`. Do not guess. For example, an absolute label once collapsed the tiles from 212px to 144px, and `getBoundingClientRect` showed it at once.
 4. A heavy effect can look right and still drop the frame rate. Sam judges smoothness on the TV, and the TV's graphics chip is weak (`RESEARCH.md` section 4).
-5. When Sam says it is right, write the final values into source (`app/src/theme/global.css` or the component), build, commit, and push for a dev build. Then clear the live block. The injected CSS is never the record.
+5. When Sam says it is right, write the final values into source (`app/src/theme/global.css` or the component), and install it with `npm run deploy:home`. Then clear the live block. The injected CSS is never the record.
