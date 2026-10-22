@@ -40,7 +40,7 @@ Found with `ls-monitor` during app switches. The details are in `docs/spikes.md`
 
 ## Results
 
-Each run: reboot, wait 2 minutes, then `switchtest.sh` with `memwatch.sh 2`. Warm means the app was still open when it was opened again.
+Each run is `tools/tv/measure.sh`: reboot, wait 2 minutes, then `switchtest.sh` with `memwatch.sh 2`. Warm means the app was still open when it was opened again.
 Memory is tight: 1222 MB in all, about 580 MB of it reserved for video. Usable memory never went below 150 MB in any run.
 
 Standard sequence (Lumen, Plex, iPlayer, YouTube, Channel 4, Channel 5 with Home between, 13 opens):
@@ -103,6 +103,8 @@ Most useful first:
 
 - `sh tools/tv/switchtest.sh [dwell-seconds]`: opens apps in a fixed order (13 steps, 20 s each) and prints, per step, warm or cold,
   seconds to the front, usable MB and the apps still open. `SWITCH_SEQ="<ids>"` replaces the order. It opens apps on screen.
+- `sh tools/tv/measure.sh <out-dir> <name>`: one full run. It reboots the TV, waits 150 s, saves the keep lists and the open apps,
+  then runs `switchtest.sh` with `memwatch.sh 2`. Put `<out-dir>` in the scratchpad.
 - `sh tools/tv/memwatch.sh [seconds] [count]`: read only. Per sample: time, app in front, the memory manager's level and usable MB,
   `MemAvailable`, swap used, then each open app as `id=RSS+swap` MB.
 - `sh tools/tv/variant.sh <in.ipk> '<json>' <out-dir>`: a copy of a built `.ipk` with extra appinfo keys.
