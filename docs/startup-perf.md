@@ -130,8 +130,12 @@ the 1.2 s after the key (about 72 is smooth; standing still it holds about 60).
   apart. Each frame costs the GPU 15-27 ms to draw and 20-40 ms to swap. Four frames show during the 240 ms slide.
 - So the hidden-layers change costs a little (about 4 frames), but most of the lag is the GPU drawing full-screen layers (wallpaper, the
   veil fading in, the blurred glass) on each frame. Switching the live blur off or on at Down makes it worse: the change itself is redrawn.
-- Not known: whether Down was smooth before the glass work. Next: install an older build, run the same test, and find the change that
-  slowed it.
+- Older builds, each installed and tested the same way (5 presses, after a fresh install): 15879b9 (today) 32-42; fd37fbc (yesterday)
+  46-50; 80416ce (before the glass rim, 2026-10-19) 41-49; c51b706 (2026-10-18) 29-39, but with an Art wallpaper, so not comparable.
+  So the hidden veil and rows (844616e) slowed Down; nothing earlier did. About 48 frames is as smooth as Down has been on this TV.
+- Fix (verify): the veil and rows are hidden only for 4 s after Lumen comes back (`html.settled`, app.tsx), then drawn ready for Down.
+  Measured: Down 39-47 frames. A return from iPlayer caught up in about 1.8-2.4 s, with an Art wallpaper; the earlier 1.3-2.1 s
+  was with a different one, so the two are not directly comparable. Down in the first 4 s after a return still draws the rows from scratch.
 
 ## Still open
 

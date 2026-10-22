@@ -252,6 +252,19 @@ export function App () {
 	}, [config.darkMode]);
 	useEffect(() => { document.documentElement.classList.toggle('reduce-motion', config.reduceMotion); }, [config.reduceMotion]);
 	useEffect(() => { document.documentElement.classList.toggle('hide-names', config.hideNames); }, [config.hideNames]);
+	// html.settled: the veil and lower rows are drawn only once a return has caught up, so the return redraws less but Down stays smooth (docs/startup-perf.md)
+	useEffect(() => {
+		const root = document.documentElement.classList;
+		let timer = 0;
+		const onVisibility = () => {
+			window.clearTimeout(timer);
+			if (document.hidden) { root.remove('settled'); return; }
+			timer = window.setTimeout(() => root.add('settled'), 4000);
+		};
+		onVisibility();
+		document.addEventListener('visibilitychange', onVisibility);
+		return () => { window.clearTimeout(timer); document.removeEventListener('visibilitychange', onVisibility); root.remove('settled'); };
+	}, []);
 	useEffect(() => setFpsCounter(__LUMEN_DEV__ && config.fpsCounter), [config.fpsCounter]);
 	useEffect(() => { document.documentElement.classList.toggle('liveblur', config.liveBlur); setLiveBlur(config.liveBlur); }, [config.liveBlur]);
 	useEffect(() => setLiquidDock(config.liquidDock), [config.liquidDock]);

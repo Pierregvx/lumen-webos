@@ -903,8 +903,8 @@ html.wp-video .screen--lower::before { background-color: transparent; background
 /* ---------- going down to the lower rows: compositor-only ----------
    Before: the rows moved with `top` (layout and repaint every frame), the full-screen blurred backdrop was created on the spot as a
    ::before with an animation, and every glass shape switched to a different picture at the same moment. Now:
-   - the backdrop (.lowerveil) fades; it and the rows below the screen are drawn only while lower or settling, so a return from another
-     app redraws no hidden layers (docs/keep-alive.md);
+   - the backdrop (.lowerveil) fades; it and the rows below the screen are not drawn for the first 4 s after Lumen comes back (html.settled,
+     app.tsx), so a return from another app redraws no hidden layers (docs/keep-alive.md), but a later Down has them ready;
    - the rows slide with transform;
    - while lower (and for a moment after, .screen--plainglass) the glass shows a plain tint instead of the fixed-position wallpaper copy:
      a fixed background is repainted on every frame of movement, and a transformed ancestor would misplace it. Over the strongly
@@ -919,7 +919,7 @@ html.wp-video .screen--lower::before { background-color: transparent; background
 	background-size: auto, cover; background-position: 0 0, center; background-repeat: no-repeat;
 }
 .screen--lower .lowerveil { opacity: 1; }
-.screen:not(.screen--plainglass) .lowerveil, .screen:not(.screen--plainglass) .rows > .row:nth-child(n+3) { visibility: hidden; }
+html:not(.settled) .screen:not(.screen--plainglass) .lowerveil, html:not(.settled) .screen:not(.screen--plainglass) .rows > .row:nth-child(n+3) { visibility: hidden; }
 html.wp-video .lowerveil { background-color: transparent; background-image: linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42)); }
 .screen--dockhidden .lowerveil { display: none; }
 
