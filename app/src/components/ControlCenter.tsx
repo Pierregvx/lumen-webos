@@ -53,6 +53,9 @@ const BACKLIGHT_DELAY_MS = 300;
  *  is heavy on the TV: the list shrinks back toward the tile as it fades out, and the grid fades back in, growing back from GRID_SHRINK. */
 const OPEN_MS = 330;
 const CLOSE_MS = 300;
+/** a long list (Sound, Picture: 7 choices) runs this much quicker, as its bigger pill felt slow on the TV */
+const LONG_LIST = 4;
+const LONG_STRETCH = 0.85;
 /** keyframes per animation; enough that the pill's corners stay round between them */
 const STEPS = 20;
 /** how far the rest of the grid shrinks toward the tile */
@@ -275,7 +278,7 @@ export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMod
 		if (!morph) return;
 		running.current.forEach((a) => a.cancel());
 		const k = timeline(morph);
-		const ms = still() ? 0 : morph.kind === 'open' ? OPEN_MS : CLOSE_MS;
+		const ms = still() ? 0 : Math.round((morph.kind === 'open' ? OPEN_MS : CLOSE_MS) * (options(morph.cell).length > LONG_LIST ? LONG_STRETCH : 1));
 		const opts: KeyframeAnimationOptions = {duration: ms, easing: 'linear', fill: 'both'};
 		const each = (root: HTMLElement | null, sel: string, frames: Keyframe[]) => (root ? Array.from(root.querySelectorAll<HTMLElement>(sel)) : []).map((el): [HTMLElement, Keyframe[]] => [el, frames]);
 		const pairs: [HTMLElement | null, Keyframe[]][] = [[pillEl.current, k.pill], [glassEl.current, k.glass], [rimEl.current, k.rim], [textEl.current, k.text], [listEl.current, k.list], [gridEl.current, k.grid],
