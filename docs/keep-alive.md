@@ -128,7 +128,10 @@ Most useful first:
    start (about 8 s). Now `watch.sh`, once, 60 s after it starts and with the screen on, starts Lumen hidden if no Lumen build is open:
    `applicationManager/launch {"id":...,"preload":"full"}`. Seen on the TV: Lumen runs and Live TV stays in front. The webosbrew boot
    hooks run late (the watcher started about 2.5 min after boot), so Lumen is ready about 3.5 min after boot. Switch off with
-   `/var/lib/homehook/no-boot-preload`. Still to see: the first Home press after such a boot opens Lumen with no launch screen.
+   `/var/lib/homehook/no-boot-preload`. Seen by Sam: the first Home press opens Lumen at once, but with a black screen first. The
+   preloaded page had fully started (its boot line shows the wallpaper decoded), but it was never drawn on screen, so there is no old
+   frame to show while the GPU draws it, as there is on a normal return. Untried: Lumen's 5 s wallpaper release while hidden probably
+   also runs on a page that has never been shown, so the wallpaper is decoded again on the first show.
    Found on the way: `getPowerState` answers `"state": "Active"` with a space, so the watcher's power state was always empty. Its wake
    check by power state never worked on this TV (the gap check did); fixed in the same change.
 4. Done 2026-10-22 (verify): the preloads Sam does not use (YouTube, LG Channels, AirPlay) are off. `setPreloadPolicy` returns true but
