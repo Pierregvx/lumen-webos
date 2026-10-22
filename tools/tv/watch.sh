@@ -6,6 +6,8 @@
 #  - After the TV wakes (power state back to Active, or a gap in this loop's once-a-second ticks, which means it was suspended) and after a boot:
 #    for WAKE_SECS, LG Home coming up is replaced by Lumen even without home-takeover, because the power button opens LG Home. Switch off with
 #    /var/lib/homehook/no-wake-launch.
+#  - About a minute after a boot, if no Lumen build is open, starts Lumen hidden (a preload launch), so the first Home press after a boot into
+#    Live TV is warm, not a cold start. Switch off with /var/lib/homehook/no-boot-preload.
 #  - Keeps /var/lib/homehook/recent: the last eight apps that were in front (not Lumen, not LG Home), newest first, one id per line. Lumen reads
 #    it for its Recent row, so apps opened from anywhere show there.
 #  - When the TV's power state becomes "Screen Saver" and /var/lib/homehook/ambient-screensaver exists (Settings > Options > Screensaver):
@@ -28,6 +30,7 @@ EXTRA=/var/lib/homehook/hosts-extra
 TAKEOVER_FLAG=/var/lib/homehook/home-takeover
 NOWAKE_FLAG=/var/lib/homehook/no-wake-launch
 WAKE_SECS=30
+NOPRELOAD_FLAG=/var/lib/homehook/no-boot-preload
 RECENT=/var/lib/homehook/recent
 prev=""
 prevapp=""
@@ -40,6 +43,7 @@ lastme=""
 pwlast=""
 tick=$(date +%s)
 wakeuntil=$((tick + 90))   # a boot counts as a wake; LG Home may take a while to come up
+preloadat=$((tick + 60))   # once, after the boot rush; 0 when done
 # prints the Lumen build in front, if any
 me_in_front() {
   for id in $ME; do case "$1" in *'"appId":"'$id'"'*) echo "$id"; return 0 ;; esac; done
@@ -65,7 +69,8 @@ while true; do
   now=$(date +%s)
   gap=$((now - tick)); tick=$now
   pw=$(luna-send -n 1 luna://com.webos.service.tvpower/power/getPowerState '{}' </dev/null 2>/dev/null)
-  pwstate=$(printf '%s' "$pw" | sed -n 's/.*"state":"\([^"]*\)".*/\1/p')
+  # webOS 25 answers "state": "Active", with a space
+  pwstate=$(printf '%s' "$pw" | sed -n 's/.*"state": *"\([^"]*\)".*/\1/p')
   woke=0
   [ "$gap" -gt 5 ] && woke=1
   if [ "$pwstate" = Active ] && [ -n "$pwlast" ] && [ "$pwlast" != Active ] && [ "$pwlast" != "Screen Saver" ]; then woke=1; fi
@@ -145,6 +150,19 @@ while true; do
         ;;
       *) pwprev="other" ;;
     esac
+  fi
+  # boot: start Lumen hidden once, so the first Home press is warm. Tried once only, and only with the screen on.
+  if [ "$preloadat" -gt 0 ] && [ "$now" -ge "$preloadat" ] && [ "$pwstate" = Active ]; then
+    preloadat=0
+    if [ ! -f "$NOPRELOAD_FLAG" ] && target=$(me_target); then
+      run=$(luna-send -n 1 luna://com.webos.applicationManager/running '{}' </dev/null 2>/dev/null)
+      open=0
+      for id in $ME; do case "$run" in *'"id":"'$id'"'*) open=1 ;; esac; done
+      if [ "$open" -eq 0 ]; then
+        r=$(luna-send -n 1 luna://com.webos.applicationManager/launch "{\"id\":\"$target\",\"preload\":\"full\"}" </dev/null 2>&1)
+        echo "$(date +%T) boot preload ($target): $r" >> /tmp/homehook.log
+      fi
+    fi
   fi
   # keep the extra blocked names in /etc/hosts (about every 30 s; the dashboard rewrites the table at boot)
   ticks=$((ticks + 1))

@@ -9,7 +9,8 @@ Sam's check at the TV, after the session:
 - Lumen opens much faster and with no launch screen at all. But the home screen lags for a moment after it appears, as if it is still
   catching up, so getting back to the last app quickly is still a struggle.
 - iPlayer and Plex stay open long enough to go back to them.
-- Not reported yet: whether their sound stops in the background, whether they carry on from the same point, and how the running dot looks.
+- Seen 2026-10-22: iPlayer carries on from the same point, and the running dot looks right. Not reported yet: whether the sound stops
+  in the background.
 
 On the TV now (each list is LG's list plus the ids named):
 - Lumen is in `com.webos.memorymanager.KeepAlive`: the memory manager never closes it.
@@ -123,8 +124,13 @@ Most useful first:
    wallpaper copy).
 2. Trim Lumen's memory footprint. Measured 2026-10-22, see "Lumen's memory" below. The drawn layers are the biggest part, and cutting
    them also shortens the return lag (item 1) with nothing changed on screen. Then the channel logos out of `localStorage`.
-3. Lumen at boot. `watch.sh` only swaps LG Home for Lumen after a boot or wake. When the TV boots into Live TV, nothing starts Lumen, so
-   the first Home press is a cold start (about 8 s).
+3. Done 2026-10-22 (verify): Lumen at boot. When the TV booted into Live TV, nothing started Lumen, so the first Home press was a cold
+   start (about 8 s). Now `watch.sh`, once, 60 s after it starts and with the screen on, starts Lumen hidden if no Lumen build is open:
+   `applicationManager/launch {"id":...,"preload":"full"}`. Seen on the TV: Lumen runs and Live TV stays in front. The webosbrew boot
+   hooks run late (the watcher started about 2.5 min after boot), so Lumen is ready about 3.5 min after boot. Switch off with
+   `/var/lib/homehook/no-boot-preload`. Still to see: the first Home press after such a boot opens Lumen with no launch screen.
+   Found on the way: `getPowerState` answers `"state": "Active"` with a space, so the watcher's power state was always empty. Its wake
+   check by power state never worked on this TV (the gap check did); fixed in the same change.
 4. Done 2026-10-22 (verify): the preloads Sam does not use (YouTube, LG Channels, AirPlay) are off. `setPreloadPolicy` returns true but
    does not write the file and is lost at reboot. Instead, `allowedApps` in `/var/preferences/webos-preload-manager-conf.json` has
    `false` for `com.webos.app.lgchannels`, `airplay` and `youtube.leanback.v4`. That holds across a reboot: `getPreloadPolicy` shows
