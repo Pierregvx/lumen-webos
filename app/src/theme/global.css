@@ -946,6 +946,7 @@ html.light:not(.wp-video) .screen--plainglass { --wp-blur: linear-gradient(rgba(
 html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after { transition: none !important; animation: none !important; }
 /* Settings > Hide app names (home screen only) */
 html.hide-names .rows .tile__label, html.hide-names .panel--folder .tile__label { display: none; }
+html.hide-recents .tile__dot { display: none; }
 
 /* ---------- Settings > Live blur (test): the glass shapes blur what is behind them (backdrop-filter) ----------
    Hybrid: the glass bar and the top buttons are live blurs, so they never change picture when the rows go down or come back. The full-screen

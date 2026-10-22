@@ -66,6 +66,8 @@ export interface UserConfig {
 	reduceMotion: boolean;
 	/** no app names under the tiles on the home screen */
 	hideNames: boolean;
+	/** the dot over apps that are open */
+	showRecents: boolean;
 	/** test: glass blurs what is behind it live (backdrop-filter) instead of showing a pre-blurred copy of the wallpaper */
 	liveBlur: boolean;
 	/** the glass bar bends the picture at its rim, like Liquid Glass (lib/liquidGlass.ts) */
@@ -131,6 +133,7 @@ export const DEFAULT_CONFIG: UserConfig = {
 	folders: [],
 	reduceMotion: false,
 	hideNames: false,
+	showRecents: true,
 	liveBlur: true,
 	liquidDock: false,
 	ambient: 'immich:recent',
@@ -195,6 +198,7 @@ export function parseConfig (raw: string): UserConfig {
 		folders: Array.isArray(parsed.folders) ? parsed.folders : [],
 		reduceMotion: parsed.reduceMotion === true,
 		hideNames: parsed.hideNames === true,
+		showRecents: parsed.showRecents !== false,
 		liveBlur: parsed.liveBlur !== false,
 		liquidDock: parsed.liquidDock === true,
 		ambientSeconds: [10, 20, 30, 60, 120, 300].indexOf(Number(parsed.ambientSeconds)) !== -1 ? Number(parsed.ambientSeconds) : 30,
