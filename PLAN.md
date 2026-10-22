@@ -243,6 +243,12 @@ Done so far (commit 167253b, dev 1.0.9003): the rows slide with `transform` inst
 `.lowerveil` layer that only fades; the glass shows a plain tint (`.screen--plainglass`) while lower and for 300 ms after, instead of the
 fixed-position wallpaper copy; the lower rows stay painted at opacity 0. Going down is better on the TV.
 Still wrong, seen on the TV:
+- [ ] Next (Sam, 2026-10-22): draw the lower rows one row at a time, not all at once 3.5 s after launch (`docs/startup-perf.md`, Still open).
+- [ ] Control Center: the move from a button to its sub-menu feels laggier since about 2026-10-22. A guess to check first: the lower rows and
+      veil are now drawn once `html.settled` is on, so the panel's live blur (3px) has more layers under it. Measure the frames with and
+      without `settled` before lengthening the transition to hide it.
+- Note 2026-10-22: the two items below predate Live blur. With it on, the glass is a `backdrop-filter` and `--wp-blur` is empty, so there
+  is no fixed picture to switch back to. They apply only with Live blur off.
 - [ ] Coming back up is now noticeably laggy. Likely cause: after the 300 ms the glass switches back to the fixed-position picture, so
       every glass shape repaints at once, and the lower rows fading out may still repaint. Trace it on the TV before changing anything.
 - [ ] The backgrounds don't change together: the glass flips to a plain tint at once while the backdrop fades over 220 ms (and flips
