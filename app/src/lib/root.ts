@@ -149,8 +149,11 @@ export function screenOff (): Promise<void> {
 	return run(luna('luna://com.webos.service.tvpower/power/turnOffScreen', {})).then(() => undefined);
 }
 
+// webOS 25 accepts only the rebootReasons in /etc/configd/layers/base/com.webos.service.tvpower.json; "restart" is refused.
 export function reboot (): Promise<void> {
-	return run(luna('luna://com.webos.service.tvpower/power/reboot', {reason: 'restart'})).then(() => undefined);
+	return run(luna('luna://com.webos.service.tvpower/power/reboot', {reason: 'rebootByOnRegular'})).then((text) => {
+		if (text.indexOf('"returnValue":false') !== -1) throw new Error('the TV refused the reboot');
+	});
 }
 
 /** Seconds left on the sleep timer, 0 when none. webOS 25 denies tvReservationAgent to apps ("Denied method call"), hence root. */
