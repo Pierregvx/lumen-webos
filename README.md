@@ -1,88 +1,175 @@
 # Lumen
 
-A tvOS-style home screen for rooted LG webOS TVs, tuned for a weak TV graphics chip. Lumen is a set of patches on top of
-[partridgeworks/webos-launcher](https://github.com/partridgeworks/webos-launcher) (MIT), plus a few small scripts that run on the TV.
-Its companion is [Lumen Gallery](https://github.com/ammar027/lumen-gallery-webos), an art-mode screensaver.
+Lumen is a tvOS-style home screen for a rooted LG webOS TV.
 
-Tested on an LG 65UQ8040PSB (webOS 22, Chromium 87, 1.5 GB RAM). It needs a rooted TV with the
-[Homebrew Channel](https://www.webosbrew.org/); a few features (screen off, restart, picture mode, the Home-button takeover) use its root service.
+This repository is a personal fork of [ammar027/lumen-webos](https://github.com/ammar027/lumen-webos). That project is built on [partridgeworks/webos-launcher](https://github.com/partridgeworks/webos-launcher) (MIT). Changes in this fork are not sent back to either project.
 
-## Demo
+## The target TV
 
-![A short walkthrough: moving along the dock, the second row, and Control Center](docs/demo/lumen-demo.gif)
+| | |
+|---|---|
+| TV | LG 43UT91006LA |
+| Firmware | webOS 25 |
+| Web engine | Chromium 120 |
+| Set-up | Rooted, with the [Homebrew Channel](https://www.webosbrew.org/) and [LG Input Hook](https://github.com/Simon34545/lginputhook) |
 
-[Watch it as a video (MP4)](docs/demo/lumen-demo.mp4). Recorded from the dev preview with `node tools/record-demo.mjs`.
+The original project was written for an LG 65UQ8040PSB on webOS 22 (Chromium 87). Some rules in the code were tuned for that TV. This fork treats each of those rules as an assumption until it works on the TV above. [PLAN.md](PLAN.md) lists what is still to verify.
+
+The build still targets `chrome79` and a classic script, not a module. The TV's graphics chip is weak, so only `transform` and `opacity` animate.
+
+## What this fork adds
+
+These are the main changes since the fork. [PLAN.md](PLAN.md) has the full list and the status of each item.
+
+- **Live TV.** A row of aerial channels with what is on now, a Now and Next guide, and a full week's guide. The Guide button on the remote can open it. See [docs/live-tv.md](docs/live-tv.md) and [docs/live-tv-build.md](docs/live-tv-build.md).
+- **Immich photos.** Your own photos from an Immich server as the wallpaper and as a screensaver. Portrait photos show in pairs. See [docs/immich.md](docs/immich.md).
+- **Photo screensaver.** It starts after a set time on the home screen, or from Art mode in the Control Center. It can dim the backlight and has a Print look for paintings.
+- **Control Center.** One grid of tvOS-sized glass controls. Sound, Picture, Theme and Clock open a list of choices, as on tvOS 26.
+- **Settings.** A stack of pages in the Apple TV layout, not tabs. See [docs/settings-redesign.md](docs/settings-redesign.md).
+- **Glass.** A light live blur on the dock and the top buttons, a colour fringe on the dock rim, and a highlight that follows focus. Settings > Appearance > Dock blur turns the dock blur on or off.
+- **Open apps.** A dot above each app that is still open in the background. Lumen opens with no launch screen and comes back from other apps faster. See [docs/keep-alive.md](docs/keep-alive.md).
+- **Wallpapers.** An Art category of 110 paintings, 300 more landscapes, and a title and credit for each picture.
+- **Speed.** A quicker cold start. In live tests on the TV, Down and Up between the rows run at about 40 fps. See [Research](#research).
+- **TV tools.** Install over SSH, DevTools access from a Mac, frame-rate scripts, and a watcher that re-pairs a Stadia controller in Moonlight.
+
+The features from the original project are still here. These include the glass dock, the second row and Recent row, folders, video wallpapers, nine languages and the weather.
 
 ## Screenshots
 
-Made from the dev preview at 1920 x 1080 (`node tools/screenshots.mjs`); the wallpaper is a public-domain painting from the Cleveland Museum of Art.
+These screenshots show the original project, before this fork's changes. The wallpaper is a public-domain painting from the Cleveland Museum of Art.
 
 ![Home screen: a glass dock of apps, date and weather top left, Inputs and Control Center top right](docs/screenshots/home.jpg)
 ![Moving down: the second row of apps appears over a blurred wallpaper](docs/screenshots/more-apps.jpg)
 ![Control Center: sound, picture, sleep timer, screensaver, quick actions and volume](docs/screenshots/control-center.jpg)
 ![Settings, Options tab: a scrolling list with a scroll indicator](docs/screenshots/settings-options.jpg)
 
-## What it adds
+## Install from the Homebrew Channel
 
-- **tvOS navigation and look:** a glass dock row of apps, a second row of more apps and a Recent row that appear as you move down, focus lift with a name
-  under the tile, a wallpaper library (cloud and bundled, shuffle per category, favourites, auto-change, night dimming), folders, hold-OK menu
-  (move, remove, add to folder), and a Settings app in the same style.
-- **Control Center:** sound, picture mode, sleep timer, screensaver start time, LG Home, Settings, Art mode, start screensaver, screen off, restart and volume.
-- **Appearance:** Light, Dark or Auto (dark from 7 pm to 6 am), in Settings and in the Control Center; the dock can slide away with Down or after a few idle seconds.
-- **Video wallpaper:** Settings > Wallpaper > Video. Pick one or several places (Switzerland, Norway, Iceland, Italy, Greece, Germany, Czechia, Spain, the Netherlands,
-  Portugal and more, plus Apple's aerial videos); it streams from the internet and pauses LG's screensaver while it plays.
-- **Language and clock:** nine languages for the menus, dates and weather, and a 12 / 24-hour option. **Weather:** pick a country and a city (about 180 cities).
-- **Top left:** date, time and weather (Open-Meteo, optional city); top right: Inputs and Control Center.
-- **Cheap on purpose:** no live blur or SVG filters. The "glass" is a pre-blurred copy of the wallpaper seen through the glass shapes, with static rim lights;
-  only `transform` and `opacity` animate. See [RESEARCH.md](RESEARCH.md).
-- **TV side** ([tools/tv/](tools/tv/)): a small watcher that turns the remote's Home button into "open Lumen" and starts Lumen Gallery when the TV's screensaver
-  starts, plus an update-notification blocker.
+Each push to a branch other than `main` publishes a dev build. A `v*` tag publishes a stable build. The GitHub workflow ([.github/workflows/release.yml](.github/workflows/release.yml)) does both.
 
-## Easy install: download the .ipk
+To get the builds on the TV:
 
-Don't want to build anything? Download the `com.samrenfrew.lumen_<version>_all.ipk` from the [releases](https://github.com/samrenfrew/lumen-webos/releases) and install it on your TV:
+1. Open the Homebrew Channel on the TV.
+2. Open the Channel's settings.
+3. Add one of these repository URLs:
+   - Dev builds: `https://raw.githubusercontent.com/samrenfrew/lumen-webos/hbc-repo/dev/apps.json`
+   - Stable builds: `https://raw.githubusercontent.com/samrenfrew/lumen-webos/hbc-repo/stable/apps.json`
+4. Install Lumen from the Channel's app list.
 
-- **With a mouse and no command line:** open [Dev Manager Desktop](https://github.com/webosbrew/dev-manager-desktop/releases), add your TV, go to *Apps* and drop the `.ipk` onto the window.
-- **Or** with the webOS CLI: `npx -p @webos-tools/cli ares-install --device lgtv com.samrenfrew.lumen_<version>_all.ipk`.
+There is no stable build yet. The stable URL works after the first `v*` tag.
 
-The release build leaves out third-party app logos and the default wallpapers are public-domain paintings; apps without an icon get a plain tile.
-Optional: to make the remote's **Home** button open Lumen, see the TV scripts under [tools/tv/](tools/tv/).
+The [releases page](https://github.com/samrenfrew/lumen-webos/releases) also has each `.ipk`. You can install one with [Dev Manager](https://github.com/webosbrew/dev-manager-desktop/releases) or `ares-install`.
 
-## How to build it
+The public build does not include third-party app logos, private wallpapers or the SF font. Apps without an icon get a plain tile.
 
-`app/` is the launcher's source: a fork of the upstream launcher with this project's changes committed on top. Settings live in `.env` at the repo root.
+## Set up for development
+
+You need Node 22 or later, Python 3, and SSH access to the rooted TV. The DevTools scripts in `tools/tv/` need Node 22.
+
+1. Install the app's packages: `npm --prefix app install`.
+2. Copy `.env.example` to `.env`. The `.env` file is gitignored.
+3. Set `LUMEN_TV_HOST` in `.env` to an SSH alias or `root@<tv-ip>`.
+4. Put your SSH public key on the TV, so that `ssh root@<tv-ip>` works with no password.
+5. Optional: put private icons, wallpapers and the font in `app/private/`. The top of [app/vite.config.ts](app/vite.config.ts) gives the layout. The app works without this folder.
+
+### Check work on the Mac
+
+- Type check and build: `npm --prefix app run build`.
+- Preview: build, then serve `app/dist` on port 5198 (the `app-dist` entry in [.claude/launch.json](.claude/launch.json)).
+
+There is no test suite. The preview and the TV are the checks.
+
+### Try a change on the TV over DevTools
+
+The TV serves Chrome DevTools for the running page. Try each change there first. Install a build only when the change is right. This saves one install for each try.
+
+1. Open a tunnel to the TV's DevTools port:
+
+   ```sh
+   ssh -f -N -L 19998:127.0.0.1:9998 root@<tv-ip>
+   ```
+
+2. Use [tools/tv/cdp.mjs](tools/tv/cdp.mjs) to work on the live page:
+   - `node tools/tv/cdp.mjs css '<css>'` adds CSS to the page. `css ''` removes it.
+   - `node tools/tv/cdp.mjs eval '<expr>'` runs JavaScript in the page.
+   - `node tools/tv/cdp.mjs shot out.png` saves a screenshot.
+   - `node tools/tv/cdp.mjs key down enter back` presses remote keys.
+3. Write each change into the source when it is right. A relaunch removes the live changes.
+
+A screenshot shows black where a video wallpaper plays. The video is on a hardware layer under the page.
+
+### Install a dev build over SSH
 
 ```sh
-cp .env.example .env        # app id, tile name, the TV's ssh address
-npm run build:ipk           # -> build/<app-id>_<version>_all.ipk
-npm run deploy              # builds, copies the .ipk to the TV over ssh, installs and launches it
+npm run deploy:home
 ```
 
-The default app id is `com.samrenfrew.lumen.dev` ("Home Dev"), so a dev build installs beside the stable one. For stable, set
-`LUMEN_APP_ID=com.samrenfrew.lumen` and `LUMEN_APP_TITLE=Home`. `npm run dev` starts the preview in a browser on port 5199.
+This command type checks, builds Lumen as `com.samrenfrew.lumen` with the dev tools on, copies the `.ipk` to the TV, installs it and starts it. It replaces the installed Lumen, so the Home button opens the new build.
 
-Brand icons and logos of third-party apps, your own photographs and the private SF font are **not** included here. Put them in `app/private/`
-(gitignored); the build lays that folder over the app if it is there. The layout is described at the top of `app/vite.config.ts`.
-Builds from the Homebrew Channel never have the font, so `npm run push-font` copies it to `/var/lib/homehook/fonts/` on the TV. After each update, Lumen copies it into its own folder, the only place it can read files from.
-`tools/gen_iconpack.py` builds icon tiles into it from logos you put in `tools/logos/` and from your own TV's app icons.
-The cloud wallpaper library is `tools/catalog.json`, turned into `app/src/config/wallpapers.ts` by `python3 tools/build_catalog.py`. `tools/harvest.py` fills it from Reddit; `tools/harvest_open.py [met|cleveland|commons]` adds Art (Cleveland; Met is in the script but gave none) and Landscapes (Wikimedia Commons) with credits. Rerun either, then `build_catalog.py`.
-`npm run release` builds the public `.ipk` (stable id, no `app/private/`) into `release/`.
+`npm run deploy` installs a second copy, `com.samrenfrew.lumen.dev` ("Home Dev"), next to the main one. The Home button does not open this copy.
 
-## Install on the TV
+After each start, a dev build writes a "boot" line to `/var/lib/homehook/lumen.log` on the TV. [docs/startup-perf.md](docs/startup-perf.md) tells you how to read it.
 
-`npm run deploy` needs a rooted TV with SSH. Without root, use the webOS CLI:
+### Other build commands
 
-```sh
-ares-setup-device           # add your TV as "lgtv" (developer mode on)
-npx -p @webos-tools/cli ares-install --device lgtv build/*.ipk
+| Command | What it does |
+|---|---|
+| `npm run build:ipk` | Builds an `.ipk` into `build/`. |
+| `npm run release` | Builds the public `.ipk` into `release/`, with no `app/private/`. |
+| `npm run push-font` | Copies the SF font to `/var/lib/homehook/fonts/` on the TV. Lumen copies it into its own folder after each update. |
+| `python3 tools/build_catalog.py` | Turns `tools/catalog.json` into the cloud wallpaper list. |
+| `python3 tools/harvest_open.py [met\|cleveland\|commons]` | Adds paintings and landscapes, with credits, to the catalogue. |
+
+## Commit and push
+
+Write a commit subject that names the area, then says what changed for the user. Use plain words.
+
+```
+Live TV: channel logos fill the tile, clear of the progress bar
 ```
 
-To make Home open Lumen, copy `tools/tv/watch.sh` to `/var/lib/homehook/` and `tools/tv/60-homehook` to `/var/lib/webosbrew/init.d/` on the TV.
-To undo it, delete the hook file and stop `watch.sh`.
+Start a commit that changes only docs with `docs/<file>:`.
 
-The same hook starts `tools/tv/stadia.sh` if it is in `/var/lib/homehook/`. While Moonlight is in front, it pairs a Stadia controller again after a drop, when you hold Stadia + Y.
+Do the work on a branch named `<area>/<topic>`, for example `home/dock-names`. Know what each push does:
+
+- A push to a branch other than `main` publishes a dev build (`1.0.9xxx`) to the Homebrew Channel's dev repository.
+- A Channel update replaces a build that you installed over SSH.
+- A `v*` tag, for example `v1.1.0`, publishes a stable build. A tag with a hyphen, for example `v1.1.0-rc.1`, publishes a prerelease.
+
+Do not push only to get a build onto the TV. Use `npm run deploy:home` for that.
+
+## TV-side scripts
+
+The scripts in [tools/tv/](tools/tv/) run on the TV. They go in `/var/lib/homehook/`, and [tools/tv/60-homehook](tools/tv/60-homehook) in `/var/lib/webosbrew/init.d/` starts them at boot.
+
+- [watch.sh](tools/tv/watch.sh) keeps the Recent list, opens Lumen after the TV wakes, starts Lumen hidden after a boot, and starts the photo screensaver.
+- [stadia.sh](tools/tv/stadia.sh) pairs a Stadia controller again in Moonlight after a drop, when you hold Stadia + Y.
+
+LG Input Hook owns the Home button on this TV. `watch.sh` takes over LG Home only when `/var/lib/homehook/home-takeover` exists.
+
+## Research
+
+The TV's graphics chip is the main limit on this project. These documents record what was measured on the TV and what was decided.
+
+| Document | What it covers |
+|---|---|
+| [RESEARCH.md](RESEARCH.md) | tvOS design rules, Liquid Glass, TV browser performance, and the cost of each glass effect on this TV. |
+| [docs/frame-rate.md](docs/frame-rate.md) | What limits the frame rate (the GPU draw of each frame), and the scripts that measure it. |
+| [docs/down-up-lag-review.md](docs/down-up-lag-review.md) | A review of the lag on Down and Up, and the test results that got it to about 40 fps. |
+| [docs/startup-perf.md](docs/startup-perf.md) | The cold-start freeze, its fix, and how to read the boot timeline. |
+| [docs/keep-alive.md](docs/keep-alive.md) | How to keep apps and Lumen open when you change apps. |
+| [docs/spikes.md](docs/spikes.md) | Short tests on the TV, one for each open question in the plan. |
+| [docs/live-tv.md](docs/live-tv.md) | How to read the channel list, the logos and the guide, and how to tune a channel. |
+
+The main findings:
+
+- Any backdrop filter, such as a live blur, cuts the frame rate about in half while something moves over it.
+- The cost is in the GPU draw, not in the app's script or layout.
+- A blurred backdrop drawn once into a small canvas costs much less than a live blur over the full screen.
+- Refraction (Liquid Glass) works only on the dock. On the panels it drops to 7 fps.
 
 ## Credits
 
-Built on partridgeworks/webos-launcher (MIT). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Not affiliated with LG, Apple or any app vendor.
+Lumen was first made by [ammar027](https://github.com/ammar027/lumen-webos), on top of [partridgeworks/webos-launcher](https://github.com/partridgeworks/webos-launcher) (MIT). See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). This project is not affiliated with LG, Apple or any app vendor.
+
 Licence: [MIT](LICENSE).

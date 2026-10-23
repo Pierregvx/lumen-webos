@@ -1,3 +1,5 @@
+> This is the README of [partridgeworks/webos-launcher](https://github.com/partridgeworks/webos-launcher), the project that `app/` was forked from. It describes that project, not Lumen. For Lumen, read the [README at the repository root](../README.md).
+
 # webOS Launcher
 
 A minimalist home screen for LG webOS TVs: a greeting and clock, a row of your apps, a
