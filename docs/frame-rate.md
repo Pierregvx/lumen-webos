@@ -47,3 +47,21 @@ The full-screen blurred backdrop (`.lowerveil`) was rastered again 2 to 3 times 
 ## The overall fix
 
 The glass should be a static texture: the pre-blurred wallpaper copy, laid out with `background-attachment: scroll` and an offset from the element's place on screen (as `.panel` already does), so it is rastered once and only moves by transform. Over a still wallpaper it looks the same as the live blur, because the live blur only blurs the wallpaper. This is the rule in `CLAUDE.md` and `RESEARCH.md` section 4, which Live blur broke.
+
+## The Guide (2026-10-23)
+
+`tools/tv/perf/guide.mjs` walks the Guide with a trace: Now and Next down and up, the switch, the Full guide down and up, and back. `guide-report.mjs` gives medians per step. Do not add the `disabled-by-default-cc.debug` category: on 2026-10-23 it made the TV restart.
+
+In Now and Next, each move rastered the focused row's drop shadow again, twice (the row that loses focus and the row that gets it). That was about half the raster per move, and it gave one stall of 100 to 160 ms. The white capsule is now a `::before` plate on its own layer that only changes opacity. Now and Next went from 9 to 12 frames per move to 12 to 17, and the worst stall to 40 to 75 ms. The look is the same.
+
+Full guide moves were already at about 14 frames, so they keep their shadow. The switch between the two views still stalls for 200 to 300 ms, because it builds the other view from nothing.
+
+## Control Center (2026-10-23)
+
+`tools/tv/perf/cc.mjs` reloads the page, then opens Control Center twice, opens two lists, moves round, and opens Inputs twice, with a trace. Read it with `WIN=1400 node guide-report.mjs`.
+
+The open and close fades animate each control's opacity, so Chromium made a layer for each control when a fade started and dropped it when the fade ended. Each drop drew the control again, shadow included. Each control now keeps its own layer (`will-change`). On the first open, raster went from 300 to 460 ms to 120 to 140 ms, and from 3 to 5 frames to 6 to 8. Closing a list went from 150 to 370 ms of raster to none. The look is the same.
+
+The panel opened on default values (backlight 100, Eye Comfort off) and redrew when the TV's values arrived 250 ms later. It now opens on the values last read, and the launcher reads them once it has settled.
+
+Opening a list is still the heaviest step: about 65 ms of JS in the key handler and 200 ms of raster for the new options and the pill.
