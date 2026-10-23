@@ -1325,7 +1325,13 @@ html.light .chan__meter span { background: #14151b; }
 	/* a layer each: focus scales a row, which would otherwise repaint the whole list */
 	will-change: transform;
 }
-.guide__row--focused { background: #fff; color: #111; transform: scale(1.02); box-shadow: 0 18px 36px rgba(0, 0, 0, 0.32); z-index: 1; }
+/* the focused capsule is a plate on its own layer that only fades in, so a move does not re-raster the shadow */
+.guide__row::before {
+	content: ''; position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: -1; border-radius: 30px; pointer-events: none;
+	background: #fff; box-shadow: 0 18px 36px rgba(0, 0, 0, 0.32); opacity: 0; will-change: opacity;
+}
+.guide__row--focused::before { opacity: 1; }
+.guide__row--focused { color: #111; transform: scale(1.02); z-index: 1; }
 .guide__row--off .guide__now, .guide__row--off .guide__next { opacity: 0.55; }
 .guide__row--off.guide__row--focused .guide__now, .guide__row--off.guide__row--focused .guide__next { opacity: 0.8; }
 .guide__num { flex: 0 0 64px; font-size: 30px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
@@ -1346,7 +1352,8 @@ html.light .chan__meter span { background: #14151b; }
 .guide__empty { position: absolute; left: 30px; top: 40px; font-size: 28px; opacity: 0.8; }
 html.light .screen--guide { color: #14151b; }
 html.light .guide__row { background: rgba(255, 255, 255, 0.42); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7); }
-html.light .guide__row--focused { background: #14151b; color: #fff; }
+html.light .guide__row--focused { color: #fff; }
+html.light .guide__row::before { background: #14151b; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7); }
 html.light .guide__meter { background: rgba(20, 22, 32, 0.2); }
 html.light .guide__meter span { background: #14151b; }
 html.light .guide__row--focused .guide__meter { background: rgba(255, 255, 255, 0.25); }
@@ -1409,7 +1416,7 @@ html.light .guide__switch--focused .guide__seg--on { background: #14151b; color:
 .fg__prog--focused { background: #fff; color: #111; opacity: 1; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.32); z-index: 2; }
 .fg__ptitle { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fg__ptime { margin-top: 2px; font-size: 18px; font-weight: 500; opacity: 0.75; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.fg__nowline { position: absolute; left: 402px; width: 2px; height: 580px; margin-top: -10px; background: #fff; z-index: 1; pointer-events: none; }
+.fg__nowline { position: absolute; left: 402px; width: 2px; height: 570px; background: #fff; z-index: 1; pointer-events: none; }
 .fg__nowline::before { content: ''; position: absolute; left: -5px; top: 0; width: 12px; height: 12px; border-radius: 6px; background: #fff; }
 html.light .fg__cell-chan, html.light .fg__prog { background: rgba(255, 255, 255, 0.42); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7); }
 html.light .fg__prog--focused { background: #14151b; color: #fff; }
