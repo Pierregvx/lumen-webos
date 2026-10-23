@@ -27,7 +27,7 @@ import {Ambient} from './components/Ambient';
 import {setVideoChoice, setVideoPaused, setVideoWallpaper, VIDEO_PLACES} from './lib/wallpaperVideo';
 import {setAmbientFlag, setVideoFlag, startScreensaver} from './lib/system';
 import {setFpsCounter} from './lib/fps';
-import {ControlCenter, type CenterAction} from './components/ControlCenter';
+import {ControlCenter, prefetchControls, type CenterAction} from './components/ControlCenter';
 import {CITIES, COUNTRIES} from './config/cities';
 import {AUTO_PLACE, peekWeather, readWeather, type Weather} from './lib/weather';
 import {useLiveTv} from './hooks/useLiveTv';
@@ -260,7 +260,7 @@ export function App () {
 		const onVisibility = () => {
 			window.clearTimeout(timer);
 			if (document.hidden) { root.remove('settled'); return; }
-			timer = window.setTimeout(() => root.add('settled'), 4000);
+			timer = window.setTimeout(() => { root.add('settled'); prefetchControls(); }, 4000);
 		};
 		onVisibility();
 		document.addEventListener('visibilitychange', onVisibility);

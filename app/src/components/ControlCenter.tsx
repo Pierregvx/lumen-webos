@@ -83,6 +83,11 @@ const OPT_H = 72;
 const OPT_GAP = 12;
 const listHeight = (count: number) => count * OPT_H + (count - 1) * OPT_GAP;
 
+/** the TV's values as last read or set, so the panel opens on them rather than on defaults that jump when the read lands */
+let lastValues: Controls = {volume: 0, muted: false, picture: 'normal', sound: 'standard', backlight: 100, eyeComfort: false};
+/** Read the TV's values ahead of the first open (app.tsx calls it once the launcher has settled). */
+export function prefetchControls (): void { readControls().then((v) => { lastValues = v; }).catch(() => undefined); }
+
 type Phase = 'grid' | 'opening' | 'list' | 'closing';
 interface Morph {kind: 'open' | 'close'; cell: MenuCell; geo: {x: number; y: number; w: number; h: number; fw: number; fh: number; tile: End; list: End}}
 
@@ -105,7 +110,8 @@ export function growFrom (panel: HTMLElement | null, key: string): void {
 export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMode, clockFormat, onDarkMode, onClockFormat}: Props) {
 	const outer = useRef({darkMode, clockFormat, onDarkMode, onClockFormat});
 	outer.current = {darkMode, clockFormat, onDarkMode, onClockFormat};
-	const [values, setValues] = useState<Controls>({volume: 0, muted: false, picture: 'normal', sound: 'standard', backlight: 100, eyeComfort: false});
+	const [values, setValues] = useState<Controls>(lastValues);
+	useEffect(() => { lastValues = values; }, [values]);
 	// x is the grid column the remote is on, kept when moving up and down, so Down from Restart lands on Eye Comfort
 	const [pos, setPos] = useState({row: 0, x: 0});
 	const [confirm, setConfirm] = useState(false);

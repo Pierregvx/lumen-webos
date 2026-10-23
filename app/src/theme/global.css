@@ -1165,6 +1165,8 @@ html.light .cc__mod--focused .cc__inputicon { filter: brightness(0) invert(1); }
 	text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
 	transition: transform var(--motion-focus-ms) ease-out;
 }
+/* a layer each, kept: the open and close fades would otherwise make and drop a layer per control, and each drop redraws its shadow */
+.panel--cc .cc__mod, .panel--cc .cc__caption { will-change: transform, opacity; }
 .cc__mod--focused { transform: scale(1.1); background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.20) 55%, rgba(255, 255, 255, 0.34)), var(--wp-blur, var(--glass-fallback)); }
 html.liveblur .cc__mod {
 	-webkit-backdrop-filter: var(--live-glass); backdrop-filter: var(--live-glass);
