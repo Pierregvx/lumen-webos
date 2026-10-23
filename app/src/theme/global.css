@@ -1175,6 +1175,8 @@ html.liveblur .topbar > .pill:not(.pill--focused):not(.pill--open), html.liveblu
 html.liveblur .cc__mod:not(.cc__mod--focused) { -webkit-backdrop-filter: none; backdrop-filter: none; }
 /* the glass bar has no live blur (it halved the frame rate of every move); the sheen and rims keep it glass. Its own layer, so a move does not repaint it */
 html.liveblur .rows > .row:first-child::before { -webkit-backdrop-filter: none; backdrop-filter: none; will-change: transform; }
+/* Settings > Appearance > Dock blur puts it back: about 2 ms more GPU draw per frame, felt most going left and right */
+html.liveblur.dockblur .rows > .row:first-child::before { -webkit-backdrop-filter: var(--live-glass); backdrop-filter: var(--live-glass); }
 .cc__mod svg { position: static; width: 44px; height: 44px; fill: none; stroke: rgba(255, 255, 255, 0.9); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .cc__mod--on svg { stroke: var(--cc-on); }
 

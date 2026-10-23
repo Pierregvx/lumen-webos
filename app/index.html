@@ -21,8 +21,9 @@
       (function () {
         try {
           var config = JSON.parse(localStorage.getItem('launcher-config-v2') || '{}');
-          // Live blur (on unless turned off, as lib/storage.ts reads it) from the first frame, or the glass first shows the heavier blurred copy
-          if (config.liveBlur !== false) document.documentElement.classList.add('liveblur');
+          // Live blur from the first frame, or the glass first shows the heavier blurred copy; Dock blur as lib/storage.ts reads it
+          document.documentElement.classList.add('liveblur');
+          if (config.dockBlur === true) document.documentElement.classList.add('dockblur');
           var boot = JSON.parse(localStorage.getItem('lumen-boot-wallpaper-v1') || 'null');
           if (!boot || !(boot.url || boot.bg)) return;
           if (boot.sel && config.wallpaper && boot.sel !== config.wallpaper) return;

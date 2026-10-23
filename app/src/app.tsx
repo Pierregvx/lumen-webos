@@ -46,7 +46,7 @@ const LIVE_INFO_W = 660;
 /** how much higher the Live TV row sits when focused, so its now/next block fits on screen */
 const LIVE_BELOW = 150;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', ambientPrint: 'ambient-print', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', liveBlur: 'live-blur', liquidDock: 'liquid-dock', reduceMotion: 'reduce-motion', hideNames: 'hide-names', showRecents: 'show-recents', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', immichDays: 'immich-recent-days', wpType: 'wp-type', wpNew: 'wp-new', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
+const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', ambientPrint: 'ambient-print', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', dockBlur: 'dock-blur', liquidDock: 'liquid-dock', reduceMotion: 'reduce-motion', hideNames: 'hide-names', showRecents: 'show-recents', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', immichDays: 'immich-recent-days', wpType: 'wp-type', wpNew: 'wp-new', nightDim: 'night-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 0.5, 1, 5, 15, 30, 60];   // minutes
 /** when the video wallpaper plays (Settings > Wallpaper > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
 const VIDEO_HOURS: Record<string, [number, number]> = {day: [7, 19], evening: [17, 23], night: [19, 7]};
@@ -267,7 +267,9 @@ export function App () {
 		return () => { window.clearTimeout(timer); document.removeEventListener('visibilitychange', onVisibility); root.remove('settled'); };
 	}, []);
 	useEffect(() => setFpsCounter(__LUMEN_DEV__ && config.fpsCounter), [config.fpsCounter]);
-	useEffect(() => { document.documentElement.classList.toggle('liveblur', config.liveBlur); setLiveBlur(config.liveBlur); }, [config.liveBlur]);
+	// the glass is always live blur now (index.html sets the class first); the old pre-blurred copy for the glass is no longer a choice
+	useEffect(() => { document.documentElement.classList.add('liveblur'); setLiveBlur(true); }, []);
+	useEffect(() => { document.documentElement.classList.toggle('dockblur', config.dockBlur); }, [config.dockBlur]);
 	useEffect(() => setLiquidDock(config.liquidDock), [config.liquidDock]);
 	useEffect(() => setVideoChoice(config.videoPlaces), [config.videoPlaces]);
 	// the video wallpaper plays only within its hours (checked each minute); the still wallpaper shows the rest of the time
@@ -636,11 +638,11 @@ export function App () {
 			value: config.reduceMotion
 		},
 		{
-			id: OPTION.liveBlur,
+			id: OPTION.dockBlur,
 			group: 'appearance' as const,
-			label: 'Live blur',
-			description: 'The glass bar, the top buttons and the panels blur whatever is behind them, live, instead of showing a blurred copy of the wallpaper. The full-screen backdrops (lower rows, Settings) stay a blurred copy. On by default. Off: the cheaper blurred copy everywhere.',
-			value: config.liveBlur
+			label: 'Dock blur',
+			description: 'The glass bar blurs whatever is behind it. Off: the same glass look with no blur, and moving left and right is smoother.',
+			value: config.dockBlur
 		},
 		{
 			id: OPTION.liquidDock,
@@ -671,7 +673,7 @@ export function App () {
 			description: 'Frames drawn in the last second and the longest frame, in the top-left corner. Only in dev builds.',
 			value: config.fpsCounter
 		}] : [])
-	], [config.liveTvRow, config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleSeconds, config.wpAutoMinutes, config.wallpaperType, config.wpNewOnLaunch, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.showRecents, config.reduceMotion, config.liveBlur, config.liquidDock, config.ambient, config.ambientOn, config.ambientSeconds, config.ambientBrightness, config.ambientPrint, immich.ready]);
+	], [config.liveTvRow, config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleSeconds, config.wpAutoMinutes, config.wallpaperType, config.wpNewOnLaunch, config.nightDim, config.showAllApps, config.showWeather, config.weatherCity, config.hideNames, config.showRecents, config.reduceMotion, config.dockBlur, config.liquidDock, config.ambient, config.ambientOn, config.ambientSeconds, config.ambientBrightness, config.ambientPrint, immich.ready]);
 
 	const wallpaper: WallpaperTab = useMemo(() => {
 		if (!inSettings) return {categories: [], entries: [], onPick: () => undefined};
@@ -824,7 +826,7 @@ export function App () {
 		else if (optionId === OPTION.hideNames) updateConfig({...config, hideNames: !config.hideNames});
 		else if (optionId === OPTION.showRecents) updateConfig({...config, showRecents: !config.showRecents});
 		else if (optionId === OPTION.reduceMotion) updateConfig({...config, reduceMotion: !config.reduceMotion});
-		else if (optionId === OPTION.liveBlur) updateConfig({...config, liveBlur: !config.liveBlur});
+		else if (optionId === OPTION.dockBlur) updateConfig({...config, dockBlur: !config.dockBlur});
 		else if (optionId === OPTION.liquidDock) updateConfig({...config, liquidDock: !config.liquidDock});
 		else if (optionId === OPTION.nightDim) updateConfig({...config, nightDim: !config.nightDim});
 		else if (optionId === OPTION.ambientOn) updateConfig({...config, ambientOn: !config.ambientOn});
