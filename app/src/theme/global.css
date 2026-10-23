@@ -865,6 +865,9 @@ html.wp-video.in-settings .screen:not(.screen--settings) { visibility: hidden; }
 /* over the video the glass is clear, so Settings gets a stronger fill: the text must stay readable */
 html.wp-video .screen--settings::before { background-image: linear-gradient(rgba(10, 12, 22, 0.76), rgba(10, 12, 22, 0.84)); opacity: 1; }
 html.light.wp-video .screen--settings::before { background-image: linear-gradient(rgba(246, 247, 251, 0.84), rgba(240, 242, 248, 0.90)); }
+/* the picture is drawn in a canvas behind the content (ScreenBackdrop, lib/blurCanvas.ts); ::before keeps only its colour */
+.backdrop { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+body .screen.screen--canvasbg::before { background-image: none !important; }
 
 /* aerial view while the dock is away: date, time and weather drop to the bottom left; the place and a description show at the bottom right */
 .status { transition: transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1); }
@@ -913,18 +916,22 @@ html.wp-video .screen--lower::before { background-color: transparent; background
 .screen.screen--lower { --wp-blur: inherit; }
 .lowerveil {
 	position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none;
-	opacity: 0; transition: opacity 220ms ease-out;
+	opacity: 0; transition: opacity 312ms cubic-bezier(0.3, 0, 0.15, 1); will-change: opacity;
 	background-color: #10131c;
 	background-image: linear-gradient(rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.26)), var(--wp-bg, none);
 	background-size: auto, cover; background-position: 0 0, center; background-repeat: no-repeat;
 }
-.screen--lower .lowerveil { opacity: 1; }
-html:not(.settled) .screen:not(.screen--plainglass) .lowerveil, html:not(.settled) .screen:not(.screen--plainglass) .rows > .row:nth-child(n+3) { visibility: hidden; }
+.screen--lower .lowerveil { opacity: 1; transition: opacity 253ms cubic-bezier(0.55, 0, 0.75, 1); }
+html:not(.settled) .screen:not(.screen--plainglass):not(.screen--lower) .lowerveil, html:not(.settled) .screen:not(.screen--plainglass):not(.screen--lower) .rows > .row:nth-child(n+3) { visibility: hidden; }
 html.wp-video .lowerveil { background-color: transparent; background-image: linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42)); }
 .screen--dockhidden .lowerveil { display: none; }
+/* the picture is drawn in a canvas (components/LowerVeil.tsx): the veil itself draws nothing, so it is one layer with no tiles */
+.lowerveil--canvas { background: none !important; }
+.lowerveil > canvas, .backdrop > canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
 
-.rows, html.wp-video .rows { transition: transform 240ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 220ms ease; }
-.rows--lower, html.wp-video .rows--lower { top: var(--layout-rows-top); transform: translateY(calc(-1 * var(--lower-shift, 300px))); }
+/* both ways slowest near the dock: Down eases out of it slowly, Up eases into it long. Up is longer (340 ms against 276): Sam felt it too fast */
+.rows, html.wp-video .rows { transition: transform 340ms cubic-bezier(0.3, 0, 0.15, 1), opacity 220ms ease; }
+.rows--lower, html.wp-video .rows--lower { top: var(--layout-rows-top); transform: translateY(calc(-1 * var(--lower-shift, 300px))); transition: transform 276ms cubic-bezier(0.55, 0, 0.75, 1), opacity 220ms ease; }
 
 html:not(.wp-video) .screen--plainglass { --wp-blur: linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)); }
 html.light:not(.wp-video) .screen--plainglass { --wp-blur: linear-gradient(rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.42)); }
@@ -942,6 +949,7 @@ html.light:not(.wp-video) .screen--plainglass { --wp-blur: linear-gradient(rgba(
 html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after { transition: none !important; animation: none !important; }
 /* Settings > Hide app names (home screen only) */
 html.hide-names .rows .tile__label, html.hide-names .panel--folder .tile__label { display: none; }
+html.hide-recents .tile__dot { display: none; }
 
 /* ---------- Settings > Live blur (test): the glass shapes blur what is behind them (backdrop-filter) ----------
    Hybrid: the glass bar and the top buttons are live blurs, so they never change picture when the rows go down or come back. The full-screen
@@ -1106,12 +1114,14 @@ html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.1; }
 
 /* ---------- peek and grid spacing, measured from tvOS ----------
    At rest only a sliver of the grid's first row shows under the bar. Down in the grid, the grid rows drop 40px further from the bar
-   (about 70px of space under the glass, as on tvOS) so the focused tile has room. The focused grid tile grows 1.175x. The bar's tiles grow 1.12x, so the focused app's name fits under the icon inside the bar's 40px of glass. */
+   (about 70px of space under the glass, as on tvOS) so the focused tile has room. The focused grid tile grows 1.14x (1.175 left too little room for the open-app dot over it). The bar's tiles grow 1.12x, so the focused app's name fits under the icon inside the bar's 40px of glass. */
 .screen--lower .rows > .row:not(:first-child) { transform: translateY(40px); }
-.rows { --motion-focus-scale: 1.175; }
+.rows { --motion-focus-scale: 1.14; }
 html.focus-subtle .rows { --motion-focus-scale: 1.1; }
 html.focus-strong .rows { --motion-focus-scale: 1.235; }
 .rows > .row:first-child { --motion-focus-scale: 1.12; }
+/* the bar's and the first grid row's tiles keep a layer each, so a Down or Up does not re-raster the rows they sit in (docs/frame-rate.md) */
+.rows > .row:nth-child(-n+2) .tile__box { will-change: transform; }
 html.focus-subtle .rows > .row:first-child { --motion-focus-scale: 1.06; }
 html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.16; }
 .rows > .row:not(:first-child) .tile__label { margin-top: 32px; }
@@ -1155,11 +1165,20 @@ html.light .cc__mod--focused .cc__inputicon { filter: brightness(0) invert(1); }
 	text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
 	transition: transform var(--motion-focus-ms) ease-out;
 }
+/* a layer each, kept: the open and close fades would otherwise make and drop a layer per control, and each drop redraws its shadow */
+.panel--cc .cc__mod, .panel--cc .cc__caption { will-change: transform, opacity; }
 .cc__mod--focused { transform: scale(1.1); background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.20) 55%, rgba(255, 255, 255, 0.34)), var(--wp-blur, var(--glass-fallback)); }
 html.liveblur .cc__mod {
 	-webkit-backdrop-filter: var(--live-glass); backdrop-filter: var(--live-glass);
 	background-attachment: scroll !important; background-color: var(--live-tint) !important; background-blend-mode: normal !important;
 }
+/* only the focused or open control keeps its live blur: each one adds about 2 ms of GPU draw to every frame (docs/frame-rate.md) */
+html.liveblur .topbar > .pill:not(.pill--focused):not(.pill--open), html.liveblur .topcap:not(.topcap--focused):not(.topcap--open),
+html.liveblur .cc__mod:not(.cc__mod--focused) { -webkit-backdrop-filter: none; backdrop-filter: none; }
+/* the glass bar has no live blur (it halved the frame rate of every move); the sheen and rims keep it glass. Its own layer, so a move does not repaint it */
+html.liveblur .rows > .row:first-child::before { -webkit-backdrop-filter: none; backdrop-filter: none; will-change: transform; }
+/* Settings > Appearance > Dock blur puts it back: about 2 ms more GPU draw per frame, felt most going left and right */
+html.liveblur.dockblur .rows > .row:first-child::before { -webkit-backdrop-filter: var(--live-glass); backdrop-filter: var(--live-glass); }
 .cc__mod svg { position: static; width: 44px; height: 44px; fill: none; stroke: rgba(255, 255, 255, 0.9); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .cc__mod--on svg { stroke: var(--cc-on); }
 
@@ -1305,8 +1324,16 @@ html.light .chan__meter span { background: #14151b; }
 	display: flex; flex-direction: row; align-items: center; background: rgba(255, 255, 255, 0.09);
 	box-shadow: inset 0 1.5px 1px -1px rgba(255, 255, 255, 0.45), inset 1.5px 0 1px -1px rgba(255, 255, 255, 0.2);
 	transition: transform var(--motion-focus-ms) ease-out;
+	/* a layer each: focus scales a row, which would otherwise repaint the whole list */
+	will-change: transform;
 }
-.guide__row--focused { background: #fff; color: #111; transform: scale(1.02); box-shadow: 0 18px 36px rgba(0, 0, 0, 0.32); z-index: 1; }
+/* the focused capsule is a plate on its own layer that only fades in, so a move does not re-raster the shadow */
+.guide__row::before {
+	content: ''; position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: -1; border-radius: 30px; pointer-events: none;
+	background: #fff; box-shadow: 0 18px 36px rgba(0, 0, 0, 0.32); opacity: 0; will-change: opacity;
+}
+.guide__row--focused::before { opacity: 1; }
+.guide__row--focused { color: #111; transform: scale(1.02); z-index: 1; }
 .guide__row--off .guide__now, .guide__row--off .guide__next { opacity: 0.55; }
 .guide__row--off.guide__row--focused .guide__now, .guide__row--off.guide__row--focused .guide__next { opacity: 0.8; }
 .guide__num { flex: 0 0 64px; font-size: 30px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; }
@@ -1327,7 +1354,8 @@ html.light .chan__meter span { background: #14151b; }
 .guide__empty { position: absolute; left: 30px; top: 40px; font-size: 28px; opacity: 0.8; }
 html.light .screen--guide { color: #14151b; }
 html.light .guide__row { background: rgba(255, 255, 255, 0.42); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7); }
-html.light .guide__row--focused { background: #14151b; color: #fff; }
+html.light .guide__row--focused { color: #fff; }
+html.light .guide__row::before { background: #14151b; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7); }
 html.light .guide__meter { background: rgba(20, 22, 32, 0.2); }
 html.light .guide__meter span { background: #14151b; }
 html.light .guide__row--focused .guide__meter { background: rgba(255, 255, 255, 0.25); }
@@ -1364,7 +1392,7 @@ html.light .guide__switch--focused .guide__seg--on { background: #14151b; color:
 .fg__times { position: absolute; left: calc(var(--layout-rows-edge) + 372px); top: 410px; font-size: 22px; font-weight: 500; opacity: 0.75; font-variant-numeric: tabular-nums; }
 .fg__times span { position: absolute; top: 0; white-space: nowrap; }
 .fg__view { position: absolute; left: calc(var(--layout-rows-edge) - 30px); right: calc(var(--layout-rows-edge) - 30px); top: 450px; height: 570px; overflow: hidden; }
-.fg__row { position: absolute; left: 30px; right: 30px; margin-top: 10px; height: 70px; }
+.fg__row { position: absolute; left: 30px; right: 30px; margin-top: 10px; height: 70px; will-change: transform; }
 .fg__cell-chan {
 	position: absolute; left: 0; top: 0; width: 360px; height: 70px; box-sizing: border-box; padding: 0 14px 0 0; border-radius: 18px;
 	display: flex; flex-direction: row; align-items: center; background: rgba(255, 255, 255, 0.09);
@@ -1390,7 +1418,7 @@ html.light .guide__switch--focused .guide__seg--on { background: #14151b; color:
 .fg__prog--focused { background: #fff; color: #111; opacity: 1; box-shadow: 0 14px 30px rgba(0, 0, 0, 0.32); z-index: 2; }
 .fg__ptitle { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fg__ptime { margin-top: 2px; font-size: 18px; font-weight: 500; opacity: 0.75; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.fg__nowline { position: absolute; left: 402px; width: 2px; height: 580px; margin-top: -10px; background: #fff; z-index: 1; pointer-events: none; }
+.fg__nowline { position: absolute; left: 402px; width: 2px; height: 570px; background: #fff; z-index: 1; pointer-events: none; }
 .fg__nowline::before { content: ''; position: absolute; left: -5px; top: 0; width: 12px; height: 12px; border-radius: 6px; background: #fff; }
 html.light .fg__cell-chan, html.light .fg__prog { background: rgba(255, 255, 255, 0.42); box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7); }
 html.light .fg__prog--focused { background: #14151b; color: #fff; }

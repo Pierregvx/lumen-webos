@@ -53,6 +53,9 @@ const BACKLIGHT_DELAY_MS = 300;
  *  is heavy on the TV: the list shrinks back toward the tile as it fades out, and the grid fades back in, growing back from GRID_SHRINK. */
 const OPEN_MS = 330;
 const CLOSE_MS = 300;
+/** a long list (Sound, Picture: 7 choices) runs this much quicker, as its bigger pill felt slow on the TV */
+const LONG_LIST = 4;
+const LONG_STRETCH = 0.85;
 /** keyframes per animation; enough that the pill's corners stay round between them */
 const STEPS = 20;
 /** how far the rest of the grid shrinks toward the tile */
@@ -80,6 +83,11 @@ const OPT_H = 72;
 const OPT_GAP = 12;
 const listHeight = (count: number) => count * OPT_H + (count - 1) * OPT_GAP;
 
+/** the TV's values as last read or set, so the panel opens on them rather than on defaults that jump when the read lands */
+let lastValues: Controls = {volume: 0, muted: false, picture: 'normal', sound: 'standard', backlight: 100, eyeComfort: false};
+/** Read the TV's values ahead of the first open (app.tsx calls it once the launcher has settled). */
+export function prefetchControls (): void { readControls().then((v) => { lastValues = v; }).catch(() => undefined); }
+
 type Phase = 'grid' | 'opening' | 'list' | 'closing';
 interface Morph {kind: 'open' | 'close'; cell: MenuCell; geo: {x: number; y: number; w: number; h: number; fw: number; fh: number; tile: End; list: End}}
 
@@ -102,7 +110,8 @@ export function growFrom (panel: HTMLElement | null, key: string): void {
 export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMode, clockFormat, onDarkMode, onClockFormat}: Props) {
 	const outer = useRef({darkMode, clockFormat, onDarkMode, onClockFormat});
 	outer.current = {darkMode, clockFormat, onDarkMode, onClockFormat};
-	const [values, setValues] = useState<Controls>({volume: 0, muted: false, picture: 'normal', sound: 'standard', backlight: 100, eyeComfort: false});
+	const [values, setValues] = useState<Controls>(lastValues);
+	useEffect(() => { lastValues = values; }, [values]);
 	// x is the grid column the remote is on, kept when moving up and down, so Down from Restart lands on Eye Comfort
 	const [pos, setPos] = useState({row: 0, x: 0});
 	const [confirm, setConfirm] = useState(false);
@@ -275,7 +284,7 @@ export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMod
 		if (!morph) return;
 		running.current.forEach((a) => a.cancel());
 		const k = timeline(morph);
-		const ms = still() ? 0 : morph.kind === 'open' ? OPEN_MS : CLOSE_MS;
+		const ms = still() ? 0 : Math.round((morph.kind === 'open' ? OPEN_MS : CLOSE_MS) * (options(morph.cell).length > LONG_LIST ? LONG_STRETCH : 1));
 		const opts: KeyframeAnimationOptions = {duration: ms, easing: 'linear', fill: 'both'};
 		const each = (root: HTMLElement | null, sel: string, frames: Keyframe[]) => (root ? Array.from(root.querySelectorAll<HTMLElement>(sel)) : []).map((el): [HTMLElement, Keyframe[]] => [el, frames]);
 		const pairs: [HTMLElement | null, Keyframe[]][] = [[pillEl.current, k.pill], [glassEl.current, k.glass], [rimEl.current, k.rim], [textEl.current, k.text], [listEl.current, k.list], [gridEl.current, k.grid],

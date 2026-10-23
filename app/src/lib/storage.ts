@@ -66,8 +66,10 @@ export interface UserConfig {
 	reduceMotion: boolean;
 	/** no app names under the tiles on the home screen */
 	hideNames: boolean;
-	/** test: glass blurs what is behind it live (backdrop-filter) instead of showing a pre-blurred copy of the wallpaper */
-	liveBlur: boolean;
+	/** the dot over apps that are open */
+	showRecents: boolean;
+	/** the glass bar blurs what is behind it (backdrop-filter); off, it keeps its glass look with no blur, and left and right run smoother */
+	dockBlur: boolean;
 	/** the glass bar bends the picture at its rim, like Liquid Glass (lib/liquidGlass.ts) */
 	liquidDock: boolean;
 	/** the Immich source the ambient screen shows (immich:recent, immich:album:<id>, ...) */
@@ -131,7 +133,8 @@ export const DEFAULT_CONFIG: UserConfig = {
 	folders: [],
 	reduceMotion: false,
 	hideNames: false,
-	liveBlur: true,
+	showRecents: true,
+	dockBlur: false,
 	liquidDock: false,
 	ambient: 'immich:recent',
 	ambientOn: false,
@@ -195,7 +198,8 @@ export function parseConfig (raw: string): UserConfig {
 		folders: Array.isArray(parsed.folders) ? parsed.folders : [],
 		reduceMotion: parsed.reduceMotion === true,
 		hideNames: parsed.hideNames === true,
-		liveBlur: parsed.liveBlur !== false,
+		showRecents: parsed.showRecents !== false,
+		dockBlur: parsed.dockBlur === true,
 		liquidDock: parsed.liquidDock === true,
 		ambientSeconds: [10, 20, 30, 60, 120, 300].indexOf(Number(parsed.ambientSeconds)) !== -1 ? Number(parsed.ambientSeconds) : 30,
 		ambientBrightness: parsed.ambientBrightness === 'tv' || parsed.ambientBrightness === 'low' ? parsed.ambientBrightness : 'dim',

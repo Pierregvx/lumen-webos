@@ -9,7 +9,7 @@ The TV is `root@192.168.0.20` (also `LUMEN_TV_HOST` in the gitignored `.env`). K
 
 ## Consent
 
-To put a change on the TV, build it locally and install it yourself with `npm run deploy:home`. Do not ask first, and do not ask Sam to update in the Homebrew Channel. Two exceptions: SSH fails (the TV is in standby or off the network), or Sam has said not to touch the TV. Then say the change is built and waits for the TV. Key presses and live CSS change what is on Sam's screen, so use them only in a task that needs them. Reading the log, `eval` of read-only expressions and screenshots need no ask.
+Hard rule (CLAUDE.md): a change Sam is to try goes into the live page first, with `css` or `eval`, and he judges it there. Install a build with `npm run deploy:home` only when he says it feels right or tells you to build. Never install a build per try. Do not ask Sam to update in the Homebrew Channel. If SSH fails (the TV is in standby or off the network), or Sam has said not to touch the TV, say the change waits for the TV. Key presses change what is on Sam's screen, so use them only in a task that needs them. Reading the log, `eval` of read-only expressions and screenshots need no ask.
 
 ## Install a build
 
@@ -50,7 +50,7 @@ Quirks:
 
 Use this for a look-and-feel change (spacing, size, position, colour), where one round trip through a dev build is slow.
 
-1. Ask Sam if he can see the TV now. If he says no, make the change in source and install it with `npm run deploy:home`.
+1. This is the default for any change Sam is to try, not only look-and-feel. If Sam cannot see the TV now, make the change in source and wait for him; do not build.
 2. Inject the change with `css` (or `eval` for a DOM or state change). Say in one line what to look at, and wait for his reply. Make one change per round.
 3. When Sam says it looks wrong ("things moved", "can you see?"), take a `shot` and measure with `eval`. Do not guess. For example, an absolute label once collapsed the tiles from 212px to 144px, and `getBoundingClientRect` showed it at once.
 4. A heavy effect can look right and still drop the frame rate. Sam judges smoothness on the TV, and the TV's graphics chip is weak (`RESEARCH.md` section 4).

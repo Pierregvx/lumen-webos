@@ -30,6 +30,10 @@ The agent installs each change on the TV over SSH (`npm run deploy:home`), so "v
 ### Verify on the TV (built, not yet seen working)
 
 Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or later).
+- [ ] Down and Up at about 40 fps (verify after the next build; measured live 2026-10-23, in source, `docs/down-up-lag-review.md`): the backdrop behind the lower rows is a canvas (`components/LowerVeil.tsx`) and looks as before, with night dimming too; the bar and first grid row tiles keep a layer each. Up slides in 340 ms, Down in 276 ms. The grid's focused tile grows 1.14x. Check that the backdrop changes with the wallpaper, and that a Down within 4 s of coming back from an app still shows the backdrop (`screen--plainglass` is no longer set under Live blur, so the `settled` rule now also checks `screen--lower`).
+- [ ] Settings and Guide backdrop, Guide rows, Back from the grid (verify after the next build; tried live 2026-10-23, in source): Settings and the Guide draw the blurred picture as a canvas (`ScreenBackdrop`, `lib/blurCanvas.ts`) and look as before; each Guide row has its own layer. Back in the grid returns to the glass bar, on the app it left from.
+- [ ] Settings > Appearance > Dock blur replaces Live blur (verify after the next build; tried live 2026-10-23): off by default, the glass bar keeps its look with no blur; on, it blurs 2px with saturation, and left and right are a little slower. Live blur is now always on underneath, so the pre-blurred copy for the glass is no longer a choice.
+- [ ] Settings > Home > Show recents indicator (verify after the next build): on by default; off hides the open-app dots.
 - [x] Running dot (seen 2026-10-22; dots match the open apps, checked over DevTools, and Sam says it looks fine): a small white dot sits above each app that is open in the background, inside the glass, and rises with the app when it has focus. It is read when Lumen comes to the front and again 5 s later. A folder has a dot when an app inside it is open. Apps the TV opens itself in the background get a dot too (YouTube no longer opens at start-up: its preload is off).
 - [ ] Glass sheen and focus lift (verify, branch `home/dock-names`; seen live over DevTools, now in source): the glass bar's rim has a faint blue fringe top left and a weaker pink one bottom right. A highlight on the bar's top edge sits over the focused app, slides with focus, stops short of the rounded ends, and fades when focus leaves the bar. The glass bar, Control Center and Inputs blur 3px; the top buttons stay at 2px. A focused app lifts 7.5px as it grows (it was 3px), on the bar and the grid, and its name rises with it.
 - [ ] Immich Recent window and stacks (verify, branch `home/dock-names`): Settings > Wallpaper > Recent photos from offers Last month to Last year, set to Last 6 months by default, and the Recent photos change to match. Once the API key has `stack.read`, only the cover photo of a stack shows; within 6 hours of adding the permission (the empty answer is kept that long).
@@ -242,11 +246,29 @@ showing `splash.png` until the first frame), and the live blur test is settled.
 Done so far (commit 167253b, dev 1.0.9003): the rows slide with `transform` instead of `top`; the blurred backdrop is a permanent
 `.lowerveil` layer that only fades; the glass shows a plain tint (`.screen--plainglass`) while lower and for 300 ms after, instead of the
 fixed-position wallpaper copy; the lower rows stay painted at opacity 0. Going down is better on the TV.
+Tuned live with Sam 2026-10-22, in source, not built yet:
+- Live blur only on the focused top button, Control Center or Inputs control (the rest a plain tint). Sam: snappier.
+- Sound and Picture lists open and close 15% quicker (7 choices); Theme and Clock as before. Sam: right.
+- The glass bar has no live blur (sheen and rims stay). Left/right on the bar went from about 22 to 40 fps.
+- Down/Up 15% slower (276 ms slide, 253 ms backdrop fade), slowest near the dock both ways. Sam: smoother, still not 60 fps.
+  Measured: the blurred backdrop switch costs Down/Up about half their frames; the moving lower rows are the next cost. A plain tint
+  in place of the blurred backdrop was better but lost something, so the blurred backdrop stays.
+
 Still wrong, seen on the TV:
+- [ ] Frame rate (measured 2026-10-22, `docs/frame-rate.md`): every focus move runs at about 22-25 fps, because each live blur adds about
+      2 ms of GPU draw to every frame and the home screen has four. With no live blur the same move runs at about 50 fps. Next: decide
+      on static glass (the pre-blurred copy with a scroll offset, rastered once) in place of Live blur.
 - [ ] Next (Sam, 2026-10-22): draw the lower rows one row at a time, not all at once 3.5 s after launch (`docs/startup-perf.md`, Still open).
-- [ ] Control Center: the move from a button to its sub-menu feels laggier since about 2026-10-22. A guess to check first: the lower rows and
-      veil are now drawn once `html.settled` is on, so the panel's live blur (3px) has more layers under it. Measure the frames with and
-      without `settled` before lengthening the transition to hide it.
+- [ ] Control Center: the move from a button to its sub-menu is laggy (about 16 fps open, 20 fps close). Measured on the TV 2026-10-22 with
+      Live blur on. `settled` makes no difference, and nor does blur 2px against 3px. The GPU draws each frame in 31 ms on average (up to
+      55 ms), because 21 live blurs change every frame: the 10 grid controls (they keep blurring while they fade), the 7 list choices, the
+      pill and the 3 top buttons. Without the grid blurs it is 19 ms; without the choices' blurs 23 ms; with no blur 5 ms. Separately, the
+      key press runs 60-70 ms of script before the first frame, and the first frame then waits on raster of the new list, so a third of
+      the 330 ms open has gone before anything moves. With no blur at all the open still drops frames for that reason.
+      Possible fix: the grid controls drop their live blur (to the plain tint) during the open, and the list choices share one blur behind
+      the list instead of seven. Catch (Sam): a blur switched off at the start of the fade shows, so the switch must wait until a control
+      is nearly faded out, or crossfade. Sam also feels the open was smoother before; no Control Center commit since 2026-10-19, so compare
+      against an older build if the fix is not enough.
 - Note 2026-10-22: the two items below predate Live blur. With it on, the glass is a `backdrop-filter` and `--wp-blur` is empty, so there
   is no fixed picture to switch back to. They apply only with Live blur off.
 - [ ] Coming back up is now noticeably laggy. Likely cause: after the 300 ms the glass switches back to the fixed-position picture, so

@@ -147,3 +147,10 @@ The plan and the measure are in `docs/keep-alive.md`. Each run: reboot, wait 2 m
   `"closeOnBackground": true` in its own appinfo, so the app manager closes it as soon as it leaves the screen, whatever the lists say;
   `applicationManager.keepAliveApps` does not override it. `bindAppProperties` only binds Live TV's icons and titles. Patching iPlayer's
   appinfo to `false` keeps it open (results in `docs/keep-alive.md`).
+
+## Gear menu (Quick Settings) (2026-10-23)
+- The gear menu is not a web app, so DevTools cannot reach it. `com.palm.app.settings` does not run when it opens.
+- The compositor, `surface-manager`, draws it from plain QML source in `/usr/lib/qml/QuickSettings` (package `com.webos.app.quicksettings`, 165 QML files, nothing compiled). The main panel is `Containers/QuickSettingsMainView.qml`; its colours come from `Utils/Style.qml`.
+- `com.webos.app.inputcommon` is a different native QML app (Live TV banners, popups, LG's screensaver), in `/usr/palm/applications/com.webos.app.inputcommon/qml`.
+- A changed copy works: copy the file to `/tmp`, edit it, `mount --bind` it over the original, then `systemctl restart surface-manager-daemon.service`. The panel turned purple. The mount also shows in each app jail, and it is gone after a reboot.
+- The compositor reads the file only at start, so each change needs that restart. The restart blanks the screen for a few seconds and closes Lumen. To make a change permanent, the boot hook would add the mount. The compositor probably starts before the hook runs, so the hook would also restart it once (not tested).
