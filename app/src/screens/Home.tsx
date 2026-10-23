@@ -384,7 +384,8 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 				break;
 			case 'left': n.columns[row.id] = clamp(columnOf(row) - 1, 0, row.items.length - 1); break;
 			case 'right': n.columns[row.id] = clamp(columnOf(row) + 1, 0, row.items.length - 1); break;
-			case 'back': return true;   // swallow: Back on the home screen does nothing
+			// Back in the grid closes it, back to the glass bar's app it left from; on the bar it does nothing
+			case 'back': if (rowIndex === 0) return true; n.rowIndex = 0; break;
 		}
 		render();
 		return true;
