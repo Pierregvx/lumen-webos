@@ -865,6 +865,9 @@ html.wp-video.in-settings .screen:not(.screen--settings) { visibility: hidden; }
 /* over the video the glass is clear, so Settings gets a stronger fill: the text must stay readable */
 html.wp-video .screen--settings::before { background-image: linear-gradient(rgba(10, 12, 22, 0.76), rgba(10, 12, 22, 0.84)); opacity: 1; }
 html.light.wp-video .screen--settings::before { background-image: linear-gradient(rgba(246, 247, 251, 0.84), rgba(240, 242, 248, 0.90)); }
+/* the picture is drawn in a canvas behind the content (ScreenBackdrop, lib/blurCanvas.ts); ::before keeps only its colour */
+.backdrop { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+body .screen.screen--canvasbg::before { background-image: none !important; }
 
 /* aerial view while the dock is away: date, time and weather drop to the bottom left; the place and a description show at the bottom right */
 .status { transition: transform 320ms cubic-bezier(0.2, 0.7, 0.2, 1); }
@@ -924,7 +927,7 @@ html.wp-video .lowerveil { background-color: transparent; background-image: line
 .screen--dockhidden .lowerveil { display: none; }
 /* the picture is drawn in a canvas (components/LowerVeil.tsx): the veil itself draws nothing, so it is one layer with no tiles */
 .lowerveil--canvas { background: none !important; }
-.lowerveil__canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.lowerveil > canvas, .backdrop > canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
 
 /* both ways slowest near the dock: Down eases out of it slowly, Up eases into it long. Up is longer (340 ms against 276): Sam felt it too fast */
 .rows, html.wp-video .rows { transition: transform 340ms cubic-bezier(0.3, 0, 0.15, 1), opacity 220ms ease; }
@@ -1317,6 +1320,8 @@ html.light .chan__meter span { background: #14151b; }
 	display: flex; flex-direction: row; align-items: center; background: rgba(255, 255, 255, 0.09);
 	box-shadow: inset 0 1.5px 1px -1px rgba(255, 255, 255, 0.45), inset 1.5px 0 1px -1px rgba(255, 255, 255, 0.2);
 	transition: transform var(--motion-focus-ms) ease-out;
+	/* a layer each: focus scales a row, which would otherwise repaint the whole list */
+	will-change: transform;
 }
 .guide__row--focused { background: #fff; color: #111; transform: scale(1.02); box-shadow: 0 18px 36px rgba(0, 0, 0, 0.32); z-index: 1; }
 .guide__row--off .guide__now, .guide__row--off .guide__next { opacity: 0.55; }
@@ -1376,7 +1381,7 @@ html.light .guide__switch--focused .guide__seg--on { background: #14151b; color:
 .fg__times { position: absolute; left: calc(var(--layout-rows-edge) + 372px); top: 410px; font-size: 22px; font-weight: 500; opacity: 0.75; font-variant-numeric: tabular-nums; }
 .fg__times span { position: absolute; top: 0; white-space: nowrap; }
 .fg__view { position: absolute; left: calc(var(--layout-rows-edge) - 30px); right: calc(var(--layout-rows-edge) - 30px); top: 450px; height: 570px; overflow: hidden; }
-.fg__row { position: absolute; left: 30px; right: 30px; margin-top: 10px; height: 70px; }
+.fg__row { position: absolute; left: 30px; right: 30px; margin-top: 10px; height: 70px; will-change: transform; }
 .fg__cell-chan {
 	position: absolute; left: 0; top: 0; width: 360px; height: 70px; box-sizing: border-box; padding: 0 14px 0 0; border-radius: 18px;
 	display: flex; flex-direction: row; align-items: center; background: rgba(255, 255, 255, 0.09);

@@ -1,4 +1,5 @@
 import {t as tr} from '../lib/i18n';
+import {ScreenBackdrop} from '../components/LowerVeil';
 import {useRef, useState} from 'preact/hooks';
 import {Grid} from '../components/Grid';
 import {SettingsList, type ListRow, type OptionGroup, type OptionItem} from '../components/SettingsList';
@@ -333,6 +334,7 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 	if (list) {
 		return (
 			<div class="screen screen--settings">
+				<ScreenBackdrop />
 				<div class="settings settings--list" key={depth}>
 					<SettingsList
 						title={list.title}
@@ -355,6 +357,7 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 
 	return (
 		<div class="screen screen--settings">
+			<ScreenBackdrop />
 			<div class="settings settings--grid" key={depth}>
 				<div class="settings__head">
 					<h1 class="settings__title">{tr(title)}</h1>

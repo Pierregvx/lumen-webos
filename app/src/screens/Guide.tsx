@@ -1,4 +1,5 @@
 import {t as tr} from '../lib/i18n';
+import {ScreenBackdrop} from '../components/LowerVeil';
 import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
@@ -97,6 +98,7 @@ export function Guide ({channels, listings, logos, now, schedule, pending, full,
 
 	return (
 		<div class={`screen screen--settings screen--guide${full ? ' screen--guide-full' : ''}`}>
+			<ScreenBackdrop />
 			<div class="guide__head">
 				<h1 class="guide__title">{tr('Guide')}</h1>
 				{typed && <div class={`guide__typed${typedHit ? '' : ' guide__typed--miss'}`}>{typed}</div>}
