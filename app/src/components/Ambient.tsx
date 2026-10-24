@@ -137,6 +137,7 @@ export function Ambient ({source, seconds = 30, backlight, weather, weatherLine,
 			))}
 			{print && <div class="ambient__print" />}
 			<div class="ambient__night" />
+			<div class="ambient__blur" />
 			<div class="ambient__shade" />
 			<div class="screen ambient__status" ref={status}><Status weather={weatherLine ? weather : null} showPeriod={showPeriod} middle={forecast && weather ? <Forecast weather={weather} size={forecast} /> : null} /></div>
 		</div>
