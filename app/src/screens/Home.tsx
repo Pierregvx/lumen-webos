@@ -12,6 +12,7 @@ import {Tile, type TileModel} from '../components/Tile';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
 import {Status} from '../components/Status';
+import {Forecast} from '../components/Forecast';
 import {BUILTIN} from '../config/builtinApps';
 import {bootMark} from '../lib/log';
 
@@ -49,6 +50,10 @@ interface Props {
 	folders?: Record<string, TileModel[]>;
 	/** shown beside the date under the clock, top left */
 	weather?: Weather | null;
+	/** the weather on the line under the clock (Settings > Weather > Date and weather, and not when the large widget shows it) */
+	weatherLine?: boolean;
+	/** the weather widget above the dock, and its size */
+	forecast?: 'small' | 'large';
 	/** off | down | idle | both: when the dock slides away */
 	dockHide?: string;
 	/** darken the wallpaper while the dock is hidden */
@@ -137,7 +142,7 @@ const MENU_KEY = 'menu';
  *  - Up from the first row reaches the top bar (Inputs button, time pill); Down goes back to the same app.
  *  - OK on Inputs opens the inputs panel, OK on the time pill opens the menu; Back closes either.
  *  - The second row stays hidden until the remote goes down to it. */
-export function Home ({rows, topItems, menuItems, inputs, active, onActivate, showPeriod, onEdit, folders, weather, dockHide, dockDim, focusRow, tiles, perRow = 6}: Props) {
+export function Home ({rows, topItems, menuItems, inputs, active, onActivate, showPeriod, onEdit, folders, weather, weatherLine, forecast, dockHide, dockDim, focusRow, tiles, perRow = 6}: Props) {
 	const nav = useRef<Nav>({engaged: false, zone: 'rows', rowIndex: 0, columns: {}, topIndex: 0, panelIndex: 0, menuIndex: 0, ctxIndex: 0, moving: null, swallowOk: false, suppressClick: false, folder: '', folderIndex: 0, ctxFrom: 'rows', ctxLevel: 'main', ctxConfirm: false, ctxAnchor: null, mode: 'key', dockHidden: false, panelFrom: 'top'});
 	// when Down was last pressed at the last input, with nowhere lower to go
 	const bottomDown = useRef(0);
@@ -514,8 +519,9 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 		<div class={`screen${active ? '' : ' screen--inactive'}${lower ? ' screen--lower' : ''}${(lower || settling) && !document.documentElement.classList.contains('liveblur') ? ' screen--plainglass' : ''}${n.moving ? ' screen--moving' : ''}${n.dockHidden ? ' screen--dockhidden' : ''}${dockDim ? ' screen--dockdim' : ''}`}>
 			<div class="dockdim" />
 			<LowerVeil />
-			<Status weather={weather} showPeriod={showPeriod} />
+			<Status weather={weatherLine ? weather : null} showPeriod={showPeriod} />
 			<VideoCaption />
+			{forecast && weather && <div class={`homecast homecast--${forecast}`}><Forecast weather={weather} size={forecast} /></div>}
 			<div class="dockhint" onClick={() => { n.dockHidden = false; render(); }}><svg viewBox="0 0 48 28" aria-hidden="true"><path d="M6 22 24 6l18 16" /></svg></div>
 			<div class="topbar">
 				{topItems.map((item, i) => item.key === MENU_KEY ? (
