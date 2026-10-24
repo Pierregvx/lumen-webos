@@ -134,6 +134,9 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [x] Power button opens LG Home, not Lumen (confirmed fixed on the TV 2026-10-16): `watch.sh` now treats a wake (power state back to Active, or a gap in its ticks) and a boot as
       a 30 s window in which LG Home is replaced by Lumen (off with `/var/lib/homehook/no-wake-launch`). **(verify)** on the TV; wakes are
       logged in `/tmp/homehook.log`.
+- [x] Any wake opens Lumen, fast (seen working on the TV 2026-10-24): Wake-on-LAN resumes straight into Live TV and skips LG Home, so the
+      wake window now opens Lumen over whatever is in front, retrying every 0.5 s until Lumen has stayed up 3 s. LG's "Home on power-on"
+      (`general` / `homeAutoLaunch`) is now `off`, so the remote's power button no longer opens LG Home first. Details in `docs/spikes.md`.
 - [x] `"keepAlive": true` in appinfo.json: tried 2026-10-16, no effect (Lumen still reloads from scratch after Plex). Removed. Cold start
       stays the thing to make fast (Phase 4).
 - [ ] Keep apps alive: Home or Recents leaves the app you were in running, and Lumen opens with no launch screen. One session of tests
