@@ -596,6 +596,9 @@ const TABLE: Record<string, string[]> = {
 		"Kar",
 		"बर्फ"
 	],
+	"High": ["Max.", "Máx.", "Max.", "Max", "Máx.", "Max.", "En yüksek", "अधिकतम"],
+	"Low": ["Min.", "Mín.", "Min.", "Min", "Mín.", "Min.", "En düşük", "न्यूनतम"],
+	"Rain from": ["Regen ab", "Lluvia desde las", "Pluie dès", "Pioggia dalle", "Chuva a partir das", "Regen vanaf", "Yağmur başlangıcı", "बारिश"],
 	"Showers": [
 		"Schauer",
 		"Chubascos",

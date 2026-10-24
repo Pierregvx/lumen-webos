@@ -58,6 +58,13 @@ export interface UserConfig {
 	showAllApps: boolean;
 	/** date and weather beside the clock */
 	showWeather: boolean;
+	/** the weather widget on the home screen, floating above the dock on the left (components/Forecast.tsx) */
+	homeForecast: boolean;
+	/** its size: small (the next hours) | large (now, the next hours and the chance of rain) */
+	homeForecastSize: string;
+	/** the weather widget on the screensaver, between the clock and the date */
+	saverForecast: boolean;
+	saverForecastSize: string;
 	/** weather country (a code from config/cities.ts), '' = not chosen */
 	weatherCountry: string;
 	/** weather place: '' = from the internet connection, else a name from config/cities.ts */
@@ -131,6 +138,10 @@ export const DEFAULT_CONFIG: UserConfig = {
 	dockDim: false,
 	showAllApps: false,
 	showWeather: true,
+	homeForecast: false,
+	homeForecastSize: 'small',
+	saverForecast: false,
+	saverForecastSize: 'small',
 	weatherCountry: '',
 	weatherCity: '',
 	folders: [],
@@ -198,6 +209,10 @@ export function parseConfig (raw: string): UserConfig {
 		dockDim: parsed.dockDim === true,
 		showAllApps: parsed.showAllApps === true,
 		showWeather: parsed.showWeather !== false,
+		homeForecast: parsed.homeForecast === true,
+		homeForecastSize: parsed.homeForecastSize === 'large' ? 'large' : 'small',
+		saverForecast: parsed.saverForecast === true,
+		saverForecastSize: parsed.saverForecastSize === 'large' ? 'large' : 'small',
 		weatherCountry: typeof parsed.weatherCountry === 'string' ? parsed.weatherCountry : '',
 		weatherCity: typeof parsed.weatherCity === 'string' ? parsed.weatherCity : '',
 		folders: Array.isArray(parsed.folders) ? parsed.folders : [],

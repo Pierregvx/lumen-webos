@@ -1521,3 +1521,51 @@ html.light .slist__chevron { stroke: rgba(20, 22, 32, 0.45); }
 html.light .slist__row--focused { background-image: none; background-color: #14151b; color: #fff; box-shadow: 0 8px 18px rgba(20, 24, 40, 0.30); }
 html.light .slist__row--focused .slist__value { color: rgba(255, 255, 255, 0.6); }
 html.light .slist__row--focused .slist__chevron { stroke: rgba(255, 255, 255, 0.6); }
+
+/* ---------- weather widget (components/Forecast.tsx): plain text over the picture like the clock, no glass, so the dock stays the only glass ---------- */
+.forecast { display: flex; flex-direction: row; color: #fff; font-weight: 500; letter-spacing: -0.011em; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; text-shadow: 0 1px 16px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.22); pointer-events: none; }
+.forecast svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.35)); flex: 0 0 auto; }
+.forecast__hour { width: 72px; display: flex; flex-direction: column; align-items: center; }
+.forecast__icon { width: 30px; height: 30px; }
+.forecast__temp { font-size: 24px; font-weight: 600; line-height: 1.2; }
+.forecast__time { font-size: 18px; line-height: 1.2; opacity: 0.78; white-space: nowrap; }
+.forecast--small .forecast__hour + .forecast__hour { margin-left: 6px; }
+.forecast--small .forecast__hour > * + * { margin-top: 4px; }
+/* large: now on the left, a rule, then the hours over a short chance-of-rain chart */
+.forecast--large { align-items: stretch; }
+.forecast__now { display: flex; flex-direction: column; justify-content: center; margin-right: 28px; padding-right: 28px; border-right: 1px solid rgba(255, 255, 255, 0.28); white-space: nowrap; }
+.forecast__big { display: flex; flex-direction: row; align-items: center; font-size: 56px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; }
+.forecast__bigicon { width: 50px; height: 50px; margin-right: 10px; }
+.forecast__cond { margin-top: 10px; font-size: 24px; font-weight: 600; }
+.forecast__meta { margin-top: 2px; font-size: 20px; opacity: 0.82; }
+.forecast__note { margin-top: 2px; font-size: 20px; color: #a8d8ff; }
+.forecast__hours { display: flex; flex-direction: column; justify-content: center; }
+.forecast__row { display: flex; flex-direction: row; }
+.forecast--large .forecast__hour > * + * { margin-top: 3px; }
+.forecast__bars { display: flex; flex-direction: row; height: 46px; margin-top: 8px; border-bottom: 2px solid rgba(255, 255, 255, 0.3); }
+.forecast__bar { width: 72px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+.forecast__bar span { margin-bottom: 3px; font-size: 15px; line-height: 1; font-weight: 600; color: #a8d8ff; }
+.forecast__bar i { display: block; width: calc(100% - 8px); background: rgba(124, 196, 255, 0.5); border-radius: 5px 5px 0 0; }
+.forecast__bar--wet i { background: rgba(124, 196, 255, 0.9); }
+.forecast__bar--dry span { opacity: 0.55; }
+
+/* home: floats above the glass bar on the left, its bottom on the picture caption's line; goes with the status when the rows come up or the dock hides */
+.homecast { position: absolute; left: var(--layout-rows-edge); bottom: 305px; z-index: 5; pointer-events: none; transition: opacity 320ms ease; }
+.screen--lower .homecast, .screen--dockhidden .homecast { opacity: 0; }
+
+/* a soft dark shade behind it instead of glass: drawn once, never animated, so the text and the rain chart read over a bright picture */
+.homecast::before { content: ''; position: absolute; left: -90px; right: -90px; top: -60px; bottom: -50px; z-index: -1; background: radial-gradient(closest-side, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.2) 55%, rgba(0, 0, 0, 0)); pointer-events: none; }
+
+/* screensaver: between the clock and the date, centred in the gap, its bottom on the date's line */
+.ambient .screen > .pill.status .forecast { align-self: flex-end; margin: 0 24px 12px; }
+.ambient .forecast__hour, .ambient .forecast__bar { width: 76px; }
+/* the large one gives way first when a 12-hour clock with AM or PM leaves less room: its hours narrow down to 62px */
+.ambient .screen > .pill.status .forecast--large { flex: 0 1 auto; min-width: 0; }
+.ambient .forecast--large .forecast__hours { flex: 1 1 auto; min-width: 0; }
+.ambient .forecast--large .forecast__hour, .ambient .forecast--large .forecast__bar { width: 76px; flex: 0 1 auto; min-width: 62px; }
+.ambient .forecast__icon { width: 32px; height: 32px; }
+.ambient .forecast__temp { font-size: 26px; }
+.ambient .forecast__time { font-size: 19px; }
+/* the status pill's own icon rules would otherwise size and space the widget's icons */
+.screen > .pill.status .forecast svg { margin: 0; width: 32px; height: 32px; }
+.screen > .pill.status .forecast .forecast__bigicon { width: 50px; height: 50px; margin-right: 10px; }

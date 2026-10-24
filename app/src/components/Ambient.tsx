@@ -1,5 +1,6 @@
 import {useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import {Status} from './Status';
+import {Forecast} from './Forecast';
 import {cachedServer, loadServer, nextAsset, picturePosition, previewUrls, type ImmichServer} from '../lib/immich';
 import {setAmbientShowing} from '../lib/system';
 import {readCache, writeCache} from '../lib/boot';
@@ -27,10 +28,10 @@ function toHomeClock (clock: HTMLElement | null): string {
 
 /** Screensaver with your own photos (Immich). Opened by watch.sh with {"view":"ambient"} when the TV's screensaver starts, instead of LG's.
  *  Two full-screen layers: the next photo is loaded and decoded on the hidden one, then they swap with a crossfade (opacity only) every `seconds` (Settings > Screensaver > Time on each photo, 30 by default); each photo
- *  zooms in very slowly (transform only). The clock sits bottom left, the weather and date bottom right. Any key or a click goes back to the home screen.
+ *  zooms in very slowly (transform only). The clock sits bottom left, the weather and date bottom right, and the weather widget (when on) between them. Any key or a click goes back to the home screen.
  *  Started from the home screen (Control Center, or the idle timer), it opens on the wallpaper already there (`opening`): the home screen fades away, the clock
  *  slides from its place top left to bottom left, and the first new photo loads only after that, so nothing heavy runs while the screen changes. */
-export function Ambient ({source, seconds = 30, backlight, weather, showPeriod, print, opening, onExit}: {source: string; seconds?: number; backlight?: number; weather?: Weather | null; showPeriod?: boolean; print?: boolean; opening?: {urls: string[]; id: string} | null; onExit: () => void}) {
+export function Ambient ({source, seconds = 30, backlight, weather, weatherLine, forecast, showPeriod, print, opening, onExit}: {source: string; seconds?: number; backlight?: number; weather?: Weather | null; weatherLine?: boolean; forecast?: 'small' | 'large'; showPeriod?: boolean; print?: boolean; opening?: {urls: string[]; id: string} | null; onExit: () => void}) {
 	// each layer holds one photo's URL, or two for a portrait pair shown side by side, and where they sit (placed on their faces)
 	const [last] = useState(() => (opening ? null : readCache<{id: string; urls: string[]}>(LAST_KEY)));
 	const first = opening || last;
@@ -54,9 +55,9 @@ export function Ambient ({source, seconds = 30, backlight, weather, showPeriod, 
 		void clock.offsetWidth;
 		clock.style.transition = 'transform 900ms cubic-bezier(0.4, 0, 0.2, 1)';
 		clock.style.transform = '';
-		// the date and weather sit on the other side here, so they fade in rather than slide
-		const row = status.current && status.current.querySelector<HTMLElement>('.status__row');
-		if (row && row.animate) row.animate([{opacity: 0}, {opacity: 1}], {duration: 600, delay: 300, easing: 'ease-out', fill: 'backwards'});
+		// the date, the weather and the widget sit elsewhere here, so they fade in rather than slide
+		const fade = status.current ? status.current.querySelectorAll<HTMLElement>('.status__row, .forecast') : [];
+		for (let i = 0; i < fade.length; i++) if (typeof fade[i].animate === 'function') fade[i].animate([{opacity: 0}, {opacity: 1}], {duration: 600, delay: 300, easing: 'ease-out', fill: 'backwards'});
 	}, []);
 
 	// the TV's backlight goes down while the screensaver shows (Settings > Screensaver > Brightness) and back up when it ends
@@ -137,7 +138,7 @@ export function Ambient ({source, seconds = 30, backlight, weather, showPeriod, 
 			{print && <div class="ambient__print" />}
 			<div class="ambient__night" />
 			<div class="ambient__shade" />
-			<div class="screen ambient__status" ref={status}><Status weather={weather} showPeriod={showPeriod} /></div>
+			<div class="screen ambient__status" ref={status}><Status weather={weatherLine ? weather : null} showPeriod={showPeriod} middle={forecast && weather ? <Forecast weather={weather} size={forecast} /> : null} /></div>
 		</div>
 	);
 }
