@@ -68,6 +68,21 @@ export function runningApps (): Promise<string[]> {
 	});
 }
 
+/** Never offered for uninstalling: Lumen itself, LG Home and system apps, and the Homebrew Channel, which every root command runs through. */
+const KEEP_INSTALLED = /^(com\.samrenfrew\.lumen|com\.ammar027\.lumen|com\.webos\.|com\.palm\.|com\.lge\.|org\.webosbrew\.hbchannel$)/;
+
+export function canUninstall (id: string): boolean {
+	return APP_ID.test(id) && !KEEP_INSTALLED.test(id);
+}
+
+/** Removes an app: the developer-mode remover first (Homebrew Channel apps), then the store's. True once the TV no longer knows the app. */
+export function uninstallApp (id: string): Promise<boolean> {
+	if (!canUninstall(id)) return Promise.reject(new Error(`refused: uninstall ${id}`));
+	const present = `${luna('luna://com.webos.applicationManager/getAppInfo', {id})} 2>/dev/null | grep -q '"returnValue":true'`;
+	const remove = (service: string) => `if ${present}; then ${luna(`luna://com.webos.appInstallService/${service}`, {id, subscribe: false})} >/dev/null 2>&1; sleep 2; fi`;
+	return run(`${remove('dev/remove')}; ${remove('remove')}; if ${present}; then echo kept; else echo gone; fi`, 30000).then((text) => text.indexOf('gone') !== -1);
+}
+
 /** Icons as "<index> <base64>" lines, one per path; paths that are not plain absolute paths are skipped (their line is missing). */
 export function readIcons (paths: string[]): Promise<string> {
 	const script = paths

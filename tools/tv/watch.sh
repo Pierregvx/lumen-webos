@@ -4,8 +4,9 @@
 #    come up, opens the launcher instead (polling, because luna-send buffers a subscription's output when it is piped). The launcher's own
 #    "LG Home" button touches /tmp/allow_lg_home first, so LG Home can still be opened on purpose (it then stays until you leave it).
 #  - After the TV wakes (power state back to Active, or a gap in this loop's once-a-second ticks, which means it was suspended) and after a boot:
-#    for WAKE_SECS, LG Home coming up is replaced by Lumen even without home-takeover, because the power button opens LG Home. Switch off with
-#    /var/lib/homehook/no-wake-launch.
+#    opens Lumen as soon as the screen is on, whatever the TV opened itself (LG Home after the remote's power button, Live TV after
+#    Wake-on-LAN). During a wake the loop ticks every 0.5 s and retries each tick until Lumen has stayed in front for WAKE_SETTLE seconds,
+#    or WAKE_SECS have passed; after that, apps are left alone. Switch off with /var/lib/homehook/no-wake-launch.
 #  - About a minute after a boot, if no Lumen build is open, starts Lumen hidden (a preload launch), so the first Home press after a boot into
 #    Live TV is warm, not a cold start. Switch off with /var/lib/homehook/no-boot-preload.
 #  - Keeps /var/lib/homehook/recent: the last eight apps that were in front (not Lumen, not LG Home), newest first, one id per line. Lumen reads
@@ -30,6 +31,7 @@ EXTRA=/var/lib/homehook/hosts-extra
 TAKEOVER_FLAG=/var/lib/homehook/home-takeover
 NOWAKE_FLAG=/var/lib/homehook/no-wake-launch
 WAKE_SECS=30
+WAKE_SETTLE=3
 NOPRELOAD_FLAG=/var/lib/homehook/no-boot-preload
 RECENT=/var/lib/homehook/recent
 prev=""
@@ -41,6 +43,8 @@ saverlast=0
 pwprev=""
 lastme=""
 pwlast=""
+mesince=0
+launchpid=0
 tick=$(date +%s)
 wakeuntil=$((tick + 90))   # a boot counts as a wake; LG Home may take a while to come up
 preloadat=$((tick + 60))   # once, after the boot rush; 0 when done
@@ -64,6 +68,15 @@ note_recent() {
   { echo "$1"; [ -f "$RECENT" ] && grep -vxF "$1" "$RECENT"; } | head -n 8 > "$RECENT.tmp" && mv "$RECENT.tmp" "$RECENT"
 }
 
+# opens Lumen without waiting (a launch can take seconds right after a wake), unless the last one is still in flight; $1 is the app in front
+wake_open() {
+  [ "$launchpid" -gt 0 ] && [ -d "/proc/$launchpid" ] && return
+  target=$(me_target) || return
+  ( r=$(luna-send -n 1 luna://com.webos.applicationManager/launch "{\"id\":\"$target\"}" </dev/null 2>&1)
+    echo "$(date +%T) wake: open $target over ${1:-nothing}: $r" >> /tmp/homehook.log ) &
+  launchpid=$!
+}
+
 while true; do
   # wake: the power state goes back to Active from standby or off (not from the screensaver), or the loop missed its ticks (suspended)
   now=$(date +%s)
@@ -78,11 +91,23 @@ while true; do
   if [ "$woke" -eq 1 ]; then
     wakeuntil=$((now + WAKE_SECS)); last=0
     echo "$(date +%T) wake (gap ${gap}s, power $pwstate)" >> /tmp/homehook.log
+    # before the foreground query: right after a wake each query can take seconds
+    [ ! -f "$NOWAKE_FLAG" ] && [ "$pwstate" = Active ] && wake_open ""
   fi
   out=$(luna-send -n 1 luna://com.webos.applicationManager/getForegroundAppInfo '{}' </dev/null 2>/dev/null)
   front=$(me_in_front "$out") && lastme=$front
   app=$(printf '%s' "$out" | sed -n 's/.*"appId":"\([^"]*\)".*/\1/p')
   if [ -n "$app" ] && [ "$app" != "$prevapp" ]; then prevapp=$app; note_recent "$app"; fi
+  # wake: Lumen in front as soon as the screen is on, whatever the TV opened (Wake-on-LAN resumes straight into Live TV, skipping LG Home)
+  if [ -n "$front" ]; then [ "$mesince" -eq 0 ] && mesince=$now; else mesince=0; fi
+  if [ ! -f "$NOWAKE_FLAG" ] && [ "$now" -lt "$wakeuntil" ] && [ "$pwstate" = Active ]; then
+    if [ -n "$front" ]; then
+      # settled: the TV can still put its own app over Lumen in the first seconds, so the wake ends only once Lumen has stayed up
+      [ $((now - mesince)) -ge "$WAKE_SETTLE" ] && wakeuntil=0
+    else
+      wake_open "$app"
+    fi
+  fi
   case "$out" in
     *'"appId":"'$LGHOME'"'*)
       # LG Home is in front. Unless the launcher's own LG Home button just asked for it, send it to the launcher, and keep trying (every 3 s) until it
@@ -97,7 +122,6 @@ while true; do
       fi
       takeover=0
       [ -f "$TAKEOVER_FLAG" ] && takeover=1
-      [ ! -f "$NOWAKE_FLAG" ] && [ "$now" -lt "$wakeuntil" ] && takeover=1
       if [ "$takeover" -eq 1 ] && [ "$okhome" -eq 0 ] && target=$(me_target) && { [ $((now - last)) -ge 3 ] || [ $((now - last)) -lt 0 ]; }; then
         last=$now
         luna-send -n 1 luna://com.webos.applicationManager/launch "{\"id\":\"$target\"}" </dev/null >/dev/null 2>&1
@@ -172,5 +196,6 @@ while true; do
       ! grep -qF "$l" /etc/hosts 2>/dev/null && echo "$l" >> /etc/hosts
     done
   fi
-  sleep 1
+  # faster ticks while a wake is open, so Lumen goes up as soon as the TV lets it
+  if [ "$now" -lt "$wakeuntil" ]; then sleep 0.5; else sleep 1; fi
 done
