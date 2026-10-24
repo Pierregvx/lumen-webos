@@ -45,18 +45,14 @@ These screenshots show the original project, before this fork's changes. The wal
 
 ## Install from the Homebrew Channel
 
-Each push to a branch other than `main` publishes a dev build. A `v*` tag publishes a stable build. The GitHub workflow ([.github/workflows/release.yml](.github/workflows/release.yml)) does both.
+Each push to `main` publishes a stable build. The GitHub workflow ([.github/workflows/release.yml](.github/workflows/release.yml)) does this.
 
 To get the builds on the TV:
 
 1. Open the Homebrew Channel on the TV.
 2. Open the Channel's settings.
-3. Add one of these repository URLs:
-   - Dev builds: `https://raw.githubusercontent.com/samrenfrew/lumen-webos/hbc-repo/dev/apps.json`
-   - Stable builds: `https://raw.githubusercontent.com/samrenfrew/lumen-webos/hbc-repo/stable/apps.json`
+3. Add this repository URL: `https://raw.githubusercontent.com/samrenfrew/lumen-webos/hbc-repo/stable/apps.json`
 4. Install Lumen from the Channel's app list.
-
-There is no stable build yet. The stable URL works after the first `v*` tag.
 
 The [releases page](https://github.com/samrenfrew/lumen-webos/releases) also has each `.ipk`. You can install one with [Dev Manager](https://github.com/webosbrew/dev-manager-desktop/releases) or `ares-install`.
 
@@ -132,9 +128,9 @@ Start a commit that changes only docs with `docs/<file>:`.
 
 Do the work on a branch named `<area>/<topic>`, for example `home/dock-names`. Know what each push does:
 
-- A push to a branch other than `main` publishes a dev build (`1.0.9xxx`) to the Homebrew Channel's dev repository.
+- A push to a branch other than `main` makes a dev build (`1.1.0xxx`). The workflow keeps it as a run artifact for 14 days. It does not publish it.
+- A push to `main` publishes a stable release and tags it `v<version>`. The version comes from `app/public/appinfo.json`. If that tag exists, the workflow uses the next free patch number. To start a new minor or major version, change `appinfo.json`.
 - A Channel update replaces a build that you installed over SSH.
-- A `v*` tag, for example `v1.1.0`, publishes a stable build. A tag with a hyphen, for example `v1.1.0-rc.1`, publishes a prerelease.
 
 Do not push only to get a build onto the TV. Use `npm run deploy:home` for that.
 

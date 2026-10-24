@@ -18,7 +18,7 @@ Hard rule (CLAUDE.md): a change Sam is to try goes into the live page first, wit
 
 Plain `npm run deploy` uses the app id in `.env`, which is `com.samrenfrew.lumen.dev` ("Home Dev"). That installs a second app beside Lumen, and the Home button does not open it. Use it only when Sam asks for a side-by-side copy.
 
-A branch push publishes a Channel build (`1.0.9xxx`), and a Channel update replaces the local install. Push only when Sam asks for it.
+A push to `main` publishes a Channel release, and a Channel update replaces the local install. A branch push publishes nothing. Push only when Sam asks for it.
 
 ## The log
 

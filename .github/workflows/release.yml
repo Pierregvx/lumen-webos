@@ -1,79 +1,79 @@
-# Builds the public .ipk (no app/private/) and publishes it as a GitHub release.
-#  - a tag v* (v1.1.0): a release of that name; with a hyphen (v1.1.0-rc.1) a prerelease
-#  - a push to any branch other than main: adds a build of that commit to the rolling prerelease "dev", which keeps the last 5 builds (so a
-#    Channel that still lists the previous build can install it)
+# Builds the public .ipk (no app/private/).
+#  - a push to main: a stable release. The version comes from appinfo.json; if that tag exists, the patch number goes up to the next free one.
+#    It is published as a GitHub release (tag v<version>) and to the Homebrew Channel's stable repository.
+#  - a push to any other branch: a dev build (Settings > Frame-rate counter), kept as a workflow artifact only. Nothing is published.
 name: release
 on:
   push:
-    tags: ['v*']
-    branches-ignore: [main]
+    branches: ['**', '!hbc-repo']
 permissions:
   contents: write
-# one run at a time: two pushes close together must not race on the dev release or the hbc-repo branch
+# one run at a time: two pushes to main close together must not race on the tag or the hbc-repo branch
 concurrency:
-  group: release
+  group: release-${{ github.ref_name == 'main' && 'main' || github.run_id }}
   cancel-in-progress: false
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: app/package-lock.json
       - name: Version
-        # dev builds get a rising patch number (1.0.9 -> 1.0.9xxx, from the run number) so the Homebrew Channel offers each one as an update;
-        # a tagged release keeps the version in appinfo.json
-        if: github.ref_type != 'tag'
+        # main: the appinfo.json version, or the next free patch above it; a branch: 1.1.0 -> 1.1.0xxx from the run number, so it sorts above the release
+        env:
+          MAIN: ${{ github.ref_name == 'main' && '1' || '' }}
         run: |
           python3 - <<'PY'
-          import json, os
+          import json, os, subprocess
           p = 'app/public/appinfo.json'; d = json.load(open(p))
           a, b, c = (int(x) for x in d['version'].split('.'))
-          d['version'] = f"{a}.{b}.{c * 1000 + int(os.environ['GITHUB_RUN_NUMBER'])}"
-          json.dump(d, open(p, 'w'), indent=2); print(d['version'])
+          if os.environ['MAIN']:
+              tags = set(subprocess.check_output(['git', 'tag', '-l', 'v*'], text=True).split())
+              while f'v{a}.{b}.{c}' in tags: c += 1
+          else:
+              c = c * 1000 + int(os.environ['GITHUB_RUN_NUMBER'])
+          d['version'] = f'{a}.{b}.{c}'
+          json.dump(d, open(p, 'w'), indent=2)
+          open(os.environ['GITHUB_ENV'], 'a').write(f"VERSION={d['version']}\n")
+          print(d['version'])
           PY
       - name: Build the .ipk
-        # branch pushes are dev builds (Settings > Frame-rate counter); a tag without a hyphen is stable
         env:
-          LUMEN_DEV: ${{ (github.ref_type == 'tag' && !contains(github.ref_name, '-')) && '0' || '1' }}
+          LUMEN_DEV: ${{ github.ref_name == 'main' && '0' || '1' }}
         run: python3 tools/build_release.py
+      - name: Keep the dev build
+        if: github.ref_name != 'main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lumen-${{ env.VERSION }}
+          path: release/*.ipk
+          retention-days: 14
       - name: Publish
+        if: github.ref_name == 'main'
         env:
           GH_TOKEN: ${{ github.token }}
-          REF_TYPE: ${{ github.ref_type }}
-          REF: ${{ github.ref_name }}
         run: |
           IPK=$(ls release/*.ipk)
           SUM=$(sha256sum "$IPK" | cut -d' ' -f1)
           printf 'Built from %s.\n\nInstall: drop the .ipk onto Dev Manager, or `ares-install --device lgtv %s`.\n\nSHA-256: `%s`\n' \
             "$GITHUB_SHA" "$(basename "$IPK")" "$SUM" > notes.md
-          if [ "$REF_TYPE" = tag ]; then
-            TAG=$REF; PRE=; case "$TAG" in *-*) PRE=--prerelease ;; esac
-            gh release create "$TAG" "$IPK" --target "$GITHUB_SHA" --title "Lumen $TAG ($REF, ${GITHUB_SHA:0:7})" --notes-file notes.md $PRE
-          else
-            # add this build to "dev" instead of replacing the release, then drop all but the newest 5 builds
-            TAG=dev
-            gh release view dev >/dev/null 2>&1 || gh release create dev --target "$GITHUB_SHA" --title "Lumen dev" --notes-file notes.md --prerelease
-            gh release upload dev "$IPK" --clobber
-            gh release edit dev --title "Lumen dev ($REF, ${GITHUB_SHA:0:7})" --notes-file notes.md
-            gh release view dev --json assets -q '.assets[].name' | grep '\.ipk$' | sort -V | head -n -5 | while read -r old; do gh release delete-asset dev "$old" --yes; done
-          fi
-          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          gh release create "v$VERSION" "$IPK" --target "$GITHUB_SHA" --title "Lumen $VERSION (${GITHUB_SHA:0:7})" --notes-file notes.md
       - name: Homebrew Channel repository
         # The Channel reads the index with XHR, so it is served from raw.githubusercontent.com (CORS allowed) on the hbc-repo branch:
-        #   dev builds:     https://raw.githubusercontent.com/<repo>/hbc-repo/dev/apps.json
-        #   tagged release: https://raw.githubusercontent.com/<repo>/hbc-repo/stable/apps.json
+        #   https://raw.githubusercontent.com/<repo>/hbc-repo/stable/apps.json
+        if: github.ref_name == 'main'
         run: |
-          CHANNEL=stable; [ "$TAG" = dev ] && CHANNEL=dev
-          case "$TAG" in *-*) CHANNEL=dev ;; esac
           IPK=$(ls release/*.ipk)
-          BASE="https://raw.githubusercontent.com/$GITHUB_REPOSITORY/hbc-repo/$CHANNEL"
-          URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$(basename "$IPK")"
+          BASE="https://raw.githubusercontent.com/$GITHUB_REPOSITORY/hbc-repo/stable"
+          URL="https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/$(basename "$IPK")"
           git config user.name github-actions; git config user.email github-actions@users.noreply.github.com
           git fetch origin hbc-repo && git worktree add hbc origin/hbc-repo || { git worktree add --detach hbc && git -C hbc checkout --orphan hbc-repo && git -C hbc rm -rfq .; }
-          rm -rf "hbc/$CHANNEL"
-          python3 tools/gen_hbc_repo.py "$IPK" "$URL" "$BASE" "hbc/$CHANNEL"
-          cd hbc && git add -A && git commit -qm "$CHANNEL: $TAG ${GITHUB_SHA:0:7}" && git push origin HEAD:hbc-repo
+          rm -rf hbc/stable
+          python3 tools/gen_hbc_repo.py "$IPK" "$URL" "$BASE" hbc/stable
+          cd hbc && git add -A && git commit -qm "stable: v$VERSION ${GITHUB_SHA:0:7}" && git push origin HEAD:hbc-repo

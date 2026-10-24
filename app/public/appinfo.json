@@ -1,8 +1,9 @@
 {
   "id": "com.samrenfrew.lumen",
-  "version": "1.0.9",
+  "version": "1.1.0",
   "vendor": "samrenfrew",
   "type": "web",
+  "appCategory": ["home"],
   "main": "index.html",
   "title": "Home",
   "appDescription": "Minimalist home screen: apps, inputs and a way back to LG's home.",
