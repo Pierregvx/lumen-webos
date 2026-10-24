@@ -49,6 +49,11 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [ ] Screensaver from the TV (verify, branch `home/edit-mode`; checked in the preview): when the TV's screensaver opens Lumen, the first
       thing drawn is the screensaver, on the last photo it showed, and a new photo crossfades in. Any key plays the opening backwards: the
       screensaver fades out over 0.5 s while the clock slides back to its place on the home screen.
+- [ ] Wallpaper dimming (verify, branch `home/wallpaper-dim`; GitHub issue #1, feature 1): Settings > Wallpaper > Dim the wallpaper is
+      a list, Off, At night or Always (an old night setting becomes At night). Settings > Home > Dim when the dock is hidden (shown when
+      Hide the dock is on): with the dock away, a black layer at 45% fades in over the wallpaper, and fades out when the dock comes back.
+- [ ] App Store in Settings > Apps (verify, branch `home/wallpaper-dim`; GitHub issue #1, item 6): LG's store (`com.webos.app.discovery`,
+      LG's title "Apps") is no longer hidden. It shows as "App Store", with the TV's icon from the Homebrew list, and opens the store.
 - [ ] Down and Up at about 40 fps (verify after the next build; measured live 2026-10-23, in source, `docs/down-up-lag-review.md`): the backdrop behind the lower rows is a canvas (`components/LowerVeil.tsx`) and looks as before, with night dimming too; the bar and first grid row tiles keep a layer each. Up slides in 340 ms, Down in 276 ms. The grid's focused tile grows 1.14x. Check that the backdrop changes with the wallpaper, and that a Down within 4 s of coming back from an app still shows the backdrop (`screen--plainglass` is no longer set under Live blur, so the `settled` rule now also checks `screen--lower`).
 - [ ] Settings and Guide backdrop, Guide rows, Back from the grid (verify after the next build; tried live 2026-10-23, in source): Settings and the Guide draw the blurred picture as a canvas (`ScreenBackdrop`, `lib/blurCanvas.ts`) and look as before; each Guide row has its own layer. Back in the grid returns to the glass bar, on the app it left from.
 - [ ] Settings > Appearance > Dock blur replaces Live blur (verify after the next build; tried live 2026-10-23): off by default, the glass bar keeps its look with no blur; on, it blurs 2px with saturation, and left and right are a little slower. Live blur is now always on underneath, so the pre-blurred copy for the glass is no longer a choice.
@@ -156,9 +161,14 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [x] Any wake opens Lumen, fast (seen working on the TV 2026-10-24): Wake-on-LAN resumes straight into Live TV and skips LG Home, so the
       wake window now opens Lumen over whatever is in front, retrying every 0.5 s until Lumen has stayed up 3 s. LG's "Home on power-on"
       (`general` / `homeAutoLaunch`) is now `off`, so the remote's power button no longer opens LG Home first. Details in `docs/spikes.md`.
-- [ ] Restart ends in standby: Control Center's Restart sends `rebootByOnRegular` (since 84549ea, 2026-10-22). The TV reboots, then
-      turns itself off about a minute later (`docs/spikes.md`, Reboot reason). GitHub issue #1 reports the same on build 1.0.9165, which
-      has the fix, on an OLED65G3. Try `rebootByARRegular` over SSH and see whether the TV stays on.
+- [x] Restart comes back on (seen working on the TV 2026-10-24; GitHub issue #1, item 4): every `tvpower` reboot reason, `rebootByARRegular`
+      included, comes back in Active Standby. Restart now runs the shell's `reboot`; from Control Center the TV came back Active
+      (`PowerOnReason` `micomPower`). Details in `docs/spikes.md`, Reboot reason.
+- [ ] Cold start after a reboot: the TV showed Live TV for 10 to 15 s before Lumen (2026-10-24). The TV is busy as it starts: Lumen's
+      script ran at 10.5 s and drew at 13.1 s, against under 0.5 s on a normal start. Lumen is now a TV input (`eim/addDevice`, id
+      `MVPD_IP-com.samrenfrew.lumen`, done over SSH, not from the app), picked once as the last input. The next restart drew at 8.3 s
+      (one sample). Next: more samples, check that Live TV no longer shows first, and why `/tmp/homehook.log` was missing after that boot.
+      Removing the input is `eim/deleteDevice` with the same appId (untested).
 - [x] `"keepAlive": true` in appinfo.json: tried 2026-10-16, no effect (Lumen still reloads from scratch after Plex). Removed. Cold start
       stays the thing to make fast (Phase 4).
 - [ ] Keep apps alive: Home or Recents leaves the app you were in running, and Lumen opens with no launch screen. One session of tests
