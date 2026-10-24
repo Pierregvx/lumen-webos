@@ -1275,11 +1275,11 @@ html.light .cc__mod--focused .cc__fill .cc__slidertext svg { stroke: #fff; }
 /* Dim the wallpaper at night covers the screensaver too */
 .ambient__night { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: #000; opacity: 0; pointer-events: none; }
 html.night .ambient__night { opacity: 0.45; }
-/* the darker band behind the clock, date and weather: taller and eased, so it has no visible top edge, and darkest at the bottom */
-.ambient__shade { position: absolute; left: 0; right: 0; bottom: 0; height: 520px; background: linear-gradient(rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.06) 25%, rgba(0, 0, 0, 0.18) 45%, rgba(0, 0, 0, 0.34) 65%, rgba(0, 0, 0, 0.48) 82%, rgba(0, 0, 0, 0.56) 100%); pointer-events: none; }
+/* a very slight dark band behind the clock, date and weather: eased, so it has no visible top edge; the blur under it does most of the work */
+.ambient__shade { position: absolute; left: 0; right: 0; bottom: 0; height: 520px; background: linear-gradient(rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.03) 25%, rgba(0, 0, 0, 0.09) 45%, rgba(0, 0, 0, 0.17) 65%, rgba(0, 0, 0, 0.24) 82%, rgba(0, 0, 0, 0.28) 100%); pointer-events: none; }
 /* a light live blur along the bottom, under the shade: it fades in once the screensaver has settled (the opening slide and the first photo are done),
    so it costs nothing while they run; it fades in from the top of the band, so there is no edge (verify on the TV: the zoom and crossfade stay smooth with it) */
-.ambient__blur { position: absolute; left: 0; right: 0; bottom: 0; height: 520px; -webkit-backdrop-filter: blur(2.5px); backdrop-filter: blur(2.5px); -webkit-mask-image: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6) 40%, #000 70%); mask-image: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6) 40%, #000 70%); opacity: 0; animation: ambient-in 1.2s ease 6s forwards; pointer-events: none; }
+.ambient__blur { position: absolute; left: 0; right: 0; bottom: 0; height: 520px; -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); -webkit-mask-image: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6) 40%, #000 70%); mask-image: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6) 40%, #000 70%); opacity: 0; animation: ambient-in 1.2s ease 6s forwards; pointer-events: none; }
 html.reduce-motion .ambient__blur { animation: none; opacity: 1; }
 .screen.ambient__status { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: none; pointer-events: none; }
 .ambient .screen > .pill.status { top: auto; bottom: 72px; }
@@ -1527,17 +1527,18 @@ html.light .slist__row--focused { background-image: none; background-color: #141
 html.light .slist__row--focused .slist__value { color: rgba(255, 255, 255, 0.6); }
 html.light .slist__row--focused .slist__chevron { stroke: rgba(255, 255, 255, 0.6); }
 
-/* ---------- weather widget (components/Forecast.tsx): plain text over the picture like the clock, no glass, so the dock stays the only glass ---------- */
-.forecast { display: flex; flex-direction: row; color: #fff; font-weight: 500; letter-spacing: -0.011em; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; text-shadow: 0 1px 16px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.22); pointer-events: none; }
+/* ---------- weather widget (components/Forecast.tsx): plain text over the picture like the clock, no glass, so the dock stays the only glass; it looks the same on home and the screensaver, only where it sits differs ---------- */
+/* each hour's width and icon: the small one keeps the size it had on home, the large one is a touch bigger */
+.forecast { --cast-col: 72px; --cast-icon: 30px; display: flex; flex-direction: row; color: #fff; font-weight: 500; letter-spacing: -0.011em; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; text-shadow: 0 1px 16px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.22); pointer-events: none; }
 .forecast svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.35)); flex: 0 0 auto; }
-.forecast__hour { width: 72px; display: flex; flex-direction: column; align-items: center; }
-.forecast__icon { width: 30px; height: 30px; }
+.forecast__hour { width: var(--cast-col); display: flex; flex-direction: column; align-items: center; }
+.forecast__icon { width: var(--cast-icon); height: var(--cast-icon); }
 .forecast__temp { font-size: 24px; font-weight: 600; line-height: 1.2; }
-.forecast__time { font-size: 18px; line-height: 1.2; opacity: 0.78; white-space: nowrap; }
+.forecast__time { font-size: 18px; font-weight: 400; line-height: 1.2; opacity: 0.6; white-space: nowrap; }
 .forecast--small .forecast__hour + .forecast__hour { margin-left: 6px; }
 .forecast--small .forecast__hour > * + * { margin-top: 4px; }
 /* large: now on the left, a rule, then the hours over a short chance-of-rain chart */
-.forecast--large { align-items: stretch; }
+.forecast--large { --cast-col: 76px; --cast-icon: 32px; align-items: stretch; }
 .forecast__now { display: flex; flex-direction: column; justify-content: center; margin-right: 28px; padding-right: 28px; border-right: 1px solid rgba(255, 255, 255, 0.28); white-space: nowrap; }
 .forecast__big { display: flex; flex-direction: row; align-items: center; font-size: 56px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; }
 .forecast__bigicon { width: 50px; height: 50px; margin-right: 10px; }
@@ -1547,8 +1548,9 @@ html.light .slist__row--focused .slist__chevron { stroke: rgba(255, 255, 255, 0.
 .forecast__hours { display: flex; flex-direction: column; justify-content: center; }
 .forecast__row { display: flex; flex-direction: row; }
 .forecast--large .forecast__hour > * + * { margin-top: 3px; }
+.forecast--large .forecast__time { margin-bottom: 2px; }
 .forecast__bars { display: flex; flex-direction: row; height: 46px; margin-top: 8px; border-bottom: 2px solid rgba(255, 255, 255, 0.3); }
-.forecast__bar { width: 72px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+.forecast__bar { width: var(--cast-col); display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
 .forecast__bar span { margin-bottom: 3px; font-size: 15px; line-height: 1; font-weight: 600; color: #a8d8ff; }
 .forecast__bar i { display: block; width: calc(100% - 8px); background: rgba(124, 196, 255, 0.5); border-radius: 5px 5px 0 0; }
 .forecast__bar--wet i { background: rgba(124, 196, 255, 0.9); }
@@ -1563,16 +1565,12 @@ html.light .slist__row--focused .slist__chevron { stroke: rgba(255, 255, 255, 0.
 
 /* screensaver: between the clock and the date, centred in the gap, its bottom on the date's line */
 .ambient .screen > .pill.status .forecast { align-self: flex-end; margin: 0 24px 12px; }
-.ambient .forecast__hour, .ambient .forecast__bar { width: 76px; }
 /* the large one gives way first when a 12-hour clock with AM or PM leaves less room: its hours narrow down to 62px */
 .ambient .screen > .pill.status .forecast--large { flex: 0 1 auto; min-width: 0; }
 .ambient .forecast--large .forecast__hours { flex: 1 1 auto; min-width: 0; }
-.ambient .forecast--large .forecast__hour, .ambient .forecast--large .forecast__bar { width: 76px; flex: 0 1 auto; min-width: 62px; }
-.ambient .forecast__icon { width: 32px; height: 32px; }
-.ambient .forecast__temp { font-size: 26px; }
-.ambient .forecast__time { font-size: 19px; }
+.ambient .forecast--large .forecast__hour, .ambient .forecast--large .forecast__bar { flex: 0 1 auto; min-width: 62px; }
 /* the status pill's own icon rules would otherwise size and space the widget's icons */
-.screen > .pill.status .forecast svg { margin: 0; width: 32px; height: 32px; }
+.screen > .pill.status .forecast svg { margin: 0; width: var(--cast-icon); height: var(--cast-icon); }
 .screen > .pill.status .forecast .forecast__bigicon { width: 50px; height: 50px; margin-right: 10px; }
 /* small: a slim bar under each hour, filled by the chance of rain */
 .forecast__pill { display: block; width: 44px; height: 5px; margin-top: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.24); overflow: hidden; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25); }

@@ -548,7 +548,7 @@ export function App () {
 			id: OPTION.saverCastSize,
 			group: 'screensaver' as const,
 			label: 'Weather widget size',
-			description: 'Small: the next 6 hours. Large: the weather now with today\'s high and low, and the next 8 hours with the chance of rain.',
+			description: 'Small: the next 6 hours. Large: the weather now with today\'s high and low, and the next 7 hours with the chance of rain.',
 			value: true,
 			...listed(OPTION.saverCastSize)
 		}] : []),
@@ -615,7 +615,7 @@ export function App () {
 			id: OPTION.homeCastSize,
 			group: 'home' as const,
 			label: 'Weather widget size',
-			description: 'Small: the next 6 hours. Large: the weather now with today\'s high and low, and the next 8 hours with the chance of rain.',
+			description: 'Small: the next 6 hours. Large: the weather now with today\'s high and low, and the next 7 hours with the chance of rain.',
 			value: true,
 			...listed(OPTION.homeCastSize)
 		}] : []),

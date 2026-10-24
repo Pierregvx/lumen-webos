@@ -17,7 +17,7 @@ function hourText (h: Hour, format: '12h' | '24h'): string {
 
 /** The weather widget: plain text over the picture, no glass, so it does not compete with the dock.
  *  small: the next 6 hours, each an icon, the temperature, the time and a slim bar filled by the chance of rain.
- *  large: now on the left (icon, temperature, conditions, today's high and low, when rain starts), the next 8 hours on the right with a bar for the chance of rain.
+ *  large: now on the left (icon, temperature, conditions, today's high and low, when rain starts), the next 7 hours on the right (8 put its left edge on the middle of a side-by-side photo pair) with a bar for the chance of rain.
  *  Not focusable. Draws nothing until there is a forecast. */
 export function Forecast ({weather, size}: {weather: Weather; size: 'small' | 'large'}) {
 	const [, bump] = useState(0);
@@ -31,7 +31,7 @@ export function Forecast ({weather, size}: {weather: Weather; size: 'small' | 'l
 		return () => window.clearInterval(id);
 	}, []);
 
-	const hours = hoursAhead(weather, size === 'small' ? 6 : 8);
+	const hours = hoursAhead(weather, size === 'small' ? 6 : 7);
 	if (!hours.length) return null;
 
 	if (size === 'small') {
