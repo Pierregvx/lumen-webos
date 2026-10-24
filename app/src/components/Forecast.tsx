@@ -16,7 +16,7 @@ function hourText (h: Hour, format: '12h' | '24h'): string {
 }
 
 /** The weather widget: plain text over the picture, no glass, so it does not compete with the dock.
- *  small: the next 6 hours, each an icon, the temperature and the time.
+ *  small: the next 6 hours, each an icon, the temperature, the time and a slim bar filled by the chance of rain.
  *  large: now on the left (icon, temperature, conditions, today's high and low, when rain starts), the next 8 hours on the right with a bar for the chance of rain.
  *  Not focusable. Draws nothing until there is a forecast. */
 export function Forecast ({weather, size}: {weather: Weather; size: 'small' | 'large'}) {
@@ -42,6 +42,7 @@ export function Forecast ({weather, size}: {weather: Weather; size: 'small' | 'l
 						<WeatherIcon kind={h.kind} day={h.day} class="forecast__icon" />
 						<span class="forecast__temp">{h.temp}°</span>
 						<span class="forecast__time">{hourText(h, format)}</span>
+						<span class={`forecast__pill${h.rain >= RAIN_LIKELY ? ' forecast__pill--wet' : ''}`}><i style={{width: h.rain + '%'}} /></span>
 					</div>
 				))}
 			</div>

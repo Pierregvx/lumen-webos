@@ -1569,3 +1569,13 @@ html.light .slist__row--focused .slist__chevron { stroke: rgba(255, 255, 255, 0.
 /* the status pill's own icon rules would otherwise size and space the widget's icons */
 .screen > .pill.status .forecast svg { margin: 0; width: 32px; height: 32px; }
 .screen > .pill.status .forecast .forecast__bigicon { width: 50px; height: 50px; margin-right: 10px; }
+/* small: a slim bar under each hour, filled by the chance of rain */
+.forecast__pill { display: block; width: 44px; height: 5px; margin-top: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.24); overflow: hidden; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25); }
+.forecast__pill i { display: block; height: 100%; border-radius: 3px; background: rgba(124, 196, 255, 0.6); }
+.forecast__pill--wet i { background: #7cc4ff; }
+/* screensaver with the large widget: the date goes under the clock on the left, the widget takes the right */
+.ambient--castlarge .screen > .pill.status { display: grid; grid-template-columns: auto 1fr; align-items: end; }
+.ambient--castlarge .screen > .pill.status .clock { grid-column: 1; grid-row: 1; }
+.ambient--castlarge .screen > .pill.status .status__row { grid-column: 1; grid-row: 2; flex-direction: column; align-items: flex-start; text-align: left; margin: 14px 0 0 2px; }
+.ambient--castlarge .screen > .pill.status .forecast { grid-column: 2; grid-row: 1 / span 2; justify-self: end; margin: 0 0 8px 40px; }
+.forecast--small .forecast__hour > .forecast__pill { margin-top: 8px; }
