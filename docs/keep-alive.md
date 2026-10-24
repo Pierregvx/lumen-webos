@@ -18,7 +18,7 @@ On the TV now (each list is LG's list plus the ids named):
   close them, but the memory manager still can when it needs room.
 - iPlayer's appinfo is patched to `"closeOnBackground": false` (original at `/var/lib/homehook/iplayer-appinfo.backup.json`).
 - Lumen is a hand install, not a Channel build: version 1.0.9158 built from the working copy, with `"noSplashOnLaunch": true` and the running
-  dot (a dot above each app that is open). Nothing of it is committed. A newer dev build from the Channel replaces it.
+  dot (a dot above each app that is open). Nothing of it is committed. A Channel release replaces it.
 - Every other config key has its value from before the session. The whole config's backup is `/var/lib/homehook/configd_db.backup.json`.
 
 The config changes survive a reboot. The memory manager reads them only when it starts, so a change needs a reboot to take effect.
@@ -175,4 +175,14 @@ Most useful first:
 - All config: copy `/var/lib/homehook/configd_db.backup.json` back to `/var/preferences/configd_db.json` and reboot.
 - Preloads: copy `/var/lib/homehook/preload-conf.backup.json` over `/var/preferences/webos-preload-manager-conf.json` and reboot.
 - iPlayer: copy the backup over `/media/cryptofs/apps/usr/palm/applications/bbc.iplayer.3.0/appinfo.json` and reboot.
-- Lumen: update it in the Homebrew Channel.
+- Lumen: install a build with `npm run deploy:home`, or update it in the Homebrew Channel.
+
+## LG ad and logging services (read 2026-10-24)
+
+Read over SSH with iPlayer playing. Nothing was changed.
+
+- Memory: MemAvailable 112 MB of 1.2 GB. CMA (kept for video) is 594 MB, with 5 MB free.
+- Running apps: iPlayer and Lumen only. LG Home was not running.
+- The eight services cleanyourtv-WebOS stops all run here: `remotelogger`, `service-logger`, `contentminer`, `nudge`, `admanager`, `sportsalarm`, `adoverlay-service` and `uploadd`. Each uses about 1.2 MB, about 10 MB together. `acr2` is installed but was not running.
+- The large users are the apps. iPlayer's renderer used 119 MB. Lumen's renderer used 22 MB in the background. `ss.apiadapter.pub` used 23 MB, and its job is not known yet.
+- Stopping the services would free about 10 MB. That is a small gain.

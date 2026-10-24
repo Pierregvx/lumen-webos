@@ -30,6 +30,25 @@ The agent installs each change on the TV over SSH (`npm run deploy:home`), so "v
 ### Verify on the TV (built, not yet seen working)
 
 Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or later).
+- [ ] Edit mode (verify, branch `home/edit-mode`; checked in the preview): hold OK on an app and it lifts and wobbles. Left and Right
+      move it one place, Up and Down a whole row, OK puts it down. Hold OK again while it is lifted: a menu of frosted pills, like the
+      Inputs list, rises above the app (held inside the screen's edges, under the app if there is no room above). It offers Uninstall App
+      (only for apps you installed, and it asks for a second OK), Remove from Home Screen, and Add to Folder (Games, Tools, Media). Back
+      steps out of the folder list, then closes the menu with the app still lifted. On an app in the grid, the grid stays open under the
+      menu. Uninstall goes through `uninstallApp` in `lib/root.ts` (developer-mode remover, then the store's); check it on a Homebrew app.
+- [ ] Wallpaper with nothing picked (verify, branch `home/edit-mode`; GitHub issue #1, item 3): Choose wallpaper > Deselect all now
+      works, and so does unticking the last picture. With nothing picked, the default picture shows (the first bundled one, or the first in
+      `app/private/` when that is there), and the summary says so. The next launch opens on it too. Picking anything replaces it.
+- [ ] Settings ends (verify, branch `home/edit-mode`; GitHub issue #1, item 5): Settings > Apps with four or more rows scrolls far enough
+      that the last row's names show (the grid now measures a tile's real height). At the end of a long list (Settings with the Channels
+      entry, a country list), the last row shows whole with its shadow, and the bottom fade is only there while more rows wait below.
+- [ ] Number keys (verify, branch `home/edit-mode`): 1 to 6 open the glass bar's apps at those places, from the home screen; 7 to 9 do
+      nothing. Check the remote's digits reach Lumen as key codes 48-57 on the home screen, as they do in the Guide.
+- [ ] Resting pointer (verify, branch `home/edit-mode`; from upstream): leave the Magic Remote pointer resting over the rows, press Down
+      into the grid, and the focus stays in the grid instead of jumping back to the glass bar.
+- [ ] Screensaver from the TV (verify, branch `home/edit-mode`; checked in the preview): when the TV's screensaver opens Lumen, the first
+      thing drawn is the screensaver, on the last photo it showed, and a new photo crossfades in. Any key plays the opening backwards: the
+      screensaver fades out over 0.5 s while the clock slides back to its place on the home screen.
 - [ ] Down and Up at about 40 fps (verify after the next build; measured live 2026-10-23, in source, `docs/down-up-lag-review.md`): the backdrop behind the lower rows is a canvas (`components/LowerVeil.tsx`) and looks as before, with night dimming too; the bar and first grid row tiles keep a layer each. Up slides in 340 ms, Down in 276 ms. The grid's focused tile grows 1.14x. Check that the backdrop changes with the wallpaper, and that a Down within 4 s of coming back from an app still shows the backdrop (`screen--plainglass` is no longer set under Live blur, so the `settled` rule now also checks `screen--lower`).
 - [ ] Settings and Guide backdrop, Guide rows, Back from the grid (verify after the next build; tried live 2026-10-23, in source): Settings and the Guide draw the blurred picture as a canvas (`ScreenBackdrop`, `lib/blurCanvas.ts`) and look as before; each Guide row has its own layer. Back in the grid returns to the glass bar, on the app it left from.
 - [ ] Settings > Appearance > Dock blur replaces Live blur (verify after the next build; tried live 2026-10-23): off by default, the glass bar keeps its look with no blur; on, it blurs 2px with saturation, and left and right are a little slower. Live blur is now always on underneath, so the pre-blurred copy for the glass is no longer a choice.
@@ -137,6 +156,9 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
 - [x] Any wake opens Lumen, fast (seen working on the TV 2026-10-24): Wake-on-LAN resumes straight into Live TV and skips LG Home, so the
       wake window now opens Lumen over whatever is in front, retrying every 0.5 s until Lumen has stayed up 3 s. LG's "Home on power-on"
       (`general` / `homeAutoLaunch`) is now `off`, so the remote's power button no longer opens LG Home first. Details in `docs/spikes.md`.
+- [ ] Restart ends in standby: Control Center's Restart sends `rebootByOnRegular` (since 84549ea, 2026-10-22). The TV reboots, then
+      turns itself off about a minute later (`docs/spikes.md`, Reboot reason). GitHub issue #1 reports the same on build 1.0.9165, which
+      has the fix, on an OLED65G3. Try `rebootByARRegular` over SSH and see whether the TV stays on.
 - [x] `"keepAlive": true` in appinfo.json: tried 2026-10-16, no effect (Lumen still reloads from scratch after Plex). Removed. Cold start
       stays the thing to make fast (Phase 4).
 - [ ] Keep apps alive: Home or Recents leaves the app you were in running, and Lumen opens with no launch screen. One session of tests
@@ -340,6 +362,25 @@ Done when: photos load from Immich on the TV, the ambient screen runs for an hou
 not got worse.
 
 ---
+
+## Next: ideas from other launchers (2026-10-24)
+
+From `docs/prior-art.md` and upstream (ammar027/lumen-webos). Build without the TV; try each one on the TV later.
+
+- [ ] Frigate front door card: over the home screen or the screensaver, a card with the door camera's live view when Frigate sees a person or
+      motion. Lumen listens to Home Assistant over its WebSocket API. Test which stream the TV plays (HLS, or JPEG frames from go2rtc).
+- [ ] Home Assistant buttons in Control Center: a short row of chosen entities (for example the lounge lights).
+- [ ] Native Home: `appCategory: ["home"]` is in appinfo.json (built). Next is the TV step, `setDefaultApp` (upstream
+      `docs/native-home.md`), so LG's own Home routes open Lumen, not only the remote's Home key that Input Hook rebinds. Restore LG Home
+      before removing Lumen.
+- [ ] Free more memory by stopping LG services. Read on the TV 2026-10-24 with iPlayer playing (nothing changed): MemAvailable 112 MB of
+      1.2 GB; CMA (video) 594 MB with 5 MB free. All eight services cleanyourtv-WebOS stops (tested on webOS 25) exist and run here:
+      `remotelogger`, `service-logger`, `contentminer`, `nudge`, `admanager`, `sportsalarm`, `adoverlay-service`, `uploadd`, about 1.2 MB
+      each, about 10 MB together. `acr2` exists but was not running. LG Home was not running. The big ones are the apps: iPlayer's
+      renderer 119 MB, Lumen's 22 MB in the background, and `ss.apiadapter.pub` at 23 MB (unknown; find out what it is before touching
+      it). So stopping the services frees about 10 MB: worth doing, but small. Method if Sam wants it: cleanyourtv-WebOS's
+      `scripts/debloat-stop.sh` (systemctl stop, and a do-nothing stub bind-mounted over each daemon), re-applied at boot from init.d.
+- [ ] Spike: add Lumen as a TV input (Hearth does this). Does the TV then start on Lumen with no flash of Live TV, Wake-on-LAN included?
 
 ## Later
 
