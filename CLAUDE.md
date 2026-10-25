@@ -9,6 +9,7 @@ The target TV is an LG 43UT91006LA on webOS 25 (Chromium 120). The repo was firs
 - Code that needs a TV answer is written defensively (harmless if the answer is no) and marked **(verify)** in `PLAN.md` until Sam has seen it work.
 - The build still targets `chrome79` and a classic script, not a module (`app/vite.config.ts`). Keep it that way unless Sam decides otherwise.
 - The TV's graphics chip is weak. Animate only `transform` and `opacity`; glass is a pre-blurred wallpaper copy, not live blur. The reasons are in `RESEARCH.md` section 4.
+- Numbers use the font's normal, proportional digits. Never set `font-variant-numeric: tabular-nums` or `'tnum'` on text, because it spaces digits too far apart (the 1s in "11°"). The one exception is the clock time, so it does not jitter as it changes.
 - Every root command goes through `app/src/lib/root.ts`, one fixed command per export, with each value checked against a list or pattern. Add new root commands there, in the same shape.
 
 ## Getting a build onto the TV
@@ -18,6 +19,8 @@ The target TV is an LG 43UT91006LA on webOS 25 (Chromium 120). The repo was firs
 A dev build is a local build that you install on the TV over SSH: `npm run deploy:home`. Do not push a branch only to get a build onto the TV, and do not ask Sam to update in the Homebrew Channel.
 
 A push to `main` publishes a stable release to GitHub and the Homebrew Channel (`.github/workflows/release.yml`). The version is the one in `app/public/appinfo.json`, or the next free patch above it. A push to any other branch only builds a dev `.ipk` as a workflow artifact and publishes nothing. Push only when Sam asks. A Channel update replaces a local install.
+
+Every push to `main` makes a release, docs-only pushes included, so each one needs release notes. When the release run has passed, add the notes above the text the workflow wrote (the build commit, install line and SHA-256), then a `---` line. Write them for someone who uses the TV: one line per change, in plain words, taken from the commit subjects since the last release. Use `gh release edit v<version> --repo samrenfrew/lumen-webos --notes-file <file>`. Always pass `--repo`: without it, `gh` reads the `upstream` remote (ammar027's repo), not this one. Show Sam the notes before you publish them.
 
 This Mac has SSH and DevTools access to the TV. With it you can install a build, read the log, run JS or CSS in the live page, take screenshots, or develop live while Sam watches. The `tv` skill (`.claude/skills/tv/SKILL.md`) has the steps and quirks.
 
