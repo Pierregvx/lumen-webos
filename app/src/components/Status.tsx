@@ -2,6 +2,7 @@ import type {ComponentChildren} from 'preact';
 import {useEffect, useState} from 'preact/hooks';
 import {Clock} from './Clock';
 import {langLocale, t as tr} from '../lib/i18n';
+import {useFontsReady} from '../hooks/useFontsReady';
 import {WeatherIcon} from './WeatherIcon';
 import type {Weather} from '../lib/weather';
 
@@ -12,6 +13,7 @@ const dateText = () => (() => { try { return new Date().toLocaleDateString(langL
 export function Status ({weather, showPeriod, middle}: {weather?: Weather | null; showPeriod?: boolean; middle?: ComponentChildren}) {
 	const [, bump] = useState(0);
 	const date = dateText();
+	const fontsReady = useFontsReady();
 
 	useEffect(() => {
 		const tick = () => { if (!document.hidden) bump((n) => n + 1); };
@@ -26,7 +28,7 @@ export function Status ({weather, showPeriod, middle}: {weather?: Weather | null
 			{middle}
 			<div class="status__row">
 				<span class="status__date">{date}</span>
-				{weather && (
+				{weather && fontsReady && (
 					<span class="status__weather">
 						<WeatherIcon kind={weather.kind} day={weather.day} class="status__icon" />
 						<span>{weather.temp}°</span>

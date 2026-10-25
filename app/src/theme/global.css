@@ -746,7 +746,7 @@ html.night:not(.light):not(.wp-video):not(.liveblur) .screen--plainglass .topbar
 .status__weather { margin-top: 4px; }
 
 /* ---------- smooth top-left type ---------- */
-.screen > .pill.status { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; font-variant-numeric: tabular-nums; text-shadow: 0 1px 16px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.22); }
+.screen > .pill.status { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; font-variant-numeric: normal; text-shadow: 0 1px 16px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.22); }
 .status__row .status__date, .screen > .pill.status .clock__time, .screen > .pill.status .clock__period { font-weight: 500; letter-spacing: -0.012em; }
 .status__row .status__date { margin-right: 12px; }
 .screen > .pill.status .clock__period { margin-left: 6px; }
@@ -1529,7 +1529,9 @@ html.light .slist__row--focused .slist__chevron { stroke: rgba(255, 255, 255, 0.
 
 /* ---------- weather widget (components/Forecast.tsx): plain text over the picture like the clock, no glass, so the dock stays the only glass; it looks the same on home and the screensaver, only where it sits differs ---------- */
 /* each hour's width and icon: the small one keeps the size it had on home, the large one is a touch bigger */
-.forecast { --cast-col: 72px; --cast-icon: 30px; display: flex; flex-direction: row; color: #fff; font-weight: 500; letter-spacing: -0.011em; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; text-shadow: 0 1px 16px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.22); pointer-events: none; }
+.forecast { --cast-col: 72px; --cast-icon: 30px; display: flex; flex-direction: row; color: #fff; font-weight: 500; letter-spacing: -0.011em; -webkit-font-smoothing: antialiased; font-variant-numeric: normal; text-shadow: 0 1px 16px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.22); pointer-events: none; }
+.forecast { transition: opacity 500ms ease-out; }
+.forecast--wait { opacity: 0; }
 .forecast svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.35)); flex: 0 0 auto; }
 .forecast__hour { width: var(--cast-col); display: flex; flex-direction: column; align-items: center; }
 .forecast__icon { width: var(--cast-icon); height: var(--cast-icon); }

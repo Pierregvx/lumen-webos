@@ -1,6 +1,7 @@
 import {useEffect, useState} from 'preact/hooks';
 import {WeatherIcon} from './WeatherIcon';
 import {timeParts} from '../lib/clock';
+import {useFontsReady} from '../hooks/useFontsReady';
 import {useTimeFormat} from '../hooks/useTimeFormat';
 import {getClockMode, t as tr} from '../lib/i18n';
 import {hoursAhead, type Hour, type Weather} from '../lib/weather';
@@ -21,6 +22,7 @@ function hourText (h: Hour, format: '12h' | '24h'): string {
  *  Not focusable. Draws nothing until there is a forecast. */
 export function Forecast ({weather, size}: {weather: Weather; size: 'small' | 'large'}) {
 	const [, bump] = useState(0);
+	const shown = useFontsReady();
 	const tvFormat = useTimeFormat();
 	const mode = getClockMode();
 	const format = mode === '12h' || mode === '24h' ? mode : tvFormat;
@@ -36,7 +38,7 @@ export function Forecast ({weather, size}: {weather: Weather; size: 'small' | 'l
 
 	if (size === 'small') {
 		return (
-			<div class="forecast forecast--small">
+			<div class={`forecast forecast--small${shown ? '' : ' forecast--wait'}`}>
 				{hours.map((h) => (
 					<div key={h.t} class="forecast__hour">
 						<WeatherIcon kind={h.kind} day={h.day} class="forecast__icon" />
@@ -51,7 +53,7 @@ export function Forecast ({weather, size}: {weather: Weather; size: 'small' | 'l
 
 	const wet = hours.filter((h) => h.rain >= RAIN_LIKELY)[0];
 	return (
-		<div class="forecast forecast--large">
+		<div class={`forecast forecast--large${shown ? '' : ' forecast--wait'}`}>
 			<div class="forecast__now">
 				<div class="forecast__big">
 					<WeatherIcon kind={weather.kind} day={weather.day} class="forecast__bigicon" />
