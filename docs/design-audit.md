@@ -213,9 +213,48 @@ Ordered so that each step can be checked on the TV on its own, and the early ste
 
 Steps 1 to 4 are mechanical and low risk. Steps 6 to 8 are design decisions and need you to look at the TV.
 
-## Questions for you
+## Progress (branch `design/system-cleanup`, 2026-10-26)
 
-- Is the ring focus on wallpaper thumbnails and panel tiles a choice, or should it become lift (thumbnails are content) and invert (panel items are controls)?
-- Should the Settings screen use the same screen margin as home (125px), or keep its own two-column layout margins?
-- Is the pre-blurred glass still wanted as a fallback (for example for a slower TV), or can it go now that live blur is always on?
-- Do the nine tabular-digit rules in the guide break the project rule by mistake, or should the rule allow times in lists?
+Steps 1 to 5 and 10 are done. Nothing is meant to look different.
+
+- `global.css` is gone. The stylesheet is now 11 files in `app/src/theme/`, imported in order in `main.tsx`: `tokens.css`, `base.css`, `tiles.css`, `home.css`, `panels.css`, `settings.css`, `guide.css`, `live-tv.css`, `forecast.css`, `ambient.css` and `themes.css`. It is about 1,100 lines, down from 1,562.
+- Each selector is set up once. `!important` is left only where something inline or everywhere must lose: the wallpaper's `--wp-bg` over the video (`lib/wallpaper.ts` sets it inline), the two canvas backdrops, and Reduce motion.
+- The colours, glass, shapes and timings are tokens in `tokens.css`. `tokens.ts` now holds only the layout numbers that the code also reads.
+- The light look and the focus strength are new token values in `themes.css`. A few component rules stay there, where the light look changes the style and not only a value: the status text, the Re-order button and the wallpaper chips.
+- Dead code is gone: the small dock (`.row--dock`, `compact`), `Header.tsx`, the time pill and its menu (no top button had its key), the `liveblur` class (it was always on), the pre-blurred glass, and the Quick Controls, switch and old status styles.
+- Renamed: the status block is `.status` (it was `.pill.status`).
+- Step 9, the lists part, is done. `lib/windowedList.ts` holds the scroll maths. `rowWindow` serves `SettingsList`, `Guide` and `FullGuide`, which scroll by whole rows. `gridWindow` serves `Grid` and `WallpaperPicker`, which centre the focused row by pixels. Each list keeps its own numbers and markup. Some parts stay inline because only one list has them: the grid measures its row height, Settings shows the bottom fade, and the grid draws empty tiles for far rows. A script compared the old and new maths for lists of 0 to 250 rows and each focus, and found no difference. The focus-zone part of step 9 is not done.
+- Step 10 needed no change: `RESEARCH.md` section 4 already said "a light live blur only on the focused control", and `docs/settings-redesign.md` names the old components only in its history.
+
+How it was checked: `tools/style-snapshot.mjs` records the computed style and box of every element on 122 screens, in dark and light (home, the glass bar, the grid, the top buttons, Control Center and its lists, a folder, Settings pages, the wallpaper picker, the Guide, the Full guide, the screensaver with each weather widget, and each focus strength). `tools/style-diff.mjs` compares the old build with the new one. Run on the same build twice, it finds no differences. Between the old and new builds, the only differences are values nothing draws: a corner radius on the status block (it has no background), a fully transparent tile outline, where a background image would sit on boxes that have none, `align-self` on the absolutely placed Re-order button, and `flex-wrap` on the wallpaper picker's track, which is not a flex box. No box moved by a pixel.
+
+Not covered by the check: the video wallpaper, the Inputs panel with real inputs, the toast, and the Re-order mode's lifted tiles. These need the TV.
+
+A bug was found and kept at first, so that the cleanup changed nothing: in the light look, the screensaver's weather widget drew its icons dark grey on the photo. Its rule is now deleted (2026-10-26), so the icons are white.
+
+## Answers (Sam, 2026-10-26, from TV screenshots)
+
+- The ring goes. Wallpaper thumbnails and folder tiles lift: they grow and take the home tiles' shadow (`--lift-shadow`). The thumbnail grows by 1.1, the value Sam saw. The picker's window has 28px of room at each side for it.
+- Settings uses home's screen margin, `--layout-rows-edge` (125px), on its list pages and its grid pages. `LAYOUT.edgePadding` (140px) still sets the screen's padding and the video caption on home.
+- Live blur only. The pre-blurred glass stays removed.
+- The guides and the Live TV row use normal digits. The clock time is the one place with tabular digits.
+
+## Step 6 (Sam, 2026-10-26, live on the TV)
+
+- Settings rows and the wallpaper chips are glass-row, as in the Guide. Each Settings row has its own layer, which fixed a slow Up and Down (`docs/frame-rate.md`).
+- The folder panel stays glass-control. The glass bar's blue and pink rim fringe is for the dock only: it is subtle there and echoes the pink icons at the dock's ends. On a bigger shape the pink shows too much. So the materials are glass-bar (the dock alone), glass-control (controls and the folder panel) and glass-row.
+
+## Steps 7 and 8 (Sam, 2026-10-26, live on the TV)
+
+- Focus-invert grows by two tokens: `--lift-press` (1.03) for wide rows (Settings rows, Guide rows, Control Center choices) and `--lift-pill` (1.08) for small pills (the Guide switcher, the Re-order button). Focus highlight changes both. The Full guide cells do not grow: a long cell at 1.03 would push into its neighbours.
+- Settings' grid and folder tiles lift like home tiles: `--lift`, 7.5px up, `--lift-shadow`. `--lift-tile` is gone.
+- The wallpaper chips are one bar with a pill that slides to the picked category (`WallpaperPicker.tsx`). Each category takes its text width plus an even share of the spare room. The grid swaps 250 ms after the last Left or Right (`TIMING.wallpaperGridMs`), so the slide does not stall.
+- Settings' tile and wallpaper pages have a left-aligned title and hint, like the Guide. On a tile page they step in to the grid's first column, and the Re-order button to its last; the grid stays centred so the tile shadows are not clipped.
+- Type scale: 18, 22, 26, 32, 56, 80, 120. Weights 400, 500, 600, 700. Full guide titles are 26 (Sam preferred 24 but kept the scale). The rain chance under the weather bars is 18 at 400, like the hours, in the rain colour.
+- The one exception: the picture caption's credit is 15, so it never competes with its 18 title. Both caption lines are at 70%.
+- Left off the scale: the app monograms (64, 92: graphics), the Full guide's no-logo channel name (13, in a tiny cell), and the video caption's place name (36, not yet seen with a video wallpaper).
+- Not done: Sam does not use the light look, so it was not reviewed.
+
+## Step 9, focus zones: not done (Sam, 2026-10-26)
+
+The screens do not share focus logic. Home is a five-zone state machine (rows, top buttons, panels, menus, folders), Settings has three zones, and the Guide has one switch. Each screen's moves are its own, so a shared helper would wrap one variable and remove almost nothing. The list half of step 9 (`lib/windowedList.ts`) held the real copying and is done. The audit is complete.
