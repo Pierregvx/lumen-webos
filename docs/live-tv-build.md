@@ -136,7 +136,7 @@ what the guide rows carry.
 - **The Guide screen.** A new screen beside `screens/Home.tsx` and `screens/Settings.tsx`, opened by the Guide tile, closed with Back.
   Reuse the row/focus handling rather than writing new key handling.
 - **Settings.** A "Live TV row" switch, and the channel choice (see Open questions).
-- Keep to the performance rules in `RESEARCH.md` and PLAN.md Phase 4: no new live blur, only `transform` animates, the Guide list draws
+- Keep to the performance rules in `RESEARCH.md` section 4: no new live blur, only `transform` animates, the Guide list draws
   only the rows near the focused one.
 
 ## Verify on the TV (phase 1)
