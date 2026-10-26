@@ -54,6 +54,8 @@ export interface UserConfig {
 	wallpaperDim: string;
 	/** darken the screen while the dock is hidden */
 	dockDim: boolean;
+	/** the wallpaper's title and credit, or the video's place, at the bottom right while the dock is hidden */
+	wallpaperCaptions: boolean;
 	/** offer the TV's own apps (Live TV, AirPlay ...) in Settings */
 	showAllApps: boolean;
 	/** date and weather beside the clock */
@@ -138,6 +140,7 @@ export const DEFAULT_CONFIG: UserConfig = {
 	wpAutoMinutes: 0,
 	wallpaperDim: 'off',
 	dockDim: false,
+	wallpaperCaptions: true,
 	showAllApps: false,
 	showWeather: true,
 	homeForecast: false,
@@ -210,6 +213,7 @@ export function parseConfig (raw: string): UserConfig {
 		wpAutoMinutes: typeof parsed.wpAutoMinutes === 'number' ? parsed.wpAutoMinutes : 0,
 		wallpaperDim: parsed.wallpaperDim === 'night' || parsed.wallpaperDim === 'always' ? parsed.wallpaperDim : parsed.nightDim === true ? 'night' : 'off',
 		dockDim: parsed.dockDim === true,
+		wallpaperCaptions: parsed.wallpaperCaptions !== false,
 		showAllApps: parsed.showAllApps === true,
 		showWeather: parsed.showWeather !== false,
 		homeForecast: parsed.homeForecast === true,

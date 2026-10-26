@@ -468,6 +468,7 @@ const TABLE: Record<string, string[]> = {
 		"वॉलपेपर मंद करें"
 	],
 	"At night": ["Nachts", "De noche", "La nuit", "Di notte", "À noite", "'s Nachts", "Geceleri", "रात में"],
+	"Wallpaper captions": ["Hintergrund-Beschriftungen", "Rótulos del fondo", "Légendes du fond d'écran", "Didascalie dello sfondo", "Legendas do fundo", "Achtergrondbijschriften", "Duvar kağıdı açıklamaları", "वॉलपेपर कैप्शन"],
 	"Dim when the dock is hidden": [
 		"Abdunkeln, wenn das Dock ausgeblendet ist",
 		"Atenuar con el dock oculto",

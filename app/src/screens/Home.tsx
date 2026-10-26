@@ -55,6 +55,7 @@ interface Props {
 	dockHide?: string;
 	/** darken the wallpaper while the dock is hidden */
 	dockDim?: boolean;
+	captions?: boolean;
 	/** put the focus on this row (a launch with {"view":"recent"}); a new seq asks again */
 	focusRow?: {id: string; seq: number};
 	/** tile size on the rows (Settings > Apps in the glass bar: 7 apps need smaller tiles); the first row is `perRow` tiles wide */
@@ -137,7 +138,7 @@ const INPUTS_KEY = 'inputs';
  *  - Up from the first row reaches the top bar (Control Center, Settings, Inputs); Down goes back to the same app.
  *  - OK on Inputs opens the inputs panel; Back closes it.
  *  - The second row stays hidden until the remote goes down to it. */
-export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, onEdit, folders, weather, weatherLine, forecast, dockHide, dockDim, focusRow, tiles, perRow = 6}: Props) {
+export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, onEdit, folders, weather, weatherLine, forecast, dockHide, dockDim, captions = true, focusRow, tiles, perRow = 6}: Props) {
 	const nav = useRef<Nav>({engaged: false, zone: 'rows', rowIndex: 0, columns: {}, topIndex: 0, panelIndex: 0, ctxIndex: 0, moving: null, swallowOk: false, suppressClick: false, folder: '', folderIndex: 0, ctxFrom: 'rows', ctxLevel: 'main', ctxConfirm: false, ctxAnchor: null, mode: 'key', dockHidden: false, panelFrom: 'top'});
 	// when Down was last pressed at the last input, with nowhere lower to go
 	const bottomDown = useRef(0);
@@ -481,7 +482,7 @@ export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, o
 			<div class="dockdim" />
 			<LowerVeil />
 			<Status weather={weatherLine ? weather : null} showPeriod={showPeriod} />
-			<VideoCaption />
+			{captions && <VideoCaption />}
 			{forecast && weather && <div class={`homecast homecast--${forecast}`}><Forecast weather={weather} size={forecast} /></div>}
 			<div class="dockhint" onClick={() => { n.dockHidden = false; render(); }}><svg viewBox="0 0 48 28" aria-hidden="true"><path d="M6 22 24 6l18 16" /></svg></div>
 			<div class="topbar">

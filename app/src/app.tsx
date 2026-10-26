@@ -48,7 +48,7 @@ const LIVE_INFO_W = 660;
 /** how much higher the Live TV row sits when focused, so its now/next block fits on screen */
 const LIVE_BELOW = 150;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', ambientPrint: 'ambient-print', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', dockBlur: 'dock-blur', liquidDock: 'liquid-dock', reduceMotion: 'reduce-motion', hideNames: 'hide-names', showRecents: 'show-recents', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', homeCast: 'home-forecast', saverCast: 'saver-forecast', immichUrl: 'immich-url', immichKey: 'immich-key', immichTest: 'immich-test', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', immichDays: 'immich-recent-days', wpType: 'wp-type', wpNew: 'wp-new', nightDim: 'night-dim', dockDim: 'dock-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
+const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', ambientPrint: 'ambient-print', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', dockBlur: 'dock-blur', liquidDock: 'liquid-dock', reduceMotion: 'reduce-motion', hideNames: 'hide-names', showRecents: 'show-recents', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', homeCast: 'home-forecast', saverCast: 'saver-forecast', immichUrl: 'immich-url', immichKey: 'immich-key', immichTest: 'immich-test', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', immichDays: 'immich-recent-days', wpType: 'wp-type', wpNew: 'wp-new', nightDim: 'night-dim', dockDim: 'dock-dim', captions: 'wallpaper-captions', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 0.5, 1, 5, 15, 30, 60];   // minutes
 /** when the video wallpaper plays (Settings > Wallpaper > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
 const VIDEO_HOURS: Record<string, [number, number]> = {day: [7, 19], evening: [17, 23], night: [19, 7]};
@@ -465,6 +465,12 @@ export function App () {
 				label: 'Dim when the dock is hidden',
 				description: 'With the dock away, the wallpaper fades darker. It brightens again when the dock comes back.',
 				value: config.dockDim
+			}, {
+				id: OPTION.captions,
+				group: 'home' as const,
+				label: 'Wallpaper captions',
+				description: 'With the dock away, the picture\'s title and artist, or the video\'s place, show at the bottom right.',
+				value: config.wallpaperCaptions
 			}] : []),
 			{
 				id: OPTION.weather,
@@ -900,6 +906,7 @@ export function App () {
 		else if (optionId === OPTION.dockBlur) updateConfig({...config, dockBlur: !config.dockBlur});
 		else if (optionId === OPTION.liquidDock) updateConfig({...config, liquidDock: !config.liquidDock});
 		else if (optionId === OPTION.dockDim) updateConfig({...config, dockDim: !config.dockDim});
+		else if (optionId === OPTION.captions) updateConfig({...config, wallpaperCaptions: !config.wallpaperCaptions});
 		else if (optionId === OPTION.ambientPrint) updateConfig({...config, ambientPrint: !config.ambientPrint});
 		else if (optionId === OPTION.wpNew) updateConfig({...config, wpNewOnLaunch: !config.wpNewOnLaunch});
 	}, [config, immich.ready, testImmich]);
@@ -956,7 +963,7 @@ export function App () {
 	return (
 		<>
 			{/* Home stays mounted under Settings so it keeps its focus position. */}
-			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} weatherLine={config.showWeather && !(config.homeForecast && config.homeForecastSize === 'large')} forecast={config.homeForecast ? config.homeForecastSize as 'small' | 'large' : undefined} dockHide={config.dockHide} dockDim={config.dockDim} focusRow={focusRow} />
+			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} weatherLine={config.showWeather && !(config.homeForecast && config.homeForecastSize === 'large')} forecast={config.homeForecast ? config.homeForecastSize as 'small' | 'large' : undefined} dockHide={config.dockHide} dockDim={config.dockDim} captions={config.wallpaperCaptions} focusRow={focusRow} />
 			{screen === 'ambient' && <Ambient source={config.ambient} seconds={config.ambientSeconds} backlight={AMBIENT_BACKLIGHT[config.ambientBrightness]} weather={weather} weatherLine={config.showWeather && !(config.saverForecast && config.saverForecastSize === 'large')} forecast={config.saverForecast ? config.saverForecastSize as 'small' | 'large' : undefined} showPeriod={config.showAmPm} print={config.ambientPrint} opening={ambientOpening.current} onExit={() => setScreen('home')} />}
 			{screen === 'guide' && <Guide channels={live.channels} listings={live.listings} logos={live.logos} now={live.now} schedule={live.schedule} pending={live.pending} full={config.guideFull} onMode={(full) => { if (configRef.current.guideFull !== full) updateConfig({...configRef.current, guideFull: full}); }} active={!controls} onOpen={watchChannel} onClose={() => setScreen('home')} />}
 			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onChoose={onChoose} onText={onText} onClose={() => setScreen('home')} />}
