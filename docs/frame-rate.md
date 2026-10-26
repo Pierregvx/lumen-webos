@@ -9,6 +9,7 @@ Measured on 2026-10-22 on the LG 43UT91006LA (webOS 25), Live blur on, a still I
 - `swaps-per-key.mjs <file> <part>` counts the frames that reach the screen in the 320 ms after each key. A 60 fps move gives about 19.
 - `updown.mjs <out.json> [pairs]` presses Down and Up between the dock and the grid, many times after one relaunch, and records a trace. `updown-report.mjs a.json [b.json …]` prints medians per key: the first Down, later Downs, and Ups. `LIVECSS` and `LIVEJS` work as for `walk.mjs`. A relaunch does not reload Lumen when it is already running, so a `LIVEJS` change stays until `location.reload()`.
 - `raster-tiles.mjs` counts the raster tiles per layer per key, from an `updown.mjs` capture made with `LMAP=1 CATS=cc,disabled-by-default-cc.debug`. `layer-paints.mjs` lists the layers that repaint. `key-timeline.mjs` prints one key's frames and long tasks.
+- `return.mjs <out.json> <dock|row2> [runs]` opens Moonlight (from rest, or from row 2 with remote keys), waits, presses Home over SSH, and traces the return. `return-report.mjs` prints the frames shown, raster, decode and GPU time per return. `SHOTS=1` saves the frames the page drew. `LIVEJS` as for `walk.mjs`. It opens an app on screen, so ask Sam first.
 - `probe.mjs ['<css>']` moves a small square for 2 s and prints the frame gap and the GPU draw time. It is the quickest check of what the page costs per frame.
 
 The in-page frame counter forces a main-thread frame on each vsync. The swap counts without it were the same, so it does not change the result.
@@ -39,6 +40,14 @@ Smaller things, measured but not the main cause:
 - The focused tile gets `will-change: transform` only while it is focused, so each move removes one layer and makes another. A permanent layer on every row tile cut raster in the lower rows by about 40% and the key-to-screen time from about 120 ms to 65 ms, but not the frame rate.
 - The focused tile's larger shadow and its shine (`::after`) cost some raster (800 ms to 590 ms over the rows walk), not frame rate.
 
+## Left and Right on the glass bar, 2026-10-26
+
+Each Left and Right repainted the bar's whole glass plate (`.row:first-child::before`, about 0.7 megapixels a move). The plate's sheen comes from a gradient in a CSS variable (`--glass-bar-sheen`). When the plate's style is computed again, Chromium makes a new gradient image and repaints the plate, even if the value is the same. Two writes caused this on every move: the row's own `--sel-x` (for the sliding highlight) and Home's `--lower-shift` on `.rows`, written again with the same value. The highlight is now a child element (`.row__shine`) that holds `--sel-x`, and `--lower-shift` is written only when it changes. Raster on the dock walk went from 457 ms to 196 ms, and Left and Right from about 5 to 7 frames per move to about 9. `LayerTree.layerPainted` shows which layers repaint; the scratch script used Left and Right in place of Down and Up in `layer-paints.mjs`.
+
+Rule: do not write a style property on an element above the glass bar on each move. Put a value that changes per move on the element that uses it.
+
+With frames on time, Down and Up felt too quick, so they now take 600 ms each, and the backdrop fades over 800 ms on Up (`tokens.css`).
+
 ## Down and Up, 2026-10-23
 
 The full-screen blurred backdrop (`.lowerveil`) was rastered again 2 to 3 times on every Down and Up, because the TV's memory pressure makes Chromium drop its tiles. It is now a canvas, which has no tiles, and the bar and first grid row tiles keep a layer each. Down and Up went from about 10 fps to about 40 fps. The full table is in `docs/down-up-lag-review.md`. Note: `walk.mjs vert` starts with focus on the top buttons, so its Down and Up move between the top buttons and the dock, not into the grid.
@@ -64,3 +73,7 @@ The open and close fades animate each control's opacity, so Chromium made a laye
 The panel opened on default values (backlight 100, Eye Comfort off) and redrew when the TV's values arrived 250 ms later. It now opens on the values last read, and the launcher reads them once it has settled.
 
 Opening a list is still the heaviest step: about 65 ms of JS in the key handler and 200 ms of raster for the new options and the pill.
+
+## Settings rows (2026-10-26)
+
+Up and Down in a Settings list ran at about 16 to 18 fps. The rows shared one layer with the whole list, so each focus move rastered the full list (about 1000 by 840 px) for one row's zoom and shadow. Each row now has its own layer (`will-change: transform` on `.slist__row`), as the Guide rows do. In `walk.mjs settings`, raster time fell from about 1.1 s to 0.27 s and dropped frames by more than half. Sam: much smoother on the TV.
