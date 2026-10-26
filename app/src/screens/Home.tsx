@@ -3,7 +3,6 @@ import type {Weather} from '../lib/weather';
 import {VideoCaption} from '../components/VideoCaption';
 import {LowerVeil} from '../components/LowerVeil';
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
-import {Clock} from '../components/Clock';
 import {Glyph, type GlyphName} from '../components/Glyph';
 import {canUninstall} from '../lib/root';
 import {growFrom, DOUBLE_DOWN_MS} from '../components/ControlCenter';
@@ -15,13 +14,13 @@ import {Status} from '../components/Status';
 import {Forecast} from '../components/Forecast';
 import {BUILTIN} from '../config/builtinApps';
 import {bootMark} from '../lib/log';
+import {TIMING} from '../config/constants';
 
 export interface HomeRow {
 	id: string;
 	label: string;
 	items: TileModel[];
 	emptyText?: string;
-	compact?: boolean;
 	/** show the row's name above it (the Recent row); the app rows have none, as on tvOS */
 	titled?: boolean;
 	/** extra class on the row (row--live) */
@@ -34,10 +33,8 @@ export interface HomeRow {
 
 interface Props {
 	rows: HomeRow[];
-	/** the top bar: the Inputs button, then the time pill that opens the menu */
+	/** the top bar: Control Center, Settings and Inputs */
 	topItems: TileModel[];
-	/** what the time pill's menu lists (LG Home, Settings, Start Screensaver) */
-	menuItems: TileModel[];
 	/** what the Inputs panel lists */
 	inputs: TileModel[];
 	active: boolean;
@@ -71,7 +68,7 @@ const editable = (rowId: string) => rowId === 'apps' || rowId.indexOf('dock') ==
 /** where the glass bar's row goes when the remote is down in the grid: near the top of the screen, as on tvOS (its tiles sit 40px lower) */
 const GRID_TOP = 76;
 /** the lowest a focused grid row may sit before the grid scrolls on (its tiles 40px lower) */
-const GRID_BOTTOM = 780;   // 40px less than it looks: the grid rows sit 40px lower while the remote is in them (global.css)
+const GRID_BOTTOM = 780;   // 40px less than it looks: the grid rows sit 40px lower while the remote is in them (theme/home.css)
 const FOLDER_PRESETS = ['Games', 'Tools', 'Media'];
 const FOLDER_PREFIX = 'folder:';
 /** the remote's 1 to 6 open the glass bar's apps at those places (keyCodes for the digit row and the number pad) */
@@ -96,7 +93,7 @@ function riseFrom (panel: HTMLElement, below: boolean): void {
 }
 
 /** Where the remote's focus is: a row of apps, the top bar, or one of the two open panels. */
-type Zone = 'rows' | 'top' | 'panel' | 'menu' | 'ctx' | 'folder';
+type Zone = 'rows' | 'top' | 'panel' | 'ctx' | 'folder';
 
 interface Nav {
 	/** false = resting: nothing is focused until the remote (or the pointer) is used */
@@ -106,7 +103,6 @@ interface Nav {
 	columns: Record<string, number>;
 	topIndex: number;
 	panelIndex: number;
-	menuIndex: number;
 	ctxIndex: number;
 	/** the key of the app being moved with the arrows, or null */
 	moving: string | null;
@@ -135,19 +131,18 @@ interface Nav {
 
 const PANEL_COLUMNS = 3;
 const INPUTS_KEY = 'inputs';
-const MENU_KEY = 'menu';
 
 /** The home screen, navigated like tvOS:
  *  - Left/Right move along a row; Up/Down move between rows (same column, as far as that row reaches).
- *  - Up from the first row reaches the top bar (Inputs button, time pill); Down goes back to the same app.
- *  - OK on Inputs opens the inputs panel, OK on the time pill opens the menu; Back closes either.
+ *  - Up from the first row reaches the top bar (Control Center, Settings, Inputs); Down goes back to the same app.
+ *  - OK on Inputs opens the inputs panel; Back closes it.
  *  - The second row stays hidden until the remote goes down to it. */
-export function Home ({rows, topItems, menuItems, inputs, active, onActivate, showPeriod, onEdit, folders, weather, weatherLine, forecast, dockHide, dockDim, focusRow, tiles, perRow = 6}: Props) {
-	const nav = useRef<Nav>({engaged: false, zone: 'rows', rowIndex: 0, columns: {}, topIndex: 0, panelIndex: 0, menuIndex: 0, ctxIndex: 0, moving: null, swallowOk: false, suppressClick: false, folder: '', folderIndex: 0, ctxFrom: 'rows', ctxLevel: 'main', ctxConfirm: false, ctxAnchor: null, mode: 'key', dockHidden: false, panelFrom: 'top'});
+export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, onEdit, folders, weather, weatherLine, forecast, dockHide, dockDim, focusRow, tiles, perRow = 6}: Props) {
+	const nav = useRef<Nav>({engaged: false, zone: 'rows', rowIndex: 0, columns: {}, topIndex: 0, panelIndex: 0, ctxIndex: 0, moving: null, swallowOk: false, suppressClick: false, folder: '', folderIndex: 0, ctxFrom: 'rows', ctxLevel: 'main', ctxConfirm: false, ctxAnchor: null, mode: 'key', dockHidden: false, panelFrom: 'top'});
 	// when Down was last pressed at the last input, with nowhere lower to go
 	const bottomDown = useRef(0);
-	const latest = useRef({rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide, perRow});
-	latest.current = {rows, topItems, menuItems, inputs, onActivate, onEdit, folders, dockHide, perRow};
+	const latest = useRef({rows, topItems, inputs, onActivate, onEdit, folders, dockHide, perRow});
+	latest.current = {rows, topItems, inputs, onActivate, onEdit, folders, dockHide, perRow};
 	// false while the browser only reports a mouse-enter because the rows slid under a resting pointer (webOS 25: Down bounced back to the bar)
 	const realPointer = useRef(true);
 	useEffect(() => {
@@ -183,17 +178,11 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 	}, [focusRow && focusRow.seq]);
 	useEffect(() => { if (wanted.current) focusWanted(); }, [rows]);
 
-	// coming back to the launcher from another app: rest again, unless the launch asked for a row
+	// coming back from another app stays where it left, as the TV shows Lumen's last frame first and a reset would jump (docs/startup-perf.md); a launch that asks for a row still goes there
 	useEffect(() => {
-		const rest = () => {
-			if (document.hidden) return;
-			if (focusWanted()) return;
-			const n = nav.current;
-			n.engaged = false; n.zone = 'rows'; n.rowIndex = 0; n.dockHidden = false; n.moving = null;
-			render();
-		};
-		document.addEventListener('visibilitychange', rest);
-		return () => document.removeEventListener('visibilitychange', rest);
+		const back = () => { if (!document.hidden) focusWanted(); };
+		document.addEventListener('visibilitychange', back);
+		return () => document.removeEventListener('visibilitychange', back);
 	}, []);
 
 	// the idle timer follows the option; moving the pointer brings a hidden dock back
@@ -229,7 +218,6 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 		const item = latest.current.topItems[i];
 		if (!item) return;
 		if (item.key === INPUTS_KEY) { n.panelIndex = 0; n.panelFrom = 'top'; n.zone = 'panel'; render(); }
-		else if (item.key === MENU_KEY) { n.menuIndex = 0; n.zone = 'menu'; render(); }
 		else latest.current.onActivate('top', item);
 	};
 	const activatePanel = (i: number) => {
@@ -238,13 +226,6 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 		nav.current.zone = nav.current.panelFrom;
 		render();
 		latest.current.onActivate('inputs', item);
-	};
-	const activateMenu = (i: number) => {
-		const item = latest.current.menuItems[i];
-		if (!item) return;
-		nav.current.zone = 'top';
-		render();
-		latest.current.onActivate('menu', item);
 	};
 	/** what the hold-OK menu offers now: inside a folder, only taking the app out; on a lifted app, Uninstall (apps the TV lets go only), Remove and Add to Folder */
 	const ctxItems = (): CtxItem[] => {
@@ -307,7 +288,6 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 		if (!n.engaged) return;
 		const {rows: allRows, topItems: tops, onActivate: act} = latest.current;
 		if (n.zone === 'panel') activatePanel(n.panelIndex);
-		else if (n.zone === 'menu') activateMenu(n.menuIndex);
 		else if (n.zone === 'ctx') activateCtx(n.ctxIndex);
 		else if (n.zone === 'folder') {
 			const inside = ((latest.current.folders || {})[n.folder] || [])[n.folderIndex];
@@ -339,14 +319,14 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 	const holdTimer = useRef(0);
 	const holdStart = () => {
 		window.clearTimeout(holdTimer.current);
-		holdTimer.current = window.setTimeout(() => { const n = nav.current; n.suppressClick = true; longPress(); }, 600);
+		holdTimer.current = window.setTimeout(() => { const n = nav.current; n.suppressClick = true; longPress(); }, TIMING.longPressMs);
 	};
 	const holdCancel = () => window.clearTimeout(holdTimer.current);
 
 	const pointerLeft = () => {
 		holdCancel();
 		const n = nav.current;
-		if (n.mode === 'pointer' && n.zone !== 'panel' && n.zone !== 'menu') { n.engaged = false; render(); }
+		if (n.mode === 'pointer' && n.zone !== 'panel') { n.engaged = false; render(); }
 	};
 
 	const idleTimer = useRef(0);
@@ -363,7 +343,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 	const handleKey = useCallback((key: NavKey): boolean => {
 		const n = nav.current;
 		setLate(true);
-		const {rows: allRows, topItems: tops, menuItems: menu, inputs: ins, onEdit: edit, folders: fl} = latest.current;
+		const {rows: allRows, topItems: tops, inputs: ins, onEdit: edit, folders: fl} = latest.current;
 		n.mode = 'key';
 		const hideMode = latest.current.dockHide;
 		if (n.dockHidden) { n.dockHidden = false; armIdle(); render(); return true; }   // the key that brings the dock back does nothing else
@@ -382,15 +362,6 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 					else bottomDown.current = Date.now();
 					break;
 				case 'back': n.zone = n.panelFrom; break;
-			}
-			render();
-			return true;
-		}
-		if (n.zone === 'menu') {
-			switch (key) {
-				case 'up': n.menuIndex = clamp(n.menuIndex - 1, 0, menu.length - 1); break;
-				case 'down': n.menuIndex = clamp(n.menuIndex + 1, 0, menu.length - 1); break;
-				case 'back': n.zone = 'top'; break;
 			}
 			render();
 			return true;
@@ -499,9 +470,10 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 			shift = tilesTop(kids[0]) - GRID_TOP;
 			shift = Math.max(shift, tilesTop(kids[rowIndex]) - GRID_BOTTOM + (rows[rowIndex].below || 0));
 		}
-		el.style.setProperty('--lower-shift', shift + 'px');
+		// only on a change: even a same-value write restyles the rows, and the bar's glass then repaints
+		if (el.style.getPropertyValue('--lower-shift') !== shift + 'px') el.style.setProperty('--lower-shift', shift + 'px');
 	});
-	const overlay = n.zone === 'panel' || n.zone === 'menu' || n.zone === 'ctx' || n.zone === 'folder';
+	const overlay = n.zone === 'panel' || n.zone === 'ctx' || n.zone === 'folder';
 	const topPointer = (i: number) => () => { if (!overlay && realPointer.current) { n.mode = 'pointer'; n.engaged = true; n.zone = 'top'; n.topIndex = i; render(); } };
 	const focusedTop = (i: number) => n.engaged && n.zone === 'top' && i === n.topIndex;
 	return (
@@ -513,18 +485,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 			{forecast && weather && <div class={`homecast homecast--${forecast}`}><Forecast weather={weather} size={forecast} /></div>}
 			<div class="dockhint" onClick={() => { n.dockHidden = false; render(); }}><svg viewBox="0 0 48 28" aria-hidden="true"><path d="M6 22 24 6l18 16" /></svg></div>
 			<div class="topbar">
-				{topItems.map((item, i) => item.key === MENU_KEY ? (
-					<div
-						key={item.key}
-						class={`topcap${focusedTop(i) ? ' topcap--focused' : ''}${n.zone === 'menu' ? ' topcap--open' : ''}`}
-						onMouseLeave={pointerLeft}
-						onMouseEnter={topPointer(i)}
-						onClick={() => { n.topIndex = i; activateTop(i); }}
-					>
-						<Clock showPeriod={showPeriod} />
-						<span class="pill__label">{tr(item.label)}</span>
-					</div>
-				) : (
+				{topItems.map((item, i) => (
 					<div
 						key={item.key}
 						data-top={item.key}
@@ -627,24 +588,6 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 					</>
 				);
 			})()}
-			{n.zone === 'menu' && (
-				<>
-					<div class="panel-backdrop" onClick={() => { n.zone = 'top'; render(); }} />
-					<div class="panel panel--menu">
-						{menuItems.map((item, i) => (
-							<div
-								key={item.key}
-								class={`menu__row${i === n.menuIndex ? ' menu__row--focused' : ''}`}
-								onMouseEnter={() => { n.menuIndex = i; render(); }}
-								onClick={() => activateMenu(i)}
-							>
-								{item.glyph && <Glyph name={item.glyph} />}
-								<span>{tr(item.label)}</span>
-							</div>
-						))}
-					</div>
-				</>
-			)}
 		</div>
 	);
 }

@@ -3,7 +3,17 @@ import {App} from './app';
 import {applyTokens} from './theme/tokens';
 import {bootMark, startLog} from './lib/log';
 import {copyFontIn} from './lib/root';
-import './theme/global.css';
+import './theme/tokens.css';
+import './theme/base.css';
+import './theme/tiles.css';
+import './theme/home.css';
+import './theme/panels.css';
+import './theme/settings.css';
+import './theme/guide.css';
+import './theme/live-tv.css';
+import './theme/forecast.css';
+import './theme/ambient.css';
+import './theme/themes.css';
 
 bootMark('script');
 applyTokens();

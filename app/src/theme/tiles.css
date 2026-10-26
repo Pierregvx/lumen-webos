@@ -1,0 +1,105 @@
+/* Tiles (components/Tile.tsx): app, input and folder tiles on home, in the panels and in Settings' grid. Content lifts when focused (focus-lift). */
+
+.tile { flex: 0 0 auto; width: var(--layout-tile-size); margin-right: var(--layout-tile-gap); text-align: center; outline: none; }
+.tile:last-child { margin-right: 0; }
+.tile--ghost { visibility: hidden; }
+
+.tile__box {
+	position: relative; width: var(--layout-tile-size); height: var(--layout-tile-height); border-radius: var(--layout-tile-radius);
+	background: rgba(255, 255, 255, 0.10);
+	transform: scale(1); transition: transform var(--dur-focus) ease-out;
+}
+/* focus-lift: only transform animates (the compositor moves it); the shadow and sheen appear at once */
+.tile--focused .tile__box {
+	z-index: 1; transform: scale(var(--lift)) translateY(-7.5px); will-change: transform;
+	background: rgba(255, 255, 255, 0.18); box-shadow: var(--lift-shadow);
+}
+/* Settings' grid: an unpicked app is grey and a little faded, so the icon still reads; the name stays readable */
+.tile--dimmed .tile__box { opacity: 0.75; filter: grayscale(1); }
+/* re-order mode: the picked-up tile floats above the others */
+.tile--lifted .tile__box, .tile--lifted.tile--focused .tile__box { z-index: 2; transform: scale(1.2) translateY(-6px); box-shadow: 0 0 0 5px #eeeeee, 0 18px 40px rgba(0, 0, 0, 0.7); }
+
+/* the picture fills the tile; the rounded corners are on what is drawn, so the tile that scales is never clipped */
+.tile__image { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+/* a small square icon, kept sharp on a tile of its own colour */
+.tile__image--icon { left: 50%; top: 50%; width: auto; height: 66%; max-width: 70%; transform: translate(-50%, -50%); object-fit: contain; border-radius: 16%; }
+/* LG's input glyphs are dark grey line art on transparency: lift them to light grey */
+.tile__image--glyph { left: 18%; top: 18%; width: 64%; height: 64%; object-fit: contain; filter: brightness(2.4); }
+.tile__glyph { position: absolute; left: 25%; top: 25%; width: 50%; height: 50%; fill: none; stroke: var(--ink-1); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.tile__monogram { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; border-radius: inherit; font-size: 64px; font-weight: 600; color: var(--ink-1); }
+.tile__folder { position: absolute; left: 12%; top: 14%; width: 76%; height: 72%; display: flex; flex-wrap: wrap; justify-content: space-between; align-content: space-between; border-radius: inherit; }
+.tile__mini { width: 47%; height: 47%; border-radius: 10px; background: rgba(255, 255, 255, 0.14) center / cover no-repeat; }
+
+/* the name: up to two lines, using a little of the gutter either side, so long input names fit */
+.tile__label {
+	width: calc(var(--layout-tile-size) + var(--layout-tile-gap) - 8px); height: calc(var(--tile-label-size) * 2.4);
+	margin: 22px 0 0 calc((var(--layout-tile-gap) - 8px) / -2); overflow: hidden;
+	font-size: var(--tile-label-size); font-weight: 600; line-height: 1.15; letter-spacing: -0.015em; text-align: center; white-space: normal;
+	color: var(--ink-1); text-shadow: var(--scrim-label);
+	opacity: 0; transition: opacity var(--dur-focus) ease-out;
+}
+.tile--focused .tile__label { opacity: 1; }
+
+.tile__badge { position: absolute; right: 12px; top: 12px; width: 34px; height: 34px; border-radius: 50%; background: #eeeeee; color: #000; display: flex; align-items: center; justify-content: center; }
+.tile__badge svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+
+/* an app open in the background: a dot above its tile. Zero height so the row does not move; it rises with the focused tile */
+.tile__dot { position: relative; height: 0; }
+/* a hidden dot is visibility: hidden, not only transparent, so it gets no drawn layer of its own (docs/keep-alive.md) */
+.tile__dot::before {
+	content: ''; position: absolute; left: 50%; top: -24px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%;
+	background: rgba(255, 255, 255, 0.92); box-shadow: 0 0 6px rgba(0, 0, 0, 0.45);
+	opacity: 0; visibility: hidden;
+	transition: opacity var(--dur-focus) ease-out, transform var(--dur-focus) ease-out, visibility 0s linear var(--dur-focus);
+}
+.tile__dot--on::before { opacity: 1; visibility: visible; transition-delay: 0s; }
+.tile--focused .tile__dot::before { transform: translateY(-8px); }
+
+/* ---------- on home: tiles lit from above, as on tvOS ---------- */
+
+/* app icons fill more of their tile: the small square icons at the tile's full height (their own colour runs into the tile's), the glyphs and monograms larger */
+.rows .tile__image--icon, .panel .tile__image--icon { height: 100%; max-width: 100%; border-radius: 0; }
+.rows .tile__glyph { left: 21%; top: 21%; width: 58%; height: 58%; }
+.rows .tile__monogram { font-size: 92px; }
+.rows .tile__label { color: var(--ink-photo-1); }
+
+/* a soft shadow under each tile, and over its artwork a light from the top left fading out by the middle, a bright top rim, a fainter left one and a faint dark bottom edge; all static */
+.rows .tile__box { box-shadow: 0 8px 16px rgba(0, 0, 0, 0.26), 0 2px 4px rgba(0, 0, 0, 0.16); }
+.rows .tile__box::before {
+	content: ''; position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: 1; border-radius: inherit; pointer-events: none;
+	background: linear-gradient(160deg, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0.06) 30%, rgba(255, 255, 255, 0) 55%, rgba(0, 0, 0, 0.08) 100%);
+	box-shadow: inset 0 2px 1px -1px rgba(255, 255, 255, 0.55), inset 2px 0 1px -1px rgba(255, 255, 255, 0.28), inset 0 -2px 1px -1px rgba(0, 0, 0, 0.18);
+}
+/* the bar's and the first grid row's tiles keep a layer each, so a Down or Up does not re-raster the rows they sit in (docs/frame-rate.md) */
+.rows > .row:nth-child(-n+2) .tile__box { will-change: transform; }
+
+/* focus-lift on home: a grid tile grows by --lift, a bar tile by --lift-bar so it stays inside the glass; --rx and --ry tilt it under the pointer (Tile.tsx) */
+.rows .row .tile--focused .tile__box {
+	transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--lift)) translateY(-7.5px);
+	box-shadow: var(--lift-shadow);
+}
+.rows > .row:first-child .tile--focused .tile__box {
+	transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--lift-bar)) translateY(-7.5px);
+	box-shadow: 0 12px 22px rgba(0, 0, 0, 0.32), 0 3px 6px rgba(0, 0, 0, 0.18);
+}
+.rows .row .tile--focused .tile__box::after {
+	content: ''; position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: 2; border-radius: inherit; pointer-events: none;
+	background: linear-gradient(115deg, rgba(255, 255, 255, 0.36) 0%, rgba(255, 255, 255, 0.10) 28%, rgba(255, 255, 255, 0) 46%);
+	opacity: var(--lift-sheen);
+}
+
+/* the bar's name is taken out of the flow so it cannot move the icons; the tile keeps its full height so the grid stays put */
+.rows > .row:first-child .tile { position: relative; min-height: calc(var(--layout-tile-height) + 68px); }
+.rows > .row:first-child .tile__label { position: absolute; left: 50%; top: calc(var(--layout-tile-height) + 8.5px); width: auto; height: auto; margin: 0; transform: translateX(-50%); white-space: nowrap; }
+/* the grid's name sits a little lower and rises with its lifted tile */
+.rows > .row:not(:first-child) .tile__label { margin-top: 32px; }
+.rows > .row:not(:first-child) .tile--focused .tile__label { transform: translateY(-4.5px); }
+
+/* ---------- Settings' grid (components/Grid.tsx) ---------- */
+
+.grid__viewport { overflow: hidden; height: 720px; padding: 16px 24px; margin: 0 -24px; }
+.grid__track {
+	display: grid; grid-template-columns: repeat(var(--layout-grid-columns), var(--layout-tile-size)); grid-column-gap: var(--layout-tile-gap); grid-row-gap: 40px; justify-content: center;
+	transition: transform var(--dur-scroll) var(--ease-out); will-change: transform;
+}
+.grid__track .tile { margin-right: 0; }

@@ -1,5 +1,6 @@
 import {t as tr} from '../lib/i18n';
 import {Glyph, type GlyphName} from './Glyph';
+import {rowWindow} from '../lib/windowedList';
 
 /** Which Settings page an option is listed on (Settings.tsx GROUPS). */
 export type OptionGroup = 'home' | 'wallpaper' | 'screensaver' | 'appearance' | 'photos' | 'region' | 'system';
@@ -46,7 +47,7 @@ interface Props {
 	onActivate: (index: number) => void;
 }
 
-const ROW_H = 84;           // .slist__row height + margin (global.css)
+const ROW_H = 84;           // .slist__row height + margin (theme/settings.css)
 const VIEW_H = 840;         // .slist__view height
 const SPARE = 6;            // rows drawn above and below the window, so a quick scroll never shows a gap
 const SHADOW_ROOM = 48;     // under the last row: its focus shadow (0 14px 28px) and the 1.03 grow, so the window's edge never cuts it
@@ -56,11 +57,10 @@ const SHADOW_ROOM = 48;     // under the last row: its focus shadow (0 14px 28px
 export function SettingsList ({title, glyph, description, rows, ticks, selected, onSelect, onActivate}: Props) {
 	const n = rows.length;
 	const visible = Math.floor((VIEW_H - SHADOW_ROOM) / ROW_H);
-	const offset = Math.max(0, Math.min(selected - Math.floor((visible - 1) / 2), n - visible)) * ROW_H;
+	const {top, from: first, to: last} = rowWindow(n, selected, visible, Math.floor((visible - 1) / 2), SPARE, true);
+	const offset = top * ROW_H;
 	// the bottom fade only while more rows wait below; at the end of a long list the last row shows whole
 	const more = n > visible && offset < (n - visible) * ROW_H;
-	const first = Math.max(0, Math.floor(offset / ROW_H) - SPARE);
-	const last = Math.min(n, first + visible + 2 * SPARE);
 
 	return (
 		<div class="slist">

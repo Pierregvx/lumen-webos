@@ -1,0 +1,110 @@
+/* Themes: the light look (Appearance: Light) and the focus strength (Appearance > Focus highlight), as new values for the tokens in tokens.css. */
+
+html.light {
+	--ink-1: #14151b;
+	--ink-2: #43465a;
+	--ink-3: #5d6072;
+	--ink-photo-1: #fff;
+	--ink-veil-title: rgba(255, 255, 255, 0.85);
+	--ink-veil-title-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
+	--ink-veil-note: rgba(255, 255, 255, 0.85);
+	--ink-veil-note-shadow: 0 1px 10px rgba(0, 0, 0, 0.5);
+	--ink-veil-row: #14151b;
+	--ink-veil-value: rgba(20, 22, 32, 0.55);
+	--ink-veil-chevron: rgba(20, 22, 32, 0.45);
+	--ink-guide: #14151b;
+	--ink-glyph: rgba(20, 22, 32, 0.72);
+	--ink-glyph-focus: #fff;
+	--ink-glyph-strong: rgba(20, 22, 32, 0.72);
+
+	--focus-fill: #14151b;
+	--focus-ink: #fff;
+	--focus-ink-2: rgba(255, 255, 255, 0.6);
+	--focus-ink-3: rgba(255, 255, 255, 0.6);
+	--focus-shadow: 0 8px 18px rgba(20, 24, 40, 0.30);
+
+	--accent-on: rgb(0, 122, 255);
+	--chan-info-shadow: none;
+	--meter: rgba(20, 22, 32, 0.2);
+	--meter-fill: #14151b;
+	--meter-focus: rgba(255, 255, 255, 0.25);
+
+	--veil-page-color: rgb(120, 128, 148);
+	--veil-page-tint: linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10));
+	--veil-page-video-color: transparent;
+	--veil-page-video: linear-gradient(rgba(246, 247, 251, 0.84), rgba(240, 242, 248, 0.90));
+
+	/* bright frosted glass: a white tint, the sheen and rims at full strength */
+	--glass-tint: rgba(255, 255, 255, 0.34);
+	--glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.07) 42%, rgba(255, 255, 255, 0.16) 100%);
+	--glass-sheen-focus: linear-gradient(145deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.20) 55%, rgba(255, 255, 255, 0.34));
+	--glass-rim: var(--glass-rim-bright);
+	--glass-rim-focus: 0 8px 18px rgba(20, 24, 40, 0.30);
+	--glass-ink: #14151b;
+	--glass-ink-shadow: none;
+	--glass-panel-sheen: linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10));
+	--glass-panel-rim: inset 0 0 0 1.5px rgba(255, 255, 255, 0.85), 0 24px 60px rgba(20, 24, 40, 0.28);
+	--glass-bar-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.07) 42%, rgba(255, 255, 255, 0.16) 100%);
+	--glass-bar-rim: inset 0 0 0 1.5px rgba(255, 255, 255, 0.85), 0 18px 40px rgba(20, 24, 40, 0.20);
+	--glass-bar-highlight: none;
+	/* a focused Control Center control inverts, as the Settings rows do; the backlight bar keeps its glass */
+	--cc-rim: inset 0 0 0 1.5px rgba(255, 255, 255, 0.8), 0 4px 12px rgba(20, 24, 40, 0.12);
+	--cc-slider-rim-focus: inset 0 0 0 1.5px rgba(255, 255, 255, 0.8), 0 4px 12px rgba(20, 24, 40, 0.12);
+	--cc-focus-fill: #14151b;
+	--cc-focus-sheen: none;
+	--cc-focus-rim: 0 8px 18px rgba(20, 24, 40, 0.30);
+	--cc-focus-glyph: #fff;
+	--cc-input-filter: brightness(0) opacity(0.72);
+	--cc-input-filter-focus: brightness(0) invert(1);
+	--cc-fill: rgba(20, 21, 27, 0.72);
+	--cc-fill-focus: #14151b;
+	--cc-fill-rim: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.95), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.5), inset 0 0 16px rgba(255, 255, 255, 0.16), 4px 0 14px rgba(0, 0, 0, 0.18);
+	--cc-fill-glyph: #fff;
+
+	--glass-row: rgba(255, 255, 255, 0.42);
+	--glass-row-on: rgba(255, 255, 255, 0.42);
+	--glass-row-switch: rgba(255, 255, 255, 0.42);
+	--glass-row-rim: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7);
+	--guide-plate-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7);
+	--guide-cell-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7);
+	--guide-typed: rgba(255, 255, 255, 0.6);
+	--guide-typed-miss: rgba(20, 22, 32, 0.5);
+	--slist-row: linear-gradient(145deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.45));
+	--slist-row-rim: inset 0 0 0 1.5px rgba(255, 255, 255, 0.8), 0 4px 12px rgba(20, 24, 40, 0.10);
+	--slist-icon: rgba(255, 255, 255, 0.6);
+	--slist-placeholder: rgba(255, 255, 255, 0.45);
+}
+html.light.wp-video { --wp-bg: linear-gradient(rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.58)) !important; }
+
+/* the status block stays white text on the photo, with a tighter shadow under each line */
+html.light .status * { color: #fff; }
+html.light .status *:not(.clock) { text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45); }
+
+/* Settings' Re-order button keeps the older frosted glass in the light look */
+html.light .settings__button {
+	border: 0; background-color: rgb(120, 128, 148); background-clip: border-box; background-blend-mode: normal, screen;
+	box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.8), 0 4px 12px rgba(20, 24, 40, 0.12);
+}
+html.light .settings__button { background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0.06)); color: var(--ink-2); font-weight: 600; transform-origin: 50% 50%; }
+html.light .settings__button--active { background-image: none; color: #111; }
+html.light .settings__button--focused { background-image: none; background-color: #14151b; color: #fff; box-shadow: 0 8px 18px rgba(20, 24, 40, 0.30); }
+html.light .settings__button--focused { transform: translateY(-50%) scale(var(--lift-pill)); }
+/* over the video the glass is see-through: no opaque base colour */
+html.light.wp-video .settings__button:not(.settings__button--focused) { background-color: transparent; background-blend-mode: normal; }
+
+/* ---------- Settings > Appearance > Focus highlight ---------- */
+
+html.focus-subtle {
+	--lift: 1.1;
+	--lift-bar: 1.06;
+	--lift-shadow: 0 12px 20px rgba(0, 0, 0, 0.30);
+	--lift-sheen: 0.45;
+	--lift-press: 1.015;
+	--lift-pill: 1.04;
+}
+html.focus-strong {
+	--lift: 1.235;
+	--lift-bar: 1.16;
+	--lift-press: 1.05;
+	--lift-pill: 1.12;
+}

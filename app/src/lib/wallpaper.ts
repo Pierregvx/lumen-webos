@@ -270,7 +270,7 @@ export function setWallpaper (sel: string): void {
 		root.toggle('wp-art', isArt(shownKey));
 		decoded.imgs = imgs;
 		released = false;
-		// an Immich photo is placed on its faces (lib/immich.ts); anything else keeps global.css's centre
+		// an Immich photo is placed on its faces (lib/immich.ts); anything else keeps theme/base.css's centre
 		paint(el, src, c.id && currentSel.indexOf('immich:') === 0 ? picturePosition(c.id) : '');
 		root.add(HTML_CLASS);
 		setBlur(c.src);

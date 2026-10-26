@@ -1,0 +1,116 @@
+/* The page, the wallpaper layers, the veil behind the lower rows, Settings and the Guide, and the switches on <html> that reach everything. */
+
+@font-face {
+	font-family: 'Geist Variable';
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: block;
+	src: url('../assets/geist-wght.woff2') format('woff2');
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+	margin: 0;
+	padding: 0;
+	width: var(--layout-screen-width);
+	height: var(--layout-screen-height);
+	overflow: hidden;
+	background: #000;
+	color: var(--ink-1);
+	font-family: var(--font-family);
+	letter-spacing: -0.011em;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+	font-optical-sizing: auto;
+	user-select: none;
+}
+
+#root { position: relative; z-index: 1; width: 100%; height: 100%; }
+
+/* ---------- a screen: home, Settings, the Guide ---------- */
+
+.screen {
+	position: absolute;
+	left: 0; top: 0;
+	width: 100%; height: 100%;
+	padding: 0 var(--layout-edge-padding);
+	/* the soft colour glows shown when there is no wallpaper picture (Plain background, or while one loads) */
+	background:
+		radial-gradient(ellipse 60% 55% at 18% 18%, rgba(70, 120, 255, 0.45) 0%, rgba(70, 120, 255, 0) 70%),
+		radial-gradient(ellipse 55% 60% at 85% 30%, rgba(170, 80, 230, 0.38) 0%, rgba(170, 80, 230, 0) 70%),
+		radial-gradient(ellipse 70% 50% at 55% 100%, rgba(30, 170, 190, 0.34) 0%, rgba(30, 170, 190, 0) 70%),
+		#0a0f1e;
+}
+/* with a picture or video behind, the screen keeps only a dark fade for legibility */
+.wp-image .screen, .wp-video .screen {
+	background:
+		linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.0) 45%),
+		linear-gradient(to bottom, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.0) 25%);
+}
+
+/* ---------- wallpaper: still picture (lib/wallpaper.ts) and optional video (lib/wallpaperVideo.ts); index.html draws #wpimage the same way on a cold start ---------- */
+
+#wpimage, #bgvideo { position: fixed; left: 0; top: 0; width: 100%; height: 100%; z-index: 0; }
+#wpimage { background: center / cover no-repeat; }
+/* two portrait photos side by side, each half the screen wide with a thin black seam; a portrait is always taller than its half, so fitting the width covers it */
+#wpimage.wp-pair, #wpimage .wpfade.wp-pair { background-color: #000; background-size: calc(50% - 4px) auto; background-position: left center, right center; }
+#bgvideo { object-fit: cover; background: #000; }
+html.night #wpimage { opacity: 0.55; }
+/* Art pictures: the screensaver's Print look (.ambient__print) over the painting, above the fade layer so a new one gets it as it fades in */
+html.wp-art #wpimage::after {
+	content: ''; position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;
+	background: linear-gradient(rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.14)), linear-gradient(rgba(236, 228, 212, 0.09), rgba(236, 228, 212, 0.09)), radial-gradient(ellipse 85% 95% at 24% 6%, rgba(255, 244, 222, 0.07) 0%, rgba(0, 0, 0, 0) 38%, rgba(0, 0, 0, 0.36) 100%);
+}
+/* the video plays on a hardware layer under the page: hide the still picture that would cover it */
+html.wp-video #wpimage { display: none; }
+/* the veil's picture over the video is a see-through tint; !important beats the blurred still picture lib/wallpaper.ts sets inline */
+html.wp-video { --wp-bg: linear-gradient(rgba(20, 24, 38, 0.46), rgba(20, 24, 38, 0.46)) !important; }
+html.dark.wp-video { --wp-bg: linear-gradient(rgba(8, 10, 18, 0.62), rgba(8, 10, 18, 0.62)) !important; }
+
+/* ---------- the veil: the blurred copy of the wallpaper (--wp-bg) behind the lower rows, faded in as the rows come up ---------- */
+
+.lowerveil {
+	position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none;
+	opacity: 0; transition: opacity var(--dur-veil-up) var(--ease-veil-up); will-change: opacity;
+	background-color: var(--veil-color);
+	background-image: var(--veil-tint), var(--wp-bg, none);
+	background-size: auto, cover; background-position: 0 0, center; background-repeat: no-repeat;
+}
+.screen--lower .lowerveil { opacity: 1; transition: opacity var(--dur-veil-down) var(--ease-veil-down); }
+/* the night dimming multiplies the veil's picture by a grey of 55%, which matches the wallpaper at opacity 0.55 over black (not over the video, not in the light look) */
+html.night:not(.light):not(.wp-video) .lowerveil { background-color: rgb(140, 140, 140); background-blend-mode: normal, multiply; }
+html.wp-video .lowerveil { background-color: transparent; background-image: var(--veil-video); }
+.screen--dockhidden .lowerveil { display: none; }
+/* the picture is drawn in a canvas (components/LowerVeil.tsx): the veil itself draws nothing, so it is one layer with no tiles */
+.lowerveil--canvas { background: none !important; }
+.lowerveil > canvas, .backdrop > canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+/* Settings' and the Guide's picture, drawn in a canvas behind their content (ScreenBackdrop, lib/blurCanvas.ts) */
+.backdrop { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+
+/* ---------- full-screen layers that sit over home ---------- */
+
+.panel-backdrop { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.38); z-index: 19; }
+/* Control Center and Inputs float over home undimmed, as on tvOS; the layer stays so a click outside closes them */
+.panel-backdrop--clear { background: none; }
+
+.toast {
+	position: absolute; left: 50%; bottom: 56px; transform: translateX(-50%);
+	padding: 14px 28px; border-radius: var(--radius-capsule);
+	background: rgba(255, 255, 255, 0.18);
+	font-size: 26px; color: var(--ink-2); white-space: nowrap; pointer-events: none;
+}
+.toast--error { color: var(--danger); }
+
+/* Settings > Frame-rate counter (dev builds, lib/fps.ts) */
+.fps { position: fixed; left: 24px; top: 20px; z-index: 100; padding: 4px 12px; border-radius: 14px; background: rgba(0, 0, 0, 0.62); color: #7CFC9A; font: 600 20px/1.3 monospace; pointer-events: none; }
+
+/* ---------- switches on <html> ---------- */
+
+/* Settings > Reduce motion */
+html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after { transition: none !important; animation: none !important; }
+/* Settings > Hide app names (home only) */
+html.hide-names .rows .tile__label, html.hide-names .panel--folder .tile__label { display: none; }
+html.hide-recents .tile__dot { display: none; }
+/* home stays drawn under Settings and the Guide (their backdrop is opaque), so going back does not repaint it; the video's see-through backdrop still needs it hidden */
+html.wp-video.in-settings .screen:not(.screen--settings) { visibility: hidden; }

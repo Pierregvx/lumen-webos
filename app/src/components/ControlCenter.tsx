@@ -78,14 +78,14 @@ const track = (points: number[], t: number) => {
 	const i = Math.min(points.length - 2, Math.floor(at));
 	return points[i] + (points[i + 1] - points[i]) * (at - i);
 };
-/** a list choice's height and the gap between choices, as .cc__opt in global.css */
+/** a list choice's height and the gap between choices, as .cc__opt in theme/panels.css */
 const OPT_H = 72;
 const OPT_GAP = 12;
 const listHeight = (count: number) => count * OPT_H + (count - 1) * OPT_GAP;
 
 /** the TV's values as last read or set, so the panel opens on them rather than on defaults that jump when the read lands */
 let lastValues: Controls = {volume: 0, muted: false, picture: 'normal', sound: 'standard', backlight: 100, eyeComfort: false};
-/** Read the TV's values ahead of the first open (app.tsx calls it once the launcher has settled). */
+/** Read the TV's values ahead of the first open (app.tsx calls it 4 s after each return). */
 export function prefetchControls (): void { readControls().then((v) => { lastValues = v; }).catch(() => undefined); }
 
 type Phase = 'grid' | 'opening' | 'list' | 'closing';

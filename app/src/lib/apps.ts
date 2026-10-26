@@ -218,7 +218,7 @@ function writeIconCache (cache: Record<string, string>): void {
 const COLOR_CACHE_KEY = 'launcher-icon-colors-v2';
 
 function readColorCache (): Record<string, string> {
-	try { return JSON.parse(localStorage.getItem(COLOR_CACHE_KEY) || '{}') as Record<string, string>; } catch { return {}; }
+	return readCache<Record<string, string>>(COLOR_CACHE_KEY) || {};
 }
 
 /** what one icon cost (boot timeline): how it ended, its size, and the time spent drawing and reading it */
@@ -273,7 +273,7 @@ function withIconColor (entry: AppEntry): Promise<AppEntry> {
 	return sampleColor(entry.iconUrl, entry.id).then((color) => {
 		const next = readColorCache();
 		next[key] = color || NO_COLOR;
-		try { localStorage.setItem(COLOR_CACHE_KEY, JSON.stringify(next)); } catch { /* full: sampled again next time */ }
+		writeCache(COLOR_CACHE_KEY, next);
 		return {...entry, color: color || entry.color};
 	});
 }

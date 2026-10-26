@@ -32,8 +32,8 @@ export const KEY = {
 export const TIMING = {
 	lunaTimeoutMs: 4000,
 	toastMs: 2200,
-	clockTickMs: 1000,
-	longPressMs: 600        // OK held this long enters/leaves re-order mode
+	longPressMs: 600,       // OK held this long enters/leaves re-order mode
+	wallpaperGridMs: 250    // the wallpaper grid swaps this long after the last category change, so the bar's pill slides without a stall
 } as const;
 
 /** localStorage key for the user's selections. Bump the suffix on breaking changes. */

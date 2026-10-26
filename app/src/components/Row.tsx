@@ -8,7 +8,6 @@ interface Props {
 	focused: boolean;
 	selected: number;
 	emptyText?: string;
-	compact?: boolean;
 	/** show the label above the row */
 	titled?: boolean;
 	/** extra class on the row (the Live TV row's is row--live) */
@@ -33,20 +32,22 @@ const VIEWPORT_WIDTH = LAYOUT.screenWidth - 2 * LAYOUT.rowsEdge;
 
 /** Horizontal strip of tiles. Centred when it fits; otherwise a carousel that keeps
  *  the selected tile in the middle (clamped at the ends). */
-export function Row ({label, items, focused, selected, emptyText, compact, titled, className, slot, tileSize, tileGap, hidden, rest, onLeave, onSelect, onActivate}: Props) {
-	const size = compact ? LAYOUT.dockTileSize : tileSize || LAYOUT.tileSize;
-	const gap = compact ? LAYOUT.dockTileGap : tileGap || LAYOUT.tileGap;
+export function Row ({label, items, focused, selected, emptyText, titled, className, slot, tileSize, tileGap, hidden, rest, onLeave, onSelect, onActivate}: Props) {
+	const size = tileSize || LAYOUT.tileSize;
+	const gap = tileGap || LAYOUT.tileGap;
 	const STEP = size + gap;
 	const total = items.length * STEP - gap;
 	const fits = total <= VIEWPORT_WIDTH;
 	const offset = slot !== undefined ? Math.max(0, Math.min(selected, items.length - 2) - slot) * STEP
 		: fits ? 0 : clamp(selected * STEP + size / 2 - VIEWPORT_WIDTH / 2, 0, total - VIEWPORT_WIDTH);
-	// the selected tile's centre from the row's centre, for the glass bar's sliding highlight (global.css)
+	// the selected tile's centre from the row's centre, for the glass bar's sliding highlight (home.css)
 	const selX = selected * STEP + size / 2 - offset - (fits ? total : VIEWPORT_WIDTH) / 2;
 
 	return (
-		<section class={`row${focused || rest ? ' row--focused' : ''}${compact ? ' row--dock' : ''}${titled ? ' row--titled' : ''}${hidden ? ' row--hidden' : ''}${className ? ' ' + className : ''}`} style={`--row-w:${total}px;--sel-x:${selX}px`} onMouseLeave={onLeave}>
+		<section class={`row${focused || rest ? ' row--focused' : ''}${titled ? ' row--titled' : ''}${hidden ? ' row--hidden' : ''}${className ? ' ' + className : ''}`} style={`--row-w:${total}px`} onMouseLeave={onLeave}>
 			<h2 class="row__label">{label}</h2>
+			{/* --sel-x lives here, not on the row: a style change on the row restyles the bar's glass, and its sheen then repaints in full on every move */}
+			<div class="row__shine" style={`--sel-x:${selX}px`} />
 			<div class="row__viewport">
 				{items.length === 0
 					? <div class="row__empty">{emptyText || 'Nothing here yet'}</div>

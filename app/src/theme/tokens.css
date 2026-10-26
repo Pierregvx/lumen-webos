@@ -1,0 +1,163 @@
+/* Design tokens by role; themes.css gives them new values, and tokens.ts adds the --layout-* numbers the code also needs. Chrome 79: no flex gap, inset, nesting or @layer. */
+
+:root {
+	--font-family: "SF Private", "Geist Variable", "LG Smart UI", "Helvetica Neue", Arial, sans-serif;
+	/* a tile's name; the panels' smaller tiles have a larger one */
+	--tile-label-size: 18px;
+
+	/* ---------- ink: text and line art ---------- */
+	--ink-1: #eeeeee;
+	--ink-2: #aaaaaa;
+	--ink-3: #666666;
+	/* text drawn straight on the wallpaper or a photo; the light look keeps it white, since the picture behind may be dark */
+	--ink-photo: #fff;
+	--ink-photo-1: #eeeeee;
+	--ink-photo-2: rgba(255, 255, 255, 0.72);
+	/* on the veil behind Settings */
+	--ink-veil-title: rgba(255, 255, 255, 0.62);
+	--ink-veil-title-shadow: none;
+	--ink-veil-note: rgba(255, 255, 255, 0.55);
+	--ink-veil-note-shadow: none;
+	--ink-veil-row: rgba(255, 255, 255, 0.94);
+	--ink-veil-value: rgba(255, 255, 255, 0.55);
+	--ink-veil-chevron: rgba(255, 255, 255, 0.5);
+	/* the Guide and the Live TV row's now/next block */
+	--ink-guide: #fff;
+	/* line art on glass: the top buttons, and the stronger Control Center icons */
+	--ink-glyph: rgba(255, 255, 255, 0.62);
+	--ink-glyph-focus: rgba(255, 255, 255, 0.62);
+	--ink-glyph-strong: rgba(255, 255, 255, 0.9);
+
+	/* ---------- focus-invert: a focused control (a text row, a button) turns into a solid capsule ---------- */
+	--focus-fill: #fff;
+	--focus-ink: #111;
+	--focus-ink-2: rgba(17, 17, 17, 0.55);
+	--focus-ink-3: rgba(17, 17, 17, 0.45);
+	--focus-shadow: 0 14px 28px rgba(0, 0, 0, 0.30);
+
+	/* ---------- focus-lift: how far focused content grows; Settings > Appearance > Focus highlight changes it (themes.css) ---------- */
+	--lift: 1.14;
+	/* the glass bar's tiles grow less, so the focused app's name fits under the icon inside the bar */
+	--lift-bar: 1.12;
+	--lift-shadow: 0 26px 40px rgba(0, 0, 0, 0.42), 0 8px 14px rgba(0, 0, 0, 0.22);
+	--lift-sheen: 1;
+	/* focus-invert: a wide row grows a little, a small pill more, or it barely moves */
+	--lift-press: 1.03;
+	--lift-pill: 1.08;
+
+	/* ---------- accents ---------- */
+	--accent-on: rgb(64, 196, 255);
+	--accent-on-focus: rgb(64, 196, 255);
+	--rain: #a8d8ff;
+	--rain-bar: rgba(124, 196, 255, 0.5);
+	--rain-bar-wet: rgba(124, 196, 255, 0.9);
+	--rain-pill: rgba(124, 196, 255, 0.6);
+	--rain-pill-wet: #7cc4ff;
+	--danger: #e0564f;
+	--warn: rgb(255, 92, 82);
+	--star: #ffd60a;
+	/* a channel with no brand colour of its own; lib/livetv.ts channelColor lays the same sweep over a brand colour */
+	--chan-sweep: linear-gradient(160deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.28) 100%);
+	--chan-bg: #22263a;
+	--chan-info-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+	/* a meter: how far through its programme a channel is */
+	--meter: rgba(255, 255, 255, 0.3);
+	--meter-fill: #fff;
+	--meter-focus: rgba(0, 0, 0, 0.14);
+
+	/* ---------- scrims: shadows that keep text readable over a picture ---------- */
+	--scrim-text: 0 2px 10px rgba(0, 0, 0, 0.8);
+	--scrim-label: 0 2px 14px rgba(0, 0, 0, 0.55), 0 0 2px rgba(0, 0, 0, 0.25);
+	--scrim-status: 0 1px 16px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.22);
+	--scrim-row-title: 0 2px 12px rgba(0, 0, 0, 0.45);
+
+	/* ---------- the veil: a blurred, darkened copy of the wallpaper (--wp-bg), not a live blur ---------- */
+	/* behind the lower rows */
+	--veil-color: #10131c;
+	--veil-tint: linear-gradient(rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.26));
+	--veil-video: linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42));
+	/* behind Settings and the Guide, fully opaque; over the video a see-through fill */
+	--veil-page-color: #10131c;
+	--veil-page-tint: linear-gradient(rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.26));
+	--veil-page-video-color: rgb(24, 28, 40);
+	--veil-page-video: linear-gradient(rgba(10, 12, 22, 0.76), rgba(10, 12, 22, 0.84));
+
+	/* ---------- glass-control: the top buttons, the Control Center controls and the folder panel ---------- */
+	/* a very light live blur so the picture reads through, extra colour and a dark tint; the rims do the rest. Only the focused control blurs */
+	--glass-blur: blur(2px) saturate(1.5) brightness(1.1);
+	--glass-tint: rgba(0, 0, 0, 0.3);
+	/* at rest the sheen and rims are half strength, so the glass reads dark like Liquid Glass */
+	--glass-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.03) 42%, rgba(255, 255, 255, 0.08) 100%);
+	--glass-sheen-focus: linear-gradient(145deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.12) 55%, rgba(255, 255, 255, 0.22));
+	--glass-rim: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.55), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.25), inset 0 0 14px rgba(255, 255, 255, 0.05), 0 8px 18px rgba(0, 0, 0, 0.25);
+	--glass-rim-bright: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.9), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.42), inset 0 0 14px rgba(255, 255, 255, 0.10), 0 8px 18px rgba(0, 0, 0, 0.25);
+	--glass-rim-focus: var(--glass-rim-bright);
+	--glass-ink: #fff;
+	--glass-ink-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+	--glass-panel-sheen: var(--glass-sheen);
+	--glass-panel-rim: var(--glass-rim);
+	/* Control Center */
+	--cc-rim: var(--glass-rim);
+	--cc-slider-rim-focus: var(--glass-rim-bright);
+	--cc-focus-fill: var(--glass-tint);
+	--cc-focus-sheen: var(--glass-sheen-focus);
+	--cc-focus-rim: var(--glass-rim-bright);
+	--cc-focus-glyph: rgba(255, 255, 255, 0.9);
+	--cc-input-filter: brightness(0) invert(1) opacity(0.9);
+	--cc-input-filter-focus: brightness(0) invert(1) opacity(0.9);
+	/* the backlight bar's fill: a second sheet of frost on the bar's glass */
+	--cc-fill: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 45%, rgba(255, 255, 255, 0.15) 100%);
+	--cc-fill-focus: linear-gradient(135deg, rgba(255, 255, 255, 0.36) 0%, rgba(255, 255, 255, 0.16) 45%, rgba(255, 255, 255, 0.26) 100%);
+	--cc-fill-rim: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.6), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.3), inset 0 0 16px rgba(255, 255, 255, 0.1), 4px 0 14px rgba(0, 0, 0, 0.18);
+	--cc-fill-glyph: rgba(255, 255, 255, 0.9);
+
+	/* ---------- glass-bar: the wide glass under the first row ---------- */
+	/* the sheen stops 200px in from each end, or it would spread across hundreds of pixels and look like a focused button */
+	--glass-bar-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.13) 0, rgba(255, 255, 255, 0.03) 200px, rgba(255, 255, 255, 0.03) calc(100% - 200px), rgba(255, 255, 255, 0.08) 100%);
+	/* the rim has a faint colour fringe, blue at the top left and pink at the bottom right, for the dock only: it echoes the pink icons at its ends, and on a bigger shape the pink shows too much */
+	--glass-bar-rim: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.55), inset 3px 3px 2px -2px rgba(110, 200, 255, 0.7), inset -3px -3px 2px -2px rgba(255, 120, 190, 0.28), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.2), inset 0 0 14px rgba(255, 255, 255, 0.05), 0 20px 44px rgba(0, 0, 0, 0.28);
+	/* the highlight that slides along its top edge over the focused app: block or none */
+	--glass-bar-highlight: block;
+
+	/* ---------- glass-row: faint glass for rows on the veil (the Guide, the Full guide, the switcher) ---------- */
+	--glass-row: rgba(255, 255, 255, 0.09);
+	--glass-row-on: rgba(255, 255, 255, 0.2);
+	--glass-row-switch: rgba(255, 255, 255, 0.1);
+	--glass-row-rim: inset 0 1.5px 1px -1px rgba(255, 255, 255, 0.45), inset 1.5px 0 1px -1px rgba(255, 255, 255, 0.2);
+	--guide-plate-shadow: 0 18px 36px rgba(0, 0, 0, 0.32);
+	--guide-cell-shadow: 0 14px 30px rgba(0, 0, 0, 0.32);
+	--guide-typed: rgba(255, 255, 255, 0.16);
+	--guide-typed-miss: rgba(255, 255, 255, 0.55);
+	/* Settings rows are glass-row, as in the Guide */
+	--slist-row: linear-gradient(var(--glass-row), var(--glass-row));
+	--slist-row-rim: var(--glass-row-rim);
+	--slist-icon: rgba(255, 255, 255, 0.22);
+	--slist-placeholder: rgba(17, 17, 17, 0.4);
+
+	/* ---------- shapes: anything with a set height is a capsule; an outer shape's radius is the inner radius plus the gap ---------- */
+	--radius-capsule: 999px;
+	--radius-card: 30px;
+
+	/* ---------- motion: animate only transform and opacity ---------- */
+	--ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+	--dur-focus: 160ms;
+	--dur-scroll: 260ms;
+	--dur-fade: 220ms;
+	--dur-slide: 320ms;
+	/* Up takes 600ms and eases in and out, as a strong ease-out felt snappy; Down moves at once but eases over 675ms, so the glass pane is seen to slide up over the screen */
+	--ease-up: cubic-bezier(0.65, 0, 0.25, 1);
+	--ease-down: cubic-bezier(0.25, 0.1, 0.25, 1);
+	--dur-up: 600ms;
+	--dur-down: 675ms;
+	/* on Up the clock and top buttons fade in early, and the weather widget and caption once the rows are 3/4 gone, so they never show over the tiles (home.css) */
+	--delay-show-top: 200ms;
+	--delay-show-bottom: 350ms;
+	/* on Down the weather widget and caption go first, as the pane reaches them first, then the clock and top buttons */
+	--delay-hide-top: 150ms;
+	/* on Up the backdrop fades evenly and outlasts the rows, so the wallpaper does not come back before the bar settles */
+	--ease-veil-up: cubic-bezier(0.45, 0, 0.55, 1);
+	--dur-veil-up: 800ms;
+	--dur-veil-down: 600ms;
+	/* on Down the blur builds evenly as the pane covers the screen, not at once */
+	--ease-veil-down: cubic-bezier(0.45, 0, 0.55, 1);
+}

@@ -7,6 +7,7 @@ import {Glyph, type GlyphName} from '../components/Glyph';
 import type {TileModel} from '../components/Tile';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
+import {TIMING} from '../config/constants';
 import {moveItem} from '../lib/order';
 import {LAYOUT} from '../theme/tokens';
 import {WallpaperPicker, WALLPAPER_COLUMNS, type WallpaperEntry} from '../components/WallpaperPicker';
@@ -127,6 +128,7 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 	const [reordering, setReordering] = useState(false);
 	const [held, setHeld] = useState<Held | null>(null);
 	const [wpCat, setWpCat] = useState(0);
+	const [wpShown, setWpShown] = useState(0);      // the category the grid shows; it follows wpCat once the pill settles
 	const [wpIndex, setWpIndex] = useState(0);
 	const [typed, setTyped] = useState('');
 	const field = useRef<HTMLInputElement>(null);
@@ -135,8 +137,9 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 	const page = top.page;
 	const tab = page.kind === 'grid' ? tabs.filter((t) => t.id === page.tabId)[0] : undefined;
 	const onWallpaper = page.kind === 'wallpaper';
-	const wpName = wallpaper.categories[wpCat];
-	const wpList = wallpaper.entries.filter((e) => e.category === wpName);
+	const wpOf = (c: number) => wallpaper.entries.filter((e) => e.category === wallpaper.categories[c]);
+	const wpName = wallpaper.categories[wpShown];
+	const wpList = wpOf(wpShown);
 	const textOption = page.kind === 'text' ? options.filter((o) => o.id === page.optionId)[0] : undefined;
 	const items = tab ? (reordering ? tab.shown : tab.items) : [];
 	const cols = LAYOUT.gridColumns;
@@ -227,6 +230,13 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 	const list = listPage();
 
 	const changeCategory = (i: number) => { setWpCat(clamp(i, 0, wallpaper.categories.length - 1)); setWpIndex(0); };
+	/** Down or OK from the bar: show the bar's category at once, then focus the grid. */
+	const enterWallpaperGrid = () => { if (wpOf(wpCat).length === 0) return; setWpShown(wpCat); setZone('content'); };
+	useEffect(() => {
+		if (wpShown === wpCat) return;
+		const timer = window.setTimeout(() => setWpShown(wpCat), TIMING.wallpaperGridMs);
+		return () => window.clearTimeout(timer);
+	}, [wpCat]);
 
 	/** Switch re-order mode, keeping focus on the same item where it exists in both lists. */
 	const setMode = (next: boolean) => {
@@ -267,7 +277,7 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 		if (textOption) { onText(textOption.id, field.current ? field.current.value : typed); pop(); return; }
 		if (list) { list.activate(latest.current[latest.current.length - 1].focus); return; }
 		if (zone === 'button') { setMode(!reordering); return; }
-		if (zone === 'chips') { if (wpList.length > 0) setZone('content'); return; }
+		if (zone === 'chips') { enterWallpaperGrid(); return; }
 		if (onWallpaper) { if (wpList[wpIndex]) wallpaper.onPick(wpList[wpIndex].key); return; }
 		activateGridItem(gridIndex);
 	};
@@ -310,7 +320,7 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 		if (zone === 'chips') {
 			if (key === 'left') changeCategory(wpCat - 1);
 			else if (key === 'right') changeCategory(wpCat + 1);
-			else if (key === 'down' && wpList.length > 0) setZone('content');
+			else if (key === 'down') enterWallpaperGrid();
 			return true;
 		}
 		if (zone === 'button') {
@@ -402,7 +412,7 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 	return (
 		<div class="screen screen--settings">
 			<ScreenBackdrop />
-			<div class="settings settings--grid" key={depth}>
+			<div class={`settings settings--grid${tab ? ' settings--tiles' : ''}`} key={depth}>
 				<div class="settings__head">
 					<h1 class="settings__title">{tr(title)}</h1>
 					{tab && (

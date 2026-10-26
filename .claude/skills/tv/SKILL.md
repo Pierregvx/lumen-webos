@@ -54,4 +54,4 @@ Use this for a look-and-feel change (spacing, size, position, colour), where one
 2. Inject the change with `css` (or `eval` for a DOM or state change). Say in one line what to look at, and wait for his reply. Make one change per round.
 3. When Sam says it looks wrong ("things moved", "can you see?"), take a `shot` and measure with `eval`. Do not guess. For example, an absolute label once collapsed the tiles from 212px to 144px, and `getBoundingClientRect` showed it at once.
 4. A heavy effect can look right and still drop the frame rate. Sam judges smoothness on the TV, and the TV's graphics chip is weak (`RESEARCH.md` section 4).
-5. When Sam says it is right, write the final values into source (`app/src/theme/global.css` or the component), and install it with `npm run deploy:home`. Then clear the live block. The injected CSS is never the record.
+5. When Sam says it is right, write the final values into source (the matching file in `app/src/theme/`, a token in `tokens.css` or `themes.css` where the value is one, or the component), and install it with `npm run deploy:home`. Then clear the live block. The injected CSS is never the record.

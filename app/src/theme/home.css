@@ -1,0 +1,190 @@
+/* Home (screens/Home.tsx): the status block top left, the top buttons, the glass bar and the app grid under it, and the dock hiding away. */
+
+/* ---------- status: the clock, then the date and the weather, plain text on the wallpaper (components/Status.tsx) ---------- */
+
+.status {
+	position: absolute; top: 64px; left: var(--layout-rows-edge); z-index: 5;
+	display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+	min-height: 58px; margin: 0; padding: 0;
+	color: var(--ink-photo-1); text-shadow: var(--scrim-status); pointer-events: none;
+	font-variant-numeric: normal; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+	transition: transform var(--dur-slide) var(--ease-out), opacity var(--dur-fade) ease var(--delay-show-top);
+}
+/* its bottom edge 64px above the screen's, whatever its height (top is 64px; 1080 - 64 - 64 = 952) */
+/* on Down the clock and top buttons wait --delay-hide-top; hiding the dock is at once */
+.screen--lower { --delay-show-top: var(--delay-hide-top); --delay-show-bottom: 0s; }
+.screen--dockhidden { --delay-show-top: 0s; --delay-show-bottom: 0s; }
+.screen--dockhidden .status { transform: translateY(calc(952px - 100%)); }
+.screen--lower .status { opacity: 0; pointer-events: none; }
+.status svg { position: static; flex: 0 0 auto; width: 28px; height: 28px; margin: 0 14px 0 0; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6)); }
+
+.clock { flex: 0 0 auto; margin: 0 0 0 -6px; text-align: center; font-weight: 300; line-height: 1.25; text-shadow: 0 4px 24px rgba(0, 0, 0, 0.28); pointer-events: none; }
+/* the time: tabular digits so it does not jitter as it changes (the one place they are allowed), and a narrow colon raised to the middle of the figures */
+.clock__time {
+	display: inline-flex; align-items: center;
+	font-size: 80px; font-weight: 600; line-height: 0.95; letter-spacing: 0;
+	font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1, 'case' 1;
+}
+.clock__colon { position: relative; top: -0.06em; display: inline-block; width: 0.34em; margin: 0; padding: 0; text-align: center; }
+.clock__period { align-self: flex-end; margin: 0 0 9px 7px; font-size: 22px; font-weight: 400; letter-spacing: -0.012em; }
+/* SF's 'case' colon is already centred, so no nudge; proportional digits, as on Apple's clocks, so a 1 leaves no gap */
+.sf .clock__time { align-items: baseline; font-variant-numeric: normal; font-feature-settings: 'case' 1; }
+.sf .clock__colon { top: 0; width: auto; padding: 0 0.02em; }
+
+/* home puts the weather under the date; the screensaver (ambient.css) keeps them on one line */
+.status__row { display: flex; flex-direction: column; align-items: flex-start; margin-top: 10px; }
+.status__date { font-size: 26px; font-weight: 500; line-height: 1.2; letter-spacing: -0.012em; white-space: nowrap; }
+.status__weather { display: flex; flex-direction: row; align-items: center; margin: 4px 0 0 -2px; font-size: 26px; font-weight: 500; line-height: 1.25; letter-spacing: -0.005em; white-space: nowrap; animation: status-in 600ms ease-out; }
+@keyframes status-in { from { opacity: 0; } to { opacity: 1; } }
+.status .status__icon { width: 32px; height: 32px; margin: 0 10px 0 0; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.status__cond { margin-left: 12px; font-weight: 500; }
+
+/* ---------- the top buttons: Control Center, Settings, Inputs (glass-control) ---------- */
+
+.topbar {
+	position: absolute; top: 64px; right: var(--layout-rows-edge); z-index: 5;
+	display: flex; flex-direction: row; align-items: center;
+	transition: transform var(--dur-slide) var(--ease-out), opacity var(--dur-fade) ease var(--delay-show-top);
+}
+.screen--dockhidden .topbar, .screen--lower .topbar { opacity: 0; pointer-events: none; }
+
+.pill {
+	position: relative; display: flex; align-items: center; justify-content: center;
+	width: 58px; height: 58px; margin-right: 16px; border-radius: 29px;
+	background-color: var(--glass-tint); background-image: var(--glass-sheen); background-repeat: no-repeat;
+	box-shadow: var(--glass-rim);
+	transition: transform var(--dur-focus) ease-out;
+}
+.pill svg { width: 28px; height: 28px; fill: none; stroke: var(--ink-glyph); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+/* only the focused or open button has the live blur: each one adds about 2ms of GPU draw to every frame (docs/frame-rate.md) */
+.pill--focused, .pill--open { transform: scale(1.14); background-image: var(--glass-sheen-focus); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+.pill--focused { color: var(--ink-photo-1); box-shadow: var(--glass-rim-focus); }
+.pill--focused svg { stroke: var(--ink-glyph-focus); }
+.pill--open { box-shadow: var(--glass-rim-bright); }
+.pill__label {
+	position: absolute; top: 72px; left: 50%; transform: translateX(-50%);
+	font-size: 22px; white-space: nowrap; text-shadow: var(--scrim-text);
+	opacity: 0; transition: opacity var(--dur-focus) ease-out;
+}
+.pill--focused .pill__label { opacity: 1; }
+.topbar .pill:last-child .pill__label { left: auto; right: 0; transform: none; }
+/* Control Center or Settings open over home: the focused button keeps its look but not its label, which would show through above the panel */
+.screen--inactive .pill__label { opacity: 0; transition: none; }
+
+/* ---------- the rows: the glass bar, then the app grid and the Live TV row under it ---------- */
+
+/* the glass bar sits low, so the first grid row's tops peek in under it; Down slides the stack up by --lower-shift (Home.tsx) with transform only */
+.rows {
+	position: absolute; left: var(--layout-rows-edge); right: var(--layout-rows-edge); top: var(--layout-rows-top);
+	transition: transform var(--dur-up) var(--ease-up), opacity var(--dur-fade) ease;
+}
+.rows--lower { transform: translateY(calc(-1 * var(--lower-shift, 300px))); transition: transform var(--dur-down) var(--ease-down), opacity var(--dur-fade) ease; }
+html.wp-video .rows { will-change: transform; }
+/* Hide the dock: the rows slide away */
+.rows--hidden { transform: translateY(1300px); opacity: 0; pointer-events: none; }
+
+.row { position: relative; margin-bottom: var(--layout-row-gap); transition: opacity 200ms ease-out, transform 200ms ease-out, visibility 0s linear 0s; }
+.row:last-child { margin-bottom: 0; }
+/* the lower rows stay painted (opacity 0, not visibility: hidden), so showing them is a fade, not a first paint of every tile */
+.row--hidden { opacity: 0; transform: translateY(26px); pointer-events: none; transition: opacity 160ms ease-out, transform 160ms ease-out; }
+.rows > .row:not(:first-child) { will-change: opacity, transform; }
+/* the margins collapse with the bar's (40px) and its viewport's (-90px) */
+.rows > .row:nth-child(2) { margin-top: -168px; }
+.rows > .row:nth-child(n+3) { margin-top: -132px; }
+/* down in the grid the grid rows drop 40px further from the bar (about 70px of space under the glass, as on tvOS), so the focused tile has room */
+.screen--lower .rows > .row:not(:first-child) { transform: translateY(40px); }
+
+.row__label { display: none; }
+/* a titled row (Recent, Live TV): its title left-aligned with its first tile */
+.row--titled .row__label {
+	display: block; position: relative; z-index: 1; margin: 0 0 34px; padding-left: calc((1640px - var(--first-w, 1556px)) / 2);
+	font-size: 26px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink-photo-2); text-shadow: var(--scrim-row-title);
+	transition: color var(--dur-focus) ease-out;
+}
+.row--titled.row--focused .row__label { color: var(--ink-photo-1); }
+
+/* the viewport clips and the track slides; the viewport's padding leaves room so a focused (grown, shadowed) tile is never clipped */
+.row__viewport { position: relative; z-index: 1; overflow: hidden; padding: 40px 70px 90px; margin: -40px -70px -90px; transition: opacity var(--dur-focus) ease-out; }
+.row__track { display: flex; flex-direction: row; transition: transform var(--dur-scroll) var(--ease-out); will-change: transform; }
+.row__track--centered { justify-content: center; }
+/* the grid rows line up with the bar's columns (left-aligned) instead of floating in the middle */
+.rows > .row:not(:first-child) .row__track--centered { justify-content: flex-start; margin: 0; padding-left: calc((1920px - 2 * var(--layout-rows-edge) - var(--first-w, 1670px)) / 2); }
+.row__empty { font-size: 18px; font-weight: 400; color: var(--ink-3); }
+/* the Live TV row reaches far enough down to show the focused channel's now/next block, and runs off both screen edges as tvOS rows do */
+.row--live .row__viewport {
+	padding: 40px var(--layout-rows-edge) 250px; margin: -40px calc(-1 * var(--layout-rows-edge)) -250px;
+}
+
+/* ---------- the glass bar (glass-bar): 40px of glass round the first row's tiles, its corners concentric with theirs ---------- */
+
+.rows > .row:first-child::before {
+	content: ''; position: absolute; top: 0;
+	left: calc(50% - var(--row-w, 1670px) / 2 - 40px); width: calc(var(--row-w, 1670px) + 80px);
+	height: calc(var(--layout-tile-height) + 80px); border-radius: calc(var(--layout-tile-radius) + 40px);
+	background-color: var(--glass-tint); background-image: var(--glass-bar-sheen); background-repeat: no-repeat;
+	box-shadow: var(--glass-bar-rim);
+	/* no live blur (it halved the frame rate of every move); its own layer, so a move does not repaint it */
+	will-change: transform;
+}
+/* Settings > Appearance > Dock blur puts the blur back: about 2ms more GPU draw per frame, felt most going left and right */
+html.dockblur .rows > .row:first-child::before { -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+/* a highlight on the bar's top edge over the focused app, sliding with focus (--sel-x, Row.tsx) and held clear of the rounded ends; it fades out when focus leaves the bar */
+.row__shine { display: none; }
+.rows > .row:first-child > .row__shine {
+	display: var(--glass-bar-highlight); position: absolute; left: 50%; top: 0; z-index: 0; width: 260px; height: 28px; pointer-events: none;
+	background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.9) 50%, rgba(255, 255, 255, 0)) top / 100% 1.5px no-repeat,
+		radial-gradient(50% 100% at 50% 0, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0)) top / 100% 28px no-repeat;
+	--sel-edge: calc(var(--row-w, 1670px) / 2 - var(--layout-tile-radius) - 130px);
+	transform: translateX(calc(clamp(-1 * var(--sel-edge), var(--sel-x, 0px), var(--sel-edge)) - 130px));
+	opacity: 0; transition: transform var(--dur-scroll) var(--ease-out), opacity 200ms ease;
+}
+.rows > .row:first-child.row--focused > .row__shine { opacity: 1; }
+/* Settings > Liquid glass dock (lib/liquidGlass.ts): the bar bends the picture at its rim (an SVG displacement); over a video it only tints, and it is off while the rows are down */
+html.liquiddock .rows:not(.rows--lower) > .row:first-child::before {
+	-webkit-backdrop-filter: blur(0.75px) url(#lg-dock) brightness(1.1) saturate(1.5); backdrop-filter: blur(0.75px) url(#lg-dock) brightness(1.1) saturate(1.5);
+	background: rgba(0, 0, 0, 0.3); box-shadow: inset 0 0 4px 0 rgba(250, 250, 250, 0.5), 0 20px 44px rgba(0, 0, 0, 0.28);
+}
+html.liquiddock .rows:not(.rows--lower) > .row:first-child > .row__shine { display: none; }
+
+/* ---------- the dock hidden: the rows slide away, the top buttons go, a chevron at the bottom shows the way back ---------- */
+
+.dockhint { position: absolute; left: 50%; bottom: 34px; width: 52px; height: 30px; margin-left: -26px; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 260ms ease, visibility 0s linear 260ms; }
+.dockhint svg { width: 52px; height: 30px; fill: none; stroke: rgba(255, 255, 255, 0.62); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.25)); }
+.screen--dockhidden .dockhint { opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
+/* Dim when the dock is hidden: a black layer over the wallpaper, so only its opacity animates */
+.dockdim { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 400ms ease; }
+.screen--dockdim.screen--dockhidden .dockdim { opacity: 0.45; }
+
+/* ---------- captions: the video's place and description, or the picture's title and credit (components/VideoCaption.tsx) ---------- */
+
+.videocap { position: absolute; right: var(--layout-edge-padding); top: calc(var(--layout-header-top) + 806px); max-width: 800px; text-align: right; opacity: 0; pointer-events: none; transition: opacity 420ms ease; }
+.screen--dockhidden .videocap { opacity: 1; }
+html:not(.wp-video) .videocap:not(.videocap--pic), html.wp-video .videocap--pic { display: none; }
+/* the caption sits back: its text is dimmed, so the picture leads */
+.videocap__place { opacity: 0.7; font-size: 36px; font-weight: 600; letter-spacing: 0.01em; color: var(--ink-photo); text-shadow: 0 2px 14px rgba(0, 0, 0, 0.6); }
+.videocap__text { opacity: 0.7; margin-top: 6px; font-size: 22px; line-height: 1.3; color: rgba(255, 255, 255, 0.86); text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); }
+/* a picture's caption stays up with the dock, just above its glass, and slides down with the clock when the dock goes; it fills from the bottom, so a long credit grows upward */
+.videocap--pic {
+	display: flex; flex-direction: column-reverse; justify-content: flex-start; height: 76px;
+	opacity: 1; transform: translateY(-191px); transition: opacity 420ms ease var(--delay-show-bottom), transform 600ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+/* with the dock away its last line sits on the date's line */
+.screen--dockhidden .videocap--pic { transform: translateY(47px); }
+.screen--lower .videocap--pic { opacity: 0; }
+.videocap--pic .videocap__place { font-size: 18px; line-height: 23px; font-weight: 500; }
+/* the credit is the type scale's one exception: below its smallest step, so it never competes with the title */
+.videocap--pic .videocap__text { margin: 0 0 3px; font-size: 15px; line-height: 20px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+
+/* ---------- edit mode: a lifted app rises and wobbles while it is moved, as on tvOS (transform only) ---------- */
+
+.movehint { position: absolute; left: 0; right: 0; top: 120px; z-index: 5; text-align: center; font-size: 26px; color: var(--ink-1); text-shadow: var(--scrim-text); }
+.screen--moving .tile--focused { animation: tile-wobble 260ms ease-in-out infinite alternate; }
+@keyframes tile-wobble { from { transform: translateY(-10px) scale(1.06) rotate(-1.5deg); } to { transform: translateY(-10px) scale(1.06) rotate(1.5deg); } }
+html.reduce-motion .screen--moving .tile--focused { transform: translateY(-10px) scale(1.06); }
+
+/* ---------- the weather widget on home: above the glass bar on the left, its bottom on the picture caption's line ---------- */
+
+.homecast { position: absolute; left: var(--layout-rows-edge); bottom: 305px; z-index: 5; pointer-events: none; transition: opacity var(--dur-slide) ease var(--delay-show-bottom); }
+.screen--lower .homecast, .screen--dockhidden .homecast { opacity: 0; }
+/* a soft dark shade behind it instead of glass: drawn once and never animated, so the text and the rain chart read over a bright picture */
+.homecast::before { content: ''; position: absolute; left: -90px; right: -90px; top: -60px; bottom: -50px; z-index: -1; pointer-events: none; background: radial-gradient(closest-side, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.2) 55%, rgba(0, 0, 0, 0)); }

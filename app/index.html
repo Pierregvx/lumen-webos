@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=1920, initial-scale=1.0" />
     <title>Launcher</title>
     <!-- Cold start (lib/boot.ts, lib/wallpaper.ts): black, then the wallpaper (a bundled one sharp, a cloud one as its blur) before the app's script
-         and stylesheet have loaded. Matches #wpimage in global.css. -->
+         and stylesheet have loaded. Matches #wpimage in theme/base.css. -->
     <style>
       html, body { margin: 0; background: #000; overflow: hidden; }
       #wpimage { position: fixed; left: 0; top: 0; width: 100%; height: 100%; z-index: 0; background: center / cover no-repeat; }
@@ -21,8 +21,7 @@
       (function () {
         try {
           var config = JSON.parse(localStorage.getItem('launcher-config-v2') || '{}');
-          // Live blur from the first frame; Dock blur as lib/storage.ts reads it
-          document.documentElement.classList.add('liveblur');
+          // Dock blur from the first frame, as lib/storage.ts reads it
           if (config.dockBlur === true) document.documentElement.classList.add('dockblur');
           var boot = JSON.parse(localStorage.getItem('lumen-boot-wallpaper-v1') || 'null');
           if (!boot || !(boot.url || boot.bg)) return;

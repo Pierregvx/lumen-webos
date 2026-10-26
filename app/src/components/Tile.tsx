@@ -1,3 +1,4 @@
+import {useRef} from 'preact/hooks';
 import {CheckMark, Glyph, type GlyphName} from './Glyph';
 import {ChannelTile, type LiveTile} from './ChannelTile';
 
@@ -39,18 +40,28 @@ interface Props {
 }
 
 export function Tile ({model, focused, lifted, checked, dimmed, onHover, onActivate}: Props) {
+	const pointer = useRef({x: 0, y: 0, frame: 0});
 	const classes = ['tile', focused && 'tile--focused', lifted && 'tile--lifted', dimmed && 'tile--dimmed'].filter(Boolean).join(' ');
 	if (model.live) return <ChannelTile live={model.live} classes={classes} onHover={onHover} onActivate={onActivate} />;
 	// pointer: the focused tile tilts a little towards the cursor, like the Apple TV parallax (transform only, set straight on the element)
+	// at most once a frame: mousemove fires faster than the TV draws, and each update is a style pass
 	const tilt = (e: MouseEvent) => {
+		const p = pointer.current;
+		p.x = e.clientX; p.y = e.clientY;
+		if (p.frame) return;
 		const el = e.currentTarget as HTMLElement;
-		const box = el.querySelector('.tile__box') as HTMLElement | null;
-		if (!box) return;
-		const r = el.getBoundingClientRect();
-		box.style.setProperty('--rx', (-((e.clientY - r.top) / r.height - 0.5) * 10).toFixed(1) + 'deg');
-		box.style.setProperty('--ry', (((e.clientX - r.left) / r.width - 0.5) * 12).toFixed(1) + 'deg');
+		p.frame = window.requestAnimationFrame(() => {
+			p.frame = 0;
+			const box = el.querySelector('.tile__box') as HTMLElement | null;
+			if (!box) return;
+			const r = el.getBoundingClientRect();
+			box.style.setProperty('--rx', (-((p.y - r.top) / r.height - 0.5) * 10).toFixed(1) + 'deg');
+			box.style.setProperty('--ry', (((p.x - r.left) / r.width - 0.5) * 12).toFixed(1) + 'deg');
+		});
 	};
 	const untilt = (e: MouseEvent) => {
+		const p = pointer.current;
+		window.cancelAnimationFrame(p.frame); p.frame = 0;
 		const box = (e.currentTarget as HTMLElement).querySelector('.tile__box') as HTMLElement | null;
 		if (box) { box.style.removeProperty('--rx'); box.style.removeProperty('--ry'); }
 	};

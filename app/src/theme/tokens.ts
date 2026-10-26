@@ -1,86 +1,26 @@
-// Design tokens: the single source of truth for colour, spacing, type and motion.
-// `applyTokens()` exposes them as CSS custom properties so the stylesheet and the
-// components read the same values.
-
-export const COLOR = {
-	bg: '#000000',
-	bgGradientInner: '#1e1e1e',
-	bgGradientMid: '#0c0c0c',
-	bgGradientOuter: '#000000',
-	textPrimary: '#EEEEEE',
-	textSecondary: '#AAAAAA',
-	textMuted: '#666666',
-	tileBg: 'rgba(255, 255, 255, 0.10)',
-	tileBgFocus: 'rgba(255, 255, 255, 0.18)',
-	tileBorder: 'rgba(255, 255, 255, 0.0)',
-	tileBorderFocus: '#EEEEEE',
-	badge: '#EEEEEE',
-	badgeText: '#000000',
-	liftShadow: 'rgba(0, 0, 0, 0.7)',
-	buttonBorder: '#3a3a3a',
-	buttonActiveBg: '#EEEEEE',
-	buttonActiveText: '#000000',
-	switchTrack: '#333333',
-	switchTrackOn: '#EEEEEE',
-	switchKnob: '#AAAAAA',
-	switchKnobOn: '#000000',
-	danger: '#e0564f'
-} as const;
-
-export const FONT = {
-	family: '"SF Private", "Geist Variable", "LG Smart UI", "Helvetica Neue", Arial, sans-serif',
-	greeting: 72,
-	clock: 32,
-	clockTime: 44,
-	rowLabel: 20,
-	tileLabel: 19,
-	settingsTitle: 40,
-	settingsTab: 26,
-	settingsButton: 22,
-	optionLabel: 26,
-	optionDescription: 20,
-	clockPeriod: 22,
-	toast: 24
-} as const;
+// Layout numbers that both the code and the stylesheet need: `applyTokens()` writes them onto :root as --layout-* custom properties.
+// Colours, glass, shapes and timings live in tokens.css, since only the stylesheet reads them.
 
 export const LAYOUT = {
 	screenWidth: 1920,
 	screenHeight: 1080,
-	edgePadding: 140,       // heavy padding around the screen edges
-	rowsEdge: 125,          // the home rows reach further out than the rest: tiles from 125px, the glass bar 40px beyond them
+	edgePadding: 140,       // the screen's padding and the video caption; Settings uses rowsEdge, as home does
+	rowsEdge: 125,          // home's rows, the Guide and the panels: tiles from 125px, the glass bar 40px beyond them
 	headerTop: 84,
-	rowsTop: 846,           // rows start here, below the greeting and clock
-	tileSize: 236,          // Apple TV's home-screen icons are 5:3 landscape
-	tileHeight: 142,          // app / source tiles are square
+	rowsTop: 846,           // the glass bar sits low, so the first grid row peeks in under it
+	tileSize: 236,          // app and input tiles are 5:3 landscape, as Apple TV's home-screen icons
+	tileHeight: 142,
 	tileGap: 28,
 	tileRadius: 34,
-	rowLabelGap: 14,        // gap between a row's subheader and its tiles
 	rowGap: 40,             // vertical space between rows
-	dockTileSize: 84,       // the small Sources / More dock at the bottom
-	dockTileHeight: 84,
-	dockTileGap: 26,
-	dockTileRadius: 24,
-	gridColumns: 6          // settings picker grid
+	gridColumns: 6          // Settings' picker grid
 } as const;
 
-export const MOTION = {
-	focusMs: 160,
-	scrollMs: 260,
-	focusScale: 1.16,
-	liftScale: 1.2,         // a tile picked up in re-order mode
-	unfocusedRowOpacity: 0.6
-} as const;
-
-/** Writes every token onto :root as --color-*, --font-*, --layout-*, --motion-*. */
+/** Writes every layout number onto :root as --layout-*, in px (gridColumns as a plain number). */
 export function applyTokens (root: HTMLElement = document.documentElement): void {
-	const groups: Record<string, Record<string, string | number>> = {color: COLOR, font: FONT, layout: LAYOUT, motion: MOTION};
-	for (const group in groups) {
-		const values = groups[group];
-		for (const key in values) {
-			const value = values[key];
-			const unit = typeof value === 'number' && !/scale|opacity|columns/i.test(key) ? (key.endsWith('Ms') ? 'ms' : 'px') : '';
-			root.style.setProperty(`--${group}-${kebab(key)}`, `${value}${unit}`);
-		}
+	for (const key in LAYOUT) {
+		const value = LAYOUT[key as keyof typeof LAYOUT];
+		root.style.setProperty(`--layout-${kebab(key)}`, key === 'gridColumns' ? String(value) : `${value}px`);
 	}
 }
 

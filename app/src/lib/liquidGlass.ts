@@ -1,4 +1,4 @@
-/** Settings > Liquid glass dock: the SVG filter the glass bar's backdrop-filter points at (#lg-dock, global.css). After nikdelvin/liquid-glass,
+/** Settings > Liquid glass dock: the SVG filter the glass bar's backdrop-filter points at (#lg-dock, theme/home.css). After nikdelvin/liquid-glass,
  *  one displacement pass and no colour fringe: the fringe's three passes cost about 8 fps on the TV, standing still. The map must match the
  *  bar's size, so it is rebuilt when the bar changes size. */
 

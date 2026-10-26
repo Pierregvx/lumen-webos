@@ -3,7 +3,7 @@ import {useClock} from '../hooks/useClock';
 import {useTimeFormat} from '../hooks/useTimeFormat';
 import {getClockMode} from '../lib/i18n';
 
-/** Self-contained: only this small pill re-renders each second, not the rows and tiles. */
+/** Self-contained: only this small pill re-renders each minute, not the rows and tiles. */
 export function Clock ({showPeriod}: {showPeriod?: boolean}) {
 	const now = useClock();
 	const tvFormat = useTimeFormat();

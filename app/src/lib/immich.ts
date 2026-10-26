@@ -171,7 +171,7 @@ function place (f: Frame | undefined, box: number): [number, number] {
 const pct = (n: number) => `${Math.round(n * 1000) / 10}%`;
 
 /** The background-position for an Immich picture on a 16:9 screen: one photo, or a portrait pair side by side (each half the width less
- *  the 4px seam, as global.css lays them out). */
+ *  the 4px seam, as theme/base.css lays them out). */
 export function picturePosition (pic: string): string {
 	const frames = readFrames();
 	const ids = pictureIds(pic);

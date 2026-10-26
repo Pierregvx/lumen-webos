@@ -1,0 +1,104 @@
+/* Panels over home: a folder, and Control Center with its look reused by Inputs and the hold-OK menu (components/ControlCenter.tsx, screens/Home.tsx). */
+
+/* a panel is glass-control at panel size, with its own blur; its tiles are smaller than home's */
+.panel {
+	position: absolute; top: 190px; right: var(--layout-rows-edge); z-index: 20; width: 760px; padding: 30px 36px 14px; border-radius: 44px;
+	background-color: var(--glass-tint); background-image: var(--glass-panel-sheen); background-repeat: no-repeat;
+	box-shadow: var(--glass-panel-rim);
+	-webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+	--layout-tile-size: 200px; --layout-tile-height: 120px; --layout-tile-gap: 24px; --layout-tile-radius: 24px; --tile-label-size: 22px;
+}
+.panel__title { margin: 0 0 22px 6px; font-size: 32px; font-weight: 600; letter-spacing: -0.02em; color: var(--ink-1); }
+.panel__grid { display: flex; flex-direction: row; flex-wrap: wrap; padding: 6px 6px 0; }
+.panel .tile { margin: 0 24px 18px 0; }
+.panel .tile:nth-child(3n) { margin-right: 0; }
+.panel .tile__label { width: var(--layout-tile-size); height: auto; margin: 12px 0 0 0; text-align: center; opacity: 1; }
+.panel--folder { left: 50%; top: 250px; margin-left: -380px; }
+
+/* ---------- Control Center, laid out like tvOS: each control its own glass on a grid four squares wide (circles one, tiles two, the backlight bar three) ---------- */
+
+.panel.panel--cc {
+	top: 150px; width: calc(4 * var(--cc-u) + 3 * var(--cc-gap)); padding: 0; border-radius: 0;
+	background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none;
+	--cc-u: 90px; --cc-gap: 18px;
+	/* Control Center blurs a little more than the glass bar and the top buttons */
+	--glass-blur: blur(3px) saturate(1.5) brightness(1.1);
+}
+/* Inputs: three squares wide, one pill per input at the size of a Control Center list's options (.cc__opt) */
+.panel.panel--inputs { width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); }
+/* the hold-OK menu: placed over the lifted app by Home.tsx (left, top, width inline), and it rises from the app (riseFrom in Home.tsx) */
+.panel.panel--tilemenu { right: auto; }
+
+.cc__row { display: flex; flex-direction: row; margin-bottom: var(--cc-gap); }
+.cc__row > * + * { margin-left: var(--cc-gap); }
+
+/* glass-control. Only the focused control has the live blur: each one adds about 2ms of GPU draw to every frame (docs/frame-rate.md) */
+.cc__mod {
+	position: relative; flex: 0 0 auto; height: var(--cc-u); border-radius: calc(var(--cc-u) / 2);
+	background-color: var(--glass-tint); background-image: var(--glass-sheen); background-repeat: no-repeat;
+	box-shadow: var(--cc-rim);
+	color: var(--glass-ink); text-shadow: var(--glass-ink-shadow);
+	transition: transform var(--dur-focus) ease-out;
+}
+/* a layer each, kept: the open and close fades would otherwise make and drop a layer per control, and each drop redraws its shadow */
+.panel--cc .cc__mod, .panel--cc .cc__caption { will-change: transform, opacity; }
+.cc__mod--focused { transform: scale(1.1); background-image: var(--glass-sheen-focus); box-shadow: var(--cc-slider-rim-focus); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+/* the light look inverts a focused control (themes.css); the backlight bar keeps its glass, since its fill shows the value */
+.cc__mod--focused:not(.cc__slider) { background-color: var(--cc-focus-fill); background-image: var(--cc-focus-sheen); color: #fff; box-shadow: var(--cc-focus-rim); }
+.cc__mod svg { position: static; width: 44px; height: 44px; fill: none; stroke: var(--ink-glyph-strong); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.cc__mod--focused:not(.cc__slider) svg { stroke: var(--cc-focus-glyph); }
+/* a control that is on shows a blue icon, as on tvOS */
+.cc__mod--on svg { stroke: var(--accent-on); }
+.cc__mod--focused.cc__mod--on svg { stroke: var(--accent-on-focus); }
+
+.cc__tile { width: calc(2 * var(--cc-u) + var(--cc-gap)); display: flex; flex-direction: row; align-items: center; padding: 0 14px 0 20px; }
+.cc__icon { flex: 0 0 auto; display: flex; margin-right: 14px; }
+.cc__icon svg { width: 40px; height: 40px; }
+.cc__text { min-width: 0; }
+.cc__name { font-size: 22px; font-weight: 600; line-height: 1.2; white-space: nowrap; }
+.cc__sub { font-size: 22px; line-height: 1.2; opacity: 0.7; white-space: nowrap; }
+.cc__circle { width: var(--cc-u); display: flex; align-items: center; justify-content: center; }
+/* LG's input pictures fill only part of their square: at 50px in the 40px icon space they draw about 28px across, like the other icons */
+.cc__inputicon { width: 50px; height: 50px; margin: -5px; object-fit: contain; filter: var(--cc-input-filter); }
+.cc__mod--focused .cc__inputicon { filter: var(--cc-input-filter-focus); }
+/* "Press OK again to uninstall" reads as a warning */
+.cc__opt--warn .cc__name, .cc__opt--warn svg { color: var(--warn); }
+
+/* the backlight bar: the fill is a second sheet of frost on the bar's glass, a brighter tint with its own rim and no second blur */
+.cc__slider { width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); overflow: hidden; }
+.cc__fill { position: absolute; left: 0; top: 0; bottom: 0; overflow: hidden; background: var(--cc-fill); box-shadow: var(--cc-fill-rim); }
+.cc__mod--focused .cc__fill { background: var(--cc-fill-focus); }
+.cc__slidertext {
+	position: absolute; left: 0; top: 0; bottom: 0; width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); box-sizing: border-box; padding: 0 26px 0 22px;
+	display: flex; flex-direction: row; align-items: center; font-size: 22px; font-weight: 600; white-space: nowrap;
+}
+.cc__slidertext svg { width: 34px; height: 34px; margin-right: 12px; }
+.cc__fill .cc__slidertext { color: #fff; }
+.cc__fill .cc__slidertext svg { stroke: var(--cc-fill-glyph); }
+.cc__num { margin-left: auto; font-weight: 500; }
+
+.cc__caption { height: 30px; line-height: 30px; text-align: center; font-size: 22px; font-weight: 600; color: #fff; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); }
+
+/* ---------- a tile's list of choices (Sound, Picture, Theme, Clock): ControlCenter.tsx animates the layers, and these classes hold the states between ---------- */
+
+/* the fade sits on each control, never the grid or the list: a parent below full opacity cuts its children's live blur off from the wallpaper */
+
+.cc__grid--leaving { pointer-events: none; }
+.cc__grid--leaving .cc__mod, .cc__grid--leaving .cc__caption, .cc__mod--gone { opacity: 0; }
+.cc__list { position: absolute; left: 0; top: 0; width: 100%; transform-origin: 0 0; }
+.cc__list:not(.cc__list--shown) { pointer-events: none; }
+.cc__list:not(.cc__list--shown) .cc__opt { opacity: 0; }
+/* height and gap match OPT_H and OPT_GAP in ControlCenter.tsx */
+.panel--cc .cc__opt { width: 100%; height: 72px; margin-bottom: 12px; border-radius: 36px; }
+.panel--cc .cc__opt.cc__mod--focused { transform: scale(var(--lift-press)); }
+.cc__opt .cc__icon svg { width: 34px; height: 34px; }
+
+/* the pill that grows from a tile into the list: its glass, its rim on its own timing, and the tile's text on top */
+.panel--cc .cc__morph { position: absolute; transform-origin: 0 0; pointer-events: none; }
+.panel--cc .cc__morph > * { position: absolute; left: 0; top: 0; width: 100%; height: 100%; border-radius: inherit; transform: none; transition: none; }
+/* the fill without its rim and shadow, which would swell as it scales */
+.panel--cc .cc__morph > .cc__morph__glass { box-shadow: none; }
+.cc__morph__rim { box-shadow: var(--cc-focus-rim); }
+.panel--cc .cc__morph__text { position: absolute; pointer-events: none; color: #fff; text-shadow: var(--glass-ink-shadow); }
+.cc__morph__text svg { position: static; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.cc__morph__text:not(.cc__mod--on) svg { stroke: rgba(255, 255, 255, 0.9); }

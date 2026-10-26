@@ -3,6 +3,7 @@ import {WeatherIcon} from './WeatherIcon';
 import {timeParts} from '../lib/clock';
 import {useFontsReady} from '../hooks/useFontsReady';
 import {useTimeFormat} from '../hooks/useTimeFormat';
+import {onMinute} from '../lib/minute';
 import {getClockMode, t as tr} from '../lib/i18n';
 import {hoursAhead, type Hour, type Weather} from '../lib/weather';
 
@@ -28,10 +29,7 @@ export function Forecast ({weather, size}: {weather: Weather; size: 'small' | 'l
 	const format = mode === '12h' || mode === '24h' ? mode : tvFormat;
 
 	// a new hour drops off the front as the time passes, between readings
-	useEffect(() => {
-		const id = window.setInterval(() => { if (!document.hidden) bump((n) => n + 1); }, 60000);
-		return () => window.clearInterval(id);
-	}, []);
+	useEffect(() => onMinute(() => bump((n) => n + 1)), []);
 
 	const hours = hoursAhead(weather, size === 'small' ? 6 : 7);
 	if (!hours.length) return null;

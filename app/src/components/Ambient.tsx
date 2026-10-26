@@ -12,7 +12,7 @@ const NO_LAYER: Layer = {urls: [], pos: ''};
 
 /** how long the wallpaper the home screen showed stays before the first new photo starts loading */
 const WARM_DELAY_MS = 3000;
-/** how long the way back to the home screen takes (matches ambient-out in global.css) */
+/** how long the way back to the home screen takes (matches ambient-out in theme/ambient.css) */
 const CLOSE_MS = 500;
 /** the last photo shown, so the TV's screensaver opens on a picture (from the browser cache) rather than black */
 const LAST_KEY = 'lumen-ambient-last';
@@ -28,7 +28,7 @@ function toHomeClock (clock: HTMLElement | null): string {
 
 /** Screensaver with your own photos (Immich). Opened by watch.sh with {"view":"ambient"} when the TV's screensaver starts, instead of LG's.
  *  Two full-screen layers: the next photo is loaded and decoded on the hidden one, then they swap with a crossfade (opacity only) every `seconds` (Settings > Screensaver > Time on each photo, 30 by default); each photo
- *  zooms in very slowly (transform only). The clock sits bottom left, the weather and date bottom right, and the weather widget (when on) between them; a large widget takes the right side instead, with the date under the clock. Any key or a click goes back to the home screen.
+ *  stays still. The clock sits bottom left, the weather and date bottom right, and the weather widget (when on) between them; a large widget takes the right side instead, with the date under the clock. Any key or a click goes back to the home screen.
  *  Started from the home screen (Control Center, or the idle timer), it opens on the wallpaper already there (`opening`): the home screen fades away, the clock
  *  slides from its place top left to bottom left, and the first new photo loads only after that, so nothing heavy runs while the screen changes. */
 export function Ambient ({source, seconds = 30, backlight, weather, weatherLine, forecast, showPeriod, print, opening, onExit}: {source: string; seconds?: number; backlight?: number; weather?: Weather | null; weatherLine?: boolean; forecast?: 'small' | 'large'; showPeriod?: boolean; print?: boolean; opening?: {urls: string[]; id: string} | null; onExit: () => void}) {
@@ -132,8 +132,7 @@ export function Ambient ({source, seconds = 30, backlight, weather, weatherLine,
 	return (
 		<div ref={root} class={`ambient${warm ? ' ambient--warm' : ''}${forecast === 'large' && weather ? ' ambient--castlarge' : ''}`}>
 			{layers.map(({urls, pos}, i) => (
-				// keyed by URL, so a new photo restarts the slow zoom
-				<div key={i + urls.join(' ')} class={`ambient__photo${i === front ? ' ambient__photo--on' : ''}${i === 1 ? ' ambient__photo--alt' : ''}${urls.length > 1 ? ' ambient__photo--pair' : ''}`} style={urls.length > 0 ? {backgroundImage: urls.map((u) => `url("${u}")`).join(', '), backgroundPosition: pos || undefined, animationDuration: `${seconds + 6}s`} : undefined} />
+				<div key={i + urls.join(' ')} class={`ambient__photo${i === front ? ' ambient__photo--on' : ''}${urls.length > 1 ? ' ambient__photo--pair' : ''}`} style={urls.length > 0 ? {backgroundImage: urls.map((u) => `url("${u}")`).join(', '), backgroundPosition: pos || undefined} : undefined} />
 			))}
 			{print && <div class="ambient__print" />}
 			<div class="ambient__night" />

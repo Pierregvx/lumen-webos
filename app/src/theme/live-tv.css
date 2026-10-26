@@ -1,0 +1,25 @@
+/* The Live TV row (components/ChannelTile.tsx, docs/live-tv-build.md): logos on brand colours, a progress bar, and the focused channel's now/next block under it. */
+
+.tile--channel { position: relative; }
+/* a light-to-shade sweep over the brand colour (lib/livetv.ts channelColor, set inline), or over the dark default when a channel has none */
+.tile--channel .tile__box { background: var(--chan-sweep) var(--chan-bg); }
+/* a fixed box, not max sizes: the TV's logos are as small as 133 x 100, and max sizes never scale them up. It stops 46px from the bottom, clear of the bar */
+.chan__logo { position: absolute; left: 10%; right: 10%; top: 16px; bottom: 46px; width: 80%; height: calc(100% - 62px); object-fit: contain; }
+.chan__name {
+	position: absolute; left: 8%; right: 8%; top: 0; bottom: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden;
+	text-align: center; font-size: 32px; font-weight: 700; line-height: 1.1; letter-spacing: -0.015em; color: #fff;
+}
+.chan__bar { position: absolute; left: 22px; right: 22px; bottom: 16px; z-index: 2; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.22); overflow: hidden; }
+
+.chan__info {
+	position: absolute; left: 0; top: calc(var(--layout-tile-height) + 36px); width: 660px; text-align: left; pointer-events: none;
+	color: var(--ink-guide); text-shadow: var(--chan-info-shadow);
+	opacity: 0; transition: opacity var(--dur-focus) ease-out;
+}
+.tile--focused .chan__info { opacity: 1; }
+.chan__line { font-size: 22px; font-weight: 500; opacity: 0.78; white-space: nowrap; }
+.chan__title { margin-top: 4px; font-size: 32px; font-weight: 600; letter-spacing: -0.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chan__times { display: flex; flex-direction: row; align-items: center; margin-top: 8px; font-size: 22px; font-weight: 500; opacity: 0.9; white-space: nowrap; }
+.chan__meter { flex: 0 1 160px; min-width: 48px; height: 5px; margin: 0 16px; border-radius: 3px; background: var(--meter); overflow: hidden; }
+.chan__meter span { background: var(--meter-fill); }
+.chan__next { margin-top: 10px; font-size: 22px; font-weight: 500; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

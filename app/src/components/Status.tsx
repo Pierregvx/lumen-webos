@@ -3,6 +3,7 @@ import {useEffect, useState} from 'preact/hooks';
 import {Clock} from './Clock';
 import {langLocale, t as tr} from '../lib/i18n';
 import {useFontsReady} from '../hooks/useFontsReady';
+import {onMinute} from '../lib/minute';
 import {WeatherIcon} from './WeatherIcon';
 import type {Weather} from '../lib/weather';
 
@@ -15,15 +16,10 @@ export function Status ({weather, showPeriod, middle}: {weather?: Weather | null
 	const date = dateText();
 	const fontsReady = useFontsReady();
 
-	useEffect(() => {
-		const tick = () => { if (!document.hidden) bump((n) => n + 1); };
-		const id = window.setInterval(tick, 30000);
-		document.addEventListener('visibilitychange', tick);
-		return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', tick); };
-	}, []);
+	useEffect(() => onMinute(() => bump((n) => n + 1)), []);
 
 	return (
-		<div class="pill status">
+		<div class="status">
 			<Clock showPeriod={showPeriod} />
 			{middle}
 			<div class="status__row">

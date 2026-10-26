@@ -1,0 +1,59 @@
+/* The screensaver (components/Ambient.tsx): your photos and a crossfade, the clock bottom left. No zoom: it kept the graphics chip busy every frame and read as odd once seen. */
+
+.ambient { position: fixed; left: 0; top: 0; z-index: 100; width: 1920px; height: 1080px; background: #000; overflow: hidden; }
+.ambient__photo {
+	position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: center / cover no-repeat;
+	opacity: 0; transition: opacity 1600ms ease-in-out; will-change: opacity;
+}
+.ambient__photo--on { opacity: 1; }
+.ambient__photo.ambient__photo--pair { background-size: calc(50% - 4px) auto; background-position: left center, right center; }
+
+/* Print look (idea from ammar027/lumen-gallery-webos): a cream veil lifts the blacks, black pulls whites to paper white, light falls off from the top left; no blend modes */
+.ambient__print, .ambient__print::before, .ambient__print::after { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+.ambient__print { background: radial-gradient(ellipse 85% 95% at 24% 6%, rgba(255, 244, 222, 0.07) 0%, rgba(0, 0, 0, 0) 38%, rgba(0, 0, 0, 0.36) 100%); }
+.ambient__print::before { content: ''; background: rgb(236, 228, 212); opacity: 0.09; }
+.ambient__print::after { content: ''; background: #000; opacity: 0.14; }
+/* Dim the wallpaper at night covers the screensaver too */
+.ambient__night { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: #000; opacity: 0; pointer-events: none; }
+html.night .ambient__night { opacity: 0.45; }
+
+/* a very slight dark band behind the clock, date and weather: eased, so it has no visible top edge; the blur under it does most of the work */
+.ambient__shade { position: absolute; left: 0; right: 0; bottom: 0; height: 520px; pointer-events: none; background: linear-gradient(rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.03) 25%, rgba(0, 0, 0, 0.09) 45%, rgba(0, 0, 0, 0.17) 65%, rgba(0, 0, 0, 0.24) 82%, rgba(0, 0, 0, 0.28) 100%); }
+/* a light live blur along the bottom, under the shade: it fades in once the opening slide and the first photo are done, so it costs nothing while they run (verify on the TV) */
+.ambient__blur {
+	position: absolute; left: 0; right: 0; bottom: 0; height: 520px; pointer-events: none;
+	-webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+	-webkit-mask-image: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6) 40%, #000 70%); mask-image: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6) 40%, #000 70%);
+	opacity: 0; animation: ambient-in 1.2s ease 1s forwards;
+}
+html.reduce-motion .ambient__blur { animation: none; opacity: 1; }
+
+/* opened over home on its own wallpaper: fading in is home fading away; leaving is the opening in reverse */
+.ambient--warm { animation: ambient-in 600ms ease-out both; }
+@keyframes ambient-in { from { opacity: 0; } to { opacity: 1; } }
+html.reduce-motion .ambient--warm { animation: none; }
+.ambient.ambient--closing { animation: ambient-out 500ms ease-in both; pointer-events: none; }
+@keyframes ambient-out { from { opacity: 1; } to { opacity: 0; } }
+
+/* ---------- the status block: the clock bottom left at full size; the weather and, under it, the date bottom right ---------- */
+
+.screen.ambient__status { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: none; pointer-events: none; }
+.ambient .status { top: auto; bottom: 72px; right: var(--layout-rows-edge); flex-direction: row; align-items: flex-end; justify-content: space-between; }
+.ambient .clock__time { font-size: 120px; }
+.ambient .clock__period { margin: 0 0 14px 10px; font-size: 32px; }
+.ambient .status__row { flex-direction: column-reverse; align-items: flex-end; margin: 0 0 12px; text-align: right; }
+.ambient .status__date, .ambient .status__weather { font-size: 32px; }
+.ambient .status__weather { margin: 0 0 6px; }
+.ambient .status .status__icon { width: 36px; height: 36px; }
+
+/* the weather widget: between the clock and the date, centred in the gap, its bottom on the date's line */
+.ambient .status .forecast { align-self: flex-end; margin: 0 24px 12px; }
+/* the large one gives way first when a 12-hour clock with AM or PM leaves less room: its hours narrow down to 62px */
+.ambient .status .forecast--large { flex: 0 1 auto; min-width: 0; }
+.ambient .forecast--large .forecast__hours { flex: 1 1 auto; min-width: 0; }
+.ambient .forecast--large .forecast__hour, .ambient .forecast--large .forecast__bar { flex: 0 1 auto; min-width: 62px; }
+/* with the large widget the date goes under the clock on the left, and the widget takes the right */
+.ambient--castlarge .status { display: grid; grid-template-columns: auto 1fr; align-items: end; }
+.ambient--castlarge .status .clock { grid-column: 1; grid-row: 1; }
+.ambient--castlarge .status .status__row { grid-column: 1; grid-row: 2; flex-direction: column; align-items: flex-start; margin: 14px 0 0 2px; text-align: left; }
+.ambient--castlarge .status .forecast { grid-column: 2; grid-row: 1 / span 2; justify-self: end; margin: 0 0 8px 40px; }

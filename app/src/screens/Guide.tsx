@@ -5,6 +5,7 @@ import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
 import {channelColor, clockText, findChannel, nowNextAt, progress, timeLeft, type Channel, type Listings} from '../lib/livetv';
 import {FullGuide} from './FullGuide';
+import {rowWindow} from '../lib/windowedList';
 import type {LiveTv} from '../hooks/useLiveTv';
 
 interface Props {
@@ -25,7 +26,7 @@ interface Props {
 	onClose: () => void;
 }
 
-/** a row's height and the space under it (keep in step with .guide__row in global.css) */
+/** a row's height and the space under it (keep in step with .guide__row in theme/guide.css) */
 const ROW_STEP = 132;
 /** rows in view at once */
 const IN_VIEW = 6;
@@ -91,9 +92,7 @@ export function Guide ({channels, listings, logos, now, schedule, pending, full,
 	}, [active]);
 	const typedHit = typed !== '' && channels.some((c) => c.number === typed);
 
-	const top = clamp(at - FOCUS_AT, 0, Math.max(0, channels.length - IN_VIEW));
-	const from = Math.max(0, top - SPARE);
-	const to = Math.min(channels.length, top + IN_VIEW + SPARE);
+	const {top, from, to} = rowWindow(channels.length, at, IN_VIEW, FOCUS_AT, SPARE);
 	const t = Date.now();
 
 	return (

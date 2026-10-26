@@ -4,6 +4,7 @@ import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
 import {channelColor, clockText, progress, timeLeft, type Channel, type Listings, type Programme} from '../lib/livetv';
 import {SCHEDULE_HOURS} from '../hooks/useLiveTv';
+import {rowWindow} from '../lib/windowedList';
 
 interface Props {
 	channels: Channel[];
@@ -28,7 +29,7 @@ interface Props {
 	onClose: () => void;
 }
 
-/** a row's height and the space under it (keep in step with .fg__row in global.css) */
+/** a row's height and the space under it (keep in step with .fg__row in theme/guide.css) */
 const ROW_STEP = 80;
 const IN_VIEW = 7;
 const FOCUS_AT = 3;
@@ -36,7 +37,7 @@ const SPARE = 2;
 const HALF_HOUR = 1800000;
 /** the grid shows two hours across, in half-hour columns */
 const SPAN = 4 * HALF_HOUR;
-/** the grid's width (keep in step with .fg__line in global.css): the rows' 1670px less the 372px channel column */
+/** the grid's width (keep in step with .fg__line in theme/guide.css): the rows' 1670px less the 372px channel column */
 const GRID_W = 1298;
 const PX_PER_MS = GRID_W / SPAN;
 const halfHour = (ms: number) => ms - (ms % HALF_HOUR);
@@ -93,9 +94,7 @@ export function FullGuide ({channels, listings, from, thin, loading, logos, now,
 	useKeys(handleKey, active);
 	useOkPress({onPress: () => { if (channels[at]) onOpen(channels[at]); }, onLongPress: () => undefined}, active);
 
-	const top = clamp(at - FOCUS_AT, 0, Math.max(0, channels.length - IN_VIEW));
-	const rowFrom = Math.max(0, top - SPARE);
-	const rowTo = Math.min(channels.length, top + IN_VIEW + SPARE);
+	const {top, from: rowFrom, to: rowTo} = rowWindow(channels.length, at, IN_VIEW, FOCUS_AT, SPARE);
 	const t = Date.now();
 	const ch = channels[at];
 	const x = (ms: number) => Math.round((clamp(ms, win, winEnd) - win) * PX_PER_MS);

@@ -1,6 +1,7 @@
 // Temperature and an icon under the clock at the top left, and the hours ahead for the weather widget (components/Forecast.tsx). The place is the chosen city, or (Auto, only when picked in Settings) found from the internet
 // connection with ipwho.is (no key); the weather comes from open-meteo.com (no key). Cached 30 minutes per place; any failure just shows nothing.
 
+import {readCache, writeCache} from './boot';
 import {loggedFetch} from './log';
 
 import type {City} from '../config/cities';
@@ -64,18 +65,14 @@ const keyFor = (city: City | null) => 'launcher-weather-v4-' + (city ? city.name
 
 /** The last weather read for this place, however old: drawn on a cold start while readWeather asks again. */
 export function peekWeather (city: City | null): Weather | null {
-	try {
-		const cached = JSON.parse(localStorage.getItem(keyFor(city)) || 'null') as {t: number; w: Weather} | null;
-		return cached ? cached.w : null;
-	} catch { return null; }
+	const cached = readCache<{t: number; w: Weather}>(keyFor(city));
+	return cached ? cached.w : null;
 }
 
 export function readWeather (city: City | null): Promise<Weather> {
 	const key = keyFor(city);
-	try {
-		const cached = JSON.parse(localStorage.getItem(key) || 'null') as {t: number; w: Weather} | null;
-		if (cached && Date.now() - cached.t < MAX_AGE_MS) return Promise.resolve(cached.w);
-	} catch { /* fetch fresh */ }
+	const cached = readCache<{t: number; w: Weather}>(key);
+	if (cached && Date.now() - cached.t < MAX_AGE_MS) return Promise.resolve(cached.w);
 	const where: Promise<{lat: number; lon: number; place: string}> = city
 		? Promise.resolve({lat: city.lat, lon: city.lon, place: city.name})
 		: loggedFetch('https://ipwho.is/')
@@ -99,7 +96,7 @@ export function readWeather (city: City | null): Promise<Weather> {
 						.filter((x) => x.t.slice(0, 13) >= from && typeof x.temp === 'number' && !isNaN(x.temp)).slice(0, 26);
 				}
 				if (day && day.temperature_2m_max && day.temperature_2m_min) { w.high = Math.round(day.temperature_2m_max[0]); w.low = Math.round(day.temperature_2m_min[0]); }
-				try { localStorage.setItem(key, JSON.stringify({t: Date.now(), w})); } catch { /* ignore */ }
+				writeCache(key, {t: Date.now(), w});
 				return w;
 			}));
 }
