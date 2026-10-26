@@ -2,7 +2,7 @@ import {t as tr} from '../lib/i18n';
 import {Glyph, type GlyphName} from './Glyph';
 
 /** Which Settings page an option is listed on (Settings.tsx GROUPS). */
-export type OptionGroup = 'wallpaper' | 'home' | 'screensaver' | 'weather' | 'appearance' | 'language' | 'system';
+export type OptionGroup = 'home' | 'wallpaper' | 'screensaver' | 'appearance' | 'photos' | 'region' | 'system';
 
 export interface OptionItem {
 	id: string;
@@ -16,6 +16,10 @@ export interface OptionItem {
 	choices?: string[];
 	/** the index in choices that is set now */
 	choice?: number;
+	/** a list that keeps several: the indexes set now; OK ticks or unticks one and the page stays open */
+	picks?: number[];
+	/** typed text: OK opens a page with a text field (the TV's keyboard), OK there saves it */
+	text?: {value: string; placeholder: string};
 }
 
 export interface ListRow {

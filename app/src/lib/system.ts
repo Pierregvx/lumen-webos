@@ -15,6 +15,12 @@ export function setAmbientFlag (on: boolean): void {
 	root.setAmbientFlag(on).catch(() => undefined);
 }
 
+/** Settings > Screensaver > Off: watch.sh ends LG's screensaver as soon as it starts. */
+export function setSaverOffFlag (on: boolean): void {
+	if (!isWebOS()) return;
+	root.setSaverOffFlag(on).catch(() => undefined);
+}
+
 export function setAmbientShowing (on: boolean): void {
 	if (!isWebOS()) return;
 	root.setAmbientShowing(on).catch(() => undefined);

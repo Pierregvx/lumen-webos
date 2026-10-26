@@ -202,6 +202,11 @@ export function setAmbientFlag (on: boolean): Promise<void> {
 	return run(on ? `mkdir -p ${HOMEHOOK} && touch ${HOMEHOOK}/ambient-screensaver` : `rm -f ${HOMEHOOK}/ambient-screensaver`).then(() => undefined);
 }
 
+/** Tells watch.sh to end LG's screensaver as soon as it starts, in every app (Settings > Screensaver > Off). */
+export function setSaverOffFlag (on: boolean): Promise<void> {
+	return run(on ? `mkdir -p ${HOMEHOOK} && touch ${HOMEHOOK}/no-screensaver` : `rm -f ${HOMEHOOK}/no-screensaver`).then(() => undefined);
+}
+
 /** While the ambient screen is up, watch.sh only ends LG's screensaver (which starts again after its timer, as nothing is pressed) instead of
  *  opening Lumen again. */
 export function setAmbientShowing (on: boolean): Promise<void> {
@@ -225,6 +230,11 @@ const IMMICH_PATHS = [
 	/^\/api\/assets\/[0-9a-f-]{36}\/thumbnail\?size=thumbnail$/,
 	/^\/api\/faces\?id=[0-9a-f-]{36}$/
 ];
+
+/** An address and key immichRequest would accept. */
+export function immichServerOk (base: string, key: string): {base: boolean; key: boolean} {
+	return {base: IMMICH_BASE.test(base), key: IMMICH_KEY.test(key)};
+}
 
 /** One request to an Immich server, made with curl on the TV: Immich sends no CORS headers outside its dev mode, so the app's own fetch would
  *  be refused. A JSON body travels as base64. `as: 'base64'` returns the response body base64-encoded (for a thumbnail). */

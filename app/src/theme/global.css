@@ -1485,6 +1485,13 @@ html.focus-strong .slist__row--focused { transform: scale(1.05); }
 .slist__row--focused .slist__chevron { stroke: rgba(17, 17, 17, 0.45); }
 .slist__tick { flex: 0 0 auto; width: 30px; height: 30px; margin-right: 18px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; visibility: hidden; }
 .slist__tick--on { visibility: visible; }
+/* a text page (Settings > Photos): one field, styled as a focused row */
+.slist__input { position: absolute; left: 50px; right: 50px; top: 12px; height: 70px; box-sizing: border-box; padding: 0 34px; border: 0; border-radius: 35px; outline: none; font: inherit; font-size: 32px; font-weight: 500; color: #111; background-color: #fff; box-shadow: 0 14px 28px rgba(0, 0, 0, 0.30); }
+.slist__input::placeholder { color: rgba(17, 17, 17, 0.4); }
+.slist__note { position: absolute; left: 84px; right: 84px; top: 110px; margin: 0; font-size: 24px; color: rgba(255, 255, 255, 0.55); }
+html.light .slist__input { color: #fff; background-color: #14151b; }
+html.light .slist__input::placeholder { color: rgba(255, 255, 255, 0.45); }
+html.light .slist__note { color: rgba(255, 255, 255, 0.85); text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5); }
 
 html.light .settings__title, html.light .slist__title { color: rgba(255, 255, 255, 0.85); text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45); }
 html.light .slist__icon { background-color: rgba(255, 255, 255, 0.6); }

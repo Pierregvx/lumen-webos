@@ -17,6 +17,8 @@ const TABLE: Record<string, string[]> = {
 	"Home Screen": ["Startbildschirm", "Pantalla de inicio", "Écran d'accueil", "Schermata Home", "Ecrã principal", "Startscherm", "Ana ekran", "होम स्क्रीन"],
 	"Weather": ["Wetter", "Tiempo", "Météo", "Meteo", "Tempo", "Weer", "Hava durumu", "मौसम"],
 	"Language and Clock": ["Sprache und Uhr", "Idioma y reloj", "Langue et horloge", "Lingua e orologio", "Idioma e relógio", "Taal en klok", "Dil ve saat", "भाषा और घड़ी"],
+	"Language and Region": ["Sprache und Region", "Idioma y región", "Langue et région", "Lingua e regione", "Idioma e região", "Taal en regio", "Dil ve bölge", "भाषा और क्षेत्र"],
+	"Photos": ["Fotos", "Fotos", "Photos", "Foto", "Fotos", "Foto's", "Fotoğraflar", "फ़ोटो"],
 	"System": ["System", "Sistema", "Système", "Sistema", "Sistema", "Systeem", "Sistem", "सिस्टम"],
 	"Choose wallpaper": ["Hintergrund wählen", "Elegir fondo", "Choisir le fond d'écran", "Scegli sfondo", "Escolher fundo", "Achtergrond kiezen", "Duvar kağıdı seç", "वॉलपेपर चुनें"],
 	"Channels": ["Sender", "Canales", "Chaînes", "Canali", "Canais", "Zenders", "Kanallar", "चैनल"],
@@ -649,16 +651,6 @@ const TABLE: Record<string, string[]> = {
 		"Oklar taşır · OK bırakır · Geri iptal eder",
 		"तीर खिसकाते हैं · OK छोड़ता है · Back रद्द करता है"
 	],
-	"Left and right change category · OK sets the wallpaper · hold OK adds it to Favorites · Back returns": [
-		"Links/Rechts wechselt Kategorie · OK setzt Hintergrund · OK halten = Favorit · Zurück zum Start",
-		"Izquierda/derecha cambia categoría · OK fija el fondo · Mantén OK para favoritos · Atrás vuelve",
-		"Gauche/droite change de catégorie · OK applique · Maintenez OK pour favori · Retour",
-		"Sinistra/destra cambia categoria · OK imposta · Tieni OK per i preferiti · Indietro",
-		"Esquerda/direita muda categoria · OK define · Mantenha OK para favoritos · Voltar",
-		"Links/rechts wisselt categorie · OK stelt in · Houd OK voor favoriet · Terug",
-		"Sol/sağ kategori değiştirir · OK ayarlar · Favori için OK'a basılı tutun · Geri",
-		"बाएं/दाएं से श्रेणी बदलें · OK से सेट करें · पसंदीदा के लिए OK दबाए रखें · Back"
-	]
 };
 
 let current = 'en';

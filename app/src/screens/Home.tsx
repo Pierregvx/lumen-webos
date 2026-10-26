@@ -50,7 +50,7 @@ interface Props {
 	folders?: Record<string, TileModel[]>;
 	/** shown beside the date under the clock, top left */
 	weather?: Weather | null;
-	/** the weather on the line under the clock (Settings > Weather > Date and weather, and not when the large widget shows it) */
+	/** the weather on the line under the clock (Settings > Home Screen > Date and weather, and not when the large widget shows it) */
 	weatherLine?: boolean;
 	/** the weather widget above the dock, and its size */
 	forecast?: 'small' | 'large';

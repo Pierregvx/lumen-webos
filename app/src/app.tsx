@@ -22,10 +22,10 @@ import {LOCAL_WALLPAPERS, WALLPAPERS, WALLPAPER_CATEGORIES, cloudUrl} from './co
 import {setLiquidDock} from './lib/liquidGlass';
 import {resized, setPicks, setWallpaper, shownWallpaper} from './lib/wallpaper';
 import {restoreLeftoverBacklight} from './lib/tvcontrols';
-import {albums as immichAlbums, cachedServer, IMMICH_SOURCES, loadServer} from './lib/immich';
+import {albums as immichAlbums, cachedServer, IMMICH_SOURCES, loadServer, saveServer, testServer, type ImmichServer} from './lib/immich';
 import {Ambient} from './components/Ambient';
 import {setVideoChoice, setVideoPaused, setVideoWallpaper, VIDEO_PLACES} from './lib/wallpaperVideo';
-import {setAmbientFlag, setVideoFlag, startScreensaver} from './lib/system';
+import {setAmbientFlag, setSaverOffFlag, setVideoFlag, startScreensaver} from './lib/system';
 import {setFpsCounter} from './lib/fps';
 import {ControlCenter, prefetchControls, type CenterAction} from './components/ControlCenter';
 import {CITIES, COUNTRIES} from './config/cities';
@@ -46,7 +46,7 @@ const LIVE_INFO_W = 660;
 /** how much higher the Live TV row sits when focused, so its now/next block fits on screen */
 const LIVE_BELOW = 150;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', ambientPrint: 'ambient-print', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', dockBlur: 'dock-blur', liquidDock: 'liquid-dock', reduceMotion: 'reduce-motion', hideNames: 'hide-names', showRecents: 'show-recents', useHomebrew: 'use-homebrew', videoWallpaper: 'video-wallpaper', videoClip: 'video-clip', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', homeCast: 'home-forecast', homeCastSize: 'home-forecast-size', saverCast: 'saver-forecast', saverCastSize: 'saver-forecast-size', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', immichDays: 'immich-recent-days', wpType: 'wp-type', wpNew: 'wp-new', nightDim: 'night-dim', dockDim: 'dock-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
+const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', ambientPrint: 'ambient-print', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', dockBlur: 'dock-blur', liquidDock: 'liquid-dock', reduceMotion: 'reduce-motion', hideNames: 'hide-names', showRecents: 'show-recents', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', homeCast: 'home-forecast', saverCast: 'saver-forecast', immichUrl: 'immich-url', immichKey: 'immich-key', immichTest: 'immich-test', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', immichDays: 'immich-recent-days', wpType: 'wp-type', wpNew: 'wp-new', nightDim: 'night-dim', dockDim: 'dock-dim', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 0.5, 1, 5, 15, 30, 60];   // minutes
 /** when the video wallpaper plays (Settings > Wallpaper > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
 const VIDEO_HOURS: Record<string, [number, number]> = {day: [7, 19], evening: [17, 23], night: [19, 7]};
@@ -82,12 +82,16 @@ const MENU_ITEMS: TileModel[] = [
 export function App () {
 	// opened by watch.sh for the TV's screensaver: the first frame is the screensaver, so the home screen never shows first
 	const [screen, setScreen] = useState<Screen>(() => import.meta.env.DEV && /[?&]settings/.test(location.search) ? 'settings' : startParams().view === 'ambient' && loadConfig().ambientOn ? 'ambient' : 'home');
-	// Immich (Settings > Wallpaper > Photos): whether a server is set up on the TV, and its albums; read again each time Settings opens
+	// Immich (Settings > Photos): whether a server is set up on the TV, and its albums; read again each time Settings opens
 	const [immich, setImmich] = useState<{ready: boolean; albums: {id: string; title: string}[]}>({ready: !!cachedServer(), albums: []});
+	// Settings > Photos: the address and key being typed, and how the last Test connection went
+	const [immichDraft, setImmichDraft] = useState<ImmichServer>(() => cachedServer() || {url: '', key: ''});
+	const [immichTest, setImmichTest] = useState<'' | 'testing' | 'failed'>('');
 	useEffect(() => {
 		if (screen !== 'settings') return;
 		loadServer().then((srv) => {
 			if (!srv) { setImmich({ready: false, albums: []}); return; }
+			setImmichDraft(srv);
 			immichAlbums(srv).then((a) => setImmich({ready: true, albums: a}), () => setImmich({ready: true, albums: []}));
 		});
 	}, [screen]);
@@ -294,6 +298,7 @@ export function App () {
 		root.toggle('focus-strong', config.focusStrength === 'strong');
 	}, [config.focusStrength]);
 	useEffect(() => { setAmbientFlag(config.ambientOn); }, [config.ambientOn]);
+	useEffect(() => { setSaverOffFlag(config.saverOff); }, [config.saverOff]);
 	useEffect(() => { setVideoPaused(screen !== 'home'); document.documentElement.classList.toggle('in-settings', screen === 'settings' || screen === 'guide'); }, [screen]);
 	const lastScreen = useRef(screen);
 	useEffect(() => { if (lastScreen.current !== screen) navMark(`${lastScreen.current}>${screen}`); lastScreen.current = screen; }, [screen]);
@@ -314,13 +319,13 @@ export function App () {
 	/** Your photos straight away, without LG's screensaver showing first; LG's own when the photos are not turned on (unless forced, from Control Center). */
 	const showScreensaver = (photos = configRef.current.ambientOn) => {
 		if (photos && cachedServer()) { ambientOpening.current = videoOnRef.current ? null : shownWallpaper(); setScreen('ambient'); return; }
-		if (photos) { showToast('Set up Immich first (Settings > Wallpaper > Choose wallpaper > Photos)', 'error'); return; }
+		if (photos) { showToast('Set up Immich first, in Settings > Photos', 'error'); return; }
 		startScreensaver().catch(() => showToast("Couldn't start the screensaver (it needs the Homebrew Channel)", 'error'));
 	};
 
 	// idle screensaver: after the chosen time on the home screen without a key press or pointer move, while the launcher is in front
 	useEffect(() => {
-		if (!config.idleSeconds || videoOn || screen !== 'home' || controls) return;   // no screensaver of our own while the video plays
+		if (!config.idleSeconds || config.saverOff || videoOn || screen !== 'home' || controls) return;   // no screensaver of our own while the video plays
 		let timer = 0;
 		const arm = () => {
 			window.clearTimeout(timer);
@@ -330,7 +335,7 @@ export function App () {
 		const events = ['keydown', 'mousemove', 'click'];
 		events.forEach((e) => window.addEventListener(e, arm));
 		return () => { window.clearTimeout(timer); events.forEach((e) => window.removeEventListener(e, arm)); };
-	}, [config.idleSeconds, videoOn, screen, controls]);
+	}, [config.idleSeconds, config.saverOff, videoOn, screen, controls]);
 	useEffect(() => { setVideoFlag(videoOn); }, [videoOn]);
 
 	// ----- derived rows -----
@@ -414,12 +419,13 @@ export function App () {
 			[OPTION.immichDays]: {labels: ['Last month', 'Last 3 months', 'Last 6 months', 'Last year'], values: [30, 90, 180, 365], now: config.immichRecentDays},
 			[OPTION.wpAuto]: {labels: ['Off', '30 sec', '1 min', '5 min', '15 min', '30 min', '60 min'], values: WP_AUTO_CHOICES, now: config.wpAutoMinutes},
 			[OPTION.dockHide]: {labels: ['Off', 'Down arrow', 'After idle', 'Both'], values: ['off', 'down', 'idle', 'both'], now: config.dockHide},
+			[OPTION.ambientOn]: {labels: ['LG\'s screensaver', 'My photos', 'Off'], values: ['lg', 'photos', 'off'], now: config.saverOff ? 'off' : config.ambientOn ? 'photos' : 'lg'},
 			[OPTION.idle]: {labels: ['Never', '30 seconds', '1 minute', '2 minutes', '5 minutes'], values: IDLE_SECONDS, now: config.idleSeconds},
 			[OPTION.darkMode]: {labels: ['Light', 'Dark', 'Auto'], values: ['off', 'on', 'auto'], now: config.darkMode},
 			[OPTION.language]: {labels: ['Auto'].concat(LANGS.map((l) => l.name)), values: ['auto'].concat(LANGS.map((l) => l.code)), now: config.language},
 			[OPTION.clock]: {labels: ['Auto', '12-hour', '24-hour'], values: ['auto', '12h', '24h'], now: config.clockFormat},
-			[OPTION.homeCastSize]: {labels: ['Small', 'Large'], values: ['small', 'large'], now: config.homeForecastSize},
-			[OPTION.saverCastSize]: {labels: ['Small', 'Large'], values: ['small', 'large'], now: config.saverForecastSize},
+			[OPTION.homeCast]: {labels: ['Off', 'Small', 'Large'], values: ['off', 'small', 'large'], now: config.homeForecast ? config.homeForecastSize : 'off'},
+			[OPTION.saverCast]: {labels: ['Off', 'Small', 'Large'], values: ['off', 'small', 'large'], now: config.saverForecast ? config.saverForecastSize : 'off'},
 			[OPTION.focus]: {labels: ['Subtle', 'Normal', 'Strong'], values: ['subtle', 'normal', 'strong'], now: config.focusStrength},
 			[OPTION.firstRow]: {labels: ['5', '6', '7'], values: [5, 6, 7], now: config.firstRow},
 			[OPTION.ambient]: {labels: IMMICH_SOURCES.map((x) => x.title).concat(immich.albums.map((a) => a.title)), values: IMMICH_SOURCES.map((x) => x.key).concat(immich.albums.map((a) => `immich:album:${a.id}`)), now: config.ambient},
@@ -435,288 +441,313 @@ export function App () {
 		const at = c.values.indexOf(c.now);
 		return {choices: c.labels, choice: Math.max(0, at), valueText: at >= 0 ? c.labels[at] : fallback || c.labels[0]};
 	};
+	/** the screensaver's sources keep several (immich:recent|immich:favorites), which lib/immich.ts mixes */
+	const ambientPicks = () => {
+		const c = choices[OPTION.ambient];
+		const picks = config.ambient.split('|').map((k) => c.values.indexOf(k)).filter((i) => i >= 0);
+		return {choices: c.labels, choice: picks.length > 0 ? picks[0] : 0, picks, valueText: picks.length === 1 ? c.labels[picks[0]] : `${picks.length} sources`};
+	};
 
-	const options: OptionItem[] = useMemo(() => [
-		{
-			id: OPTION.liveTv,
-			group: 'home' as const,
-			label: 'Live TV row',
-			description: 'A row of TV channels under your apps, showing what is on now and next, with the Guide at the end. OK on a channel opens Live TV on it. Needs the Homebrew Channel.',
-			value: config.liveTvRow
-		},
-		{
-			id: OPTION.useHomebrew,
-			group: 'system' as const,
-			label: 'Live app list via Homebrew Channel',
-			description: 'Rooted TVs only. Lists every installed app with its real icon, using the Homebrew Channel, which runs commands as root. When off, the built-in app catalogue is used.',
-			value: config.useHomebrew
-		},
-		{
-			id: OPTION.showAll,
-			group: 'system' as const,
-			label: 'Show system apps',
-			description: 'Offer the TV\'s own apps (Live TV, LG Channels, AirPlay, Screen Share, Game Optimizer, TV Settings) in Settings > Apps, so you can add them to the home screen.',
-			value: config.showAllApps
-		},
-		{
-			id: OPTION.weather,
-			group: 'weather' as const,
-			label: 'Date and weather',
-			description: 'Show today\'s date and the temperature at the top left of the home screen. The temperature needs a Weather city below; it comes from open-meteo.com.',
-			value: config.showWeather
-		},
-		{
-			id: OPTION.country,
-			group: 'weather' as const,
-			label: 'Weather country',
-			description: 'Pick your country, then the city below. Until a city is chosen no weather is shown and nothing is fetched.',
-			value: config.weatherCountry !== '',
-			...listed(OPTION.country)
-		},
-		{
-			id: OPTION.city,
-			group: 'weather' as const,
-			label: 'Weather city',
-			description: 'Not set: no weather. Auto finds your area from your internet connection, which sends your IP address to ipwho.is and can be a few towns off. Or pick a city.',
-			value: config.weatherCity !== '',
-			...listed(OPTION.city, config.weatherCity)
-		},
-		{
-			id: OPTION.wpType,
-			group: 'wallpaper' as const,
-			label: 'Wallpaper type',
-			description: 'Pictures from the library, a video, your photos from Immich, or a plain background. Choose wallpaper then picks which ones.',
-			value: true,
-			...listed(OPTION.wpType)
-		},
-		...(immich.ready ? [{
-			id: OPTION.immichDays,
-			group: 'wallpaper' as const,
-			label: 'Recent photos from',
-			description: 'How far back the Recent and Recent, with people photos reach, for the wallpaper and the screensaver.',
-			value: true,
-			...listed(OPTION.immichDays)
-		}] : []),
-		{
-			id: OPTION.wpNew,
-			group: 'wallpaper' as const,
-			label: 'New picture on startup',
-			description: 'Opens on another of your pictures or photos each time. Off, it opens on the last one it showed.',
-			value: config.wpNewOnLaunch
-		},
-		{
-			id: OPTION.wpAuto,
-			group: 'wallpaper' as const,
-			label: 'Change wallpaper automatically',
-			description: 'Shows another of your pictures or photos every 30 seconds to 60 minutes.',
-			value: config.wpAutoMinutes > 0,
-			...listed(OPTION.wpAuto)
-		},
-		{
-			id: OPTION.ambientOn,
-			group: 'screensaver' as const,
-			label: 'Use my photos',
-			description: immich.ready
-				? 'When the TV\'s screensaver starts, show your photos from Immich instead of LG\'s: a slow crossfade, with the clock. Any key returns to the home screen. Screensaver in Control Center shows them either way.'
-				: 'Your photos from Immich instead of LG\'s screensaver. Set up Immich first (Settings > Wallpaper > Choose wallpaper > Photos).',
-			value: config.ambientOn
-		},
-		...(immich.ready ? [{
-			id: OPTION.ambient,
-			group: 'screensaver' as const,
-			label: 'Photos',
-			description: 'Which photos the screensaver shows.',
-			value: true,
-			...listed(OPTION.ambient)
-		}] : []),
-		{
-			id: OPTION.idle,
-			group: 'screensaver' as const,
-			label: 'Start on the home screen after',
-			description: 'Starts the screensaver when the home screen has been left alone this long. The TV\'s own screensaver timer still covers everything else.',
-			value: config.idleSeconds > 0,
-			...listed(OPTION.idle)
-		},
-		{
-			id: OPTION.saverCast,
-			group: 'screensaver' as const,
-			label: 'Show weather widget',
-			description: 'The next few hours of weather, at the bottom between the clock and the date. Needs a Weather city in Settings > Weather.',
-			value: config.saverForecast
-		},
-		...(config.saverForecast ? [{
-			id: OPTION.saverCastSize,
-			group: 'screensaver' as const,
-			label: 'Weather widget size',
-			description: 'Small: the next 6 hours. Large: the weather now with today\'s high and low, and the next 7 hours with the chance of rain.',
-			value: true,
-			...listed(OPTION.saverCastSize)
-		}] : []),
-		...(immich.ready ? [{
-			id: OPTION.ambientSeconds,
-			group: 'screensaver' as const,
-			label: 'Time on each photo',
-			description: 'How long each photo stays on the screensaver before the next one fades in.',
-			value: true,
-			...listed(OPTION.ambientSeconds)
-		}, {
-			id: OPTION.ambientBrightness,
-			group: 'screensaver' as const,
-			label: 'Brightness',
-			description: 'Turns the TV\'s backlight down while your photos show, and back up when you press a key.',
-			value: config.ambientBrightness !== 'tv',
-			...listed(OPTION.ambientBrightness)
-		}, {
-			id: OPTION.ambientPrint,
-			group: 'screensaver' as const,
-			label: 'Print look',
-			description: 'Makes your photos look like prints on a wall rather than a glowing screen: softer blacks, paper-white whites and a gentle fall of light.',
-			value: config.ambientPrint
-		}] : []),
-		{
-			id: OPTION.videoHours,
-			group: 'wallpaper' as const,
-			label: 'Video wallpaper hours',
-			description: 'When the video wallpaper plays. Outside these hours the still wallpaper shows instead, and nothing streams.',
-			value: config.videoHours !== 'always',
-			...listed(OPTION.videoHours)
-		},
-		{
-			id: OPTION.nightDim,
-			group: 'wallpaper' as const,
-			label: 'Dim the wallpaper',
-			description: 'A darker wallpaper, easier on the eyes in a dark room. At night: between 7 pm and 6 am.',
-			value: config.wallpaperDim !== 'off',
-			...listed(OPTION.nightDim)
-		},
-		{
-			id: OPTION.dockHide,
-			group: 'home' as const,
-			label: 'Hide the dock',
-			description: 'Down arrow: Down on the last row slides the dock away. After idle: it hides itself after 30 seconds without a key press. Any key brings it back.',
-			value: config.dockHide !== 'off',
-			...listed(OPTION.dockHide)
-		},
-		...(config.dockHide !== 'off' ? [{
-			id: OPTION.dockDim,
-			group: 'home' as const,
-			label: 'Dim when the dock is hidden',
-			description: 'With the dock away, the wallpaper fades darker. It brightens again when the dock comes back.',
-			value: config.dockDim
-		}] : []),
-		{
-			id: OPTION.homeCast,
-			group: 'home' as const,
-			label: 'Show weather widget',
-			description: 'The next few hours of weather, above the dock on the left. Needs a Weather city in Settings > Weather.',
-			value: config.homeForecast
-		},
-		...(config.homeForecast ? [{
-			id: OPTION.homeCastSize,
-			group: 'home' as const,
-			label: 'Weather widget size',
-			description: 'Small: the next 6 hours. Large: the weather now with today\'s high and low, and the next 7 hours with the chance of rain.',
-			value: true,
-			...listed(OPTION.homeCastSize)
-		}] : []),
-		{
-			id: OPTION.firstRow,
-			group: 'home' as const,
-			label: 'Apps in the glass bar',
-			description: 'How many apps a row holds: the glass bar, and each row of the grid below it. With 7 the tiles are a little smaller, with 5 a little bigger.',
-			value: true,
-			...listed(OPTION.firstRow)
-		},
-		{
-			id: OPTION.focus,
-			group: 'appearance' as const,
-			label: 'Focus highlight',
-			description: 'How much the app in focus stands out: how far it grows and how strong its shadow and shine are.',
-			value: config.focusStrength !== 'normal',
-			...listed(OPTION.focus)
-		},
-		{
-			id: OPTION.darkMode,
-			group: 'appearance' as const,
-			label: 'Appearance',
-			description: 'Light: bright glass with dark text. Dark: dark glass and a dimmer wallpaper or video. Auto is dark from 7 pm to 6 am.',
-			value: config.darkMode !== 'off',
-			...listed(OPTION.darkMode)
-		},
-		{
-			id: OPTION.language,
-			group: 'language' as const,
-			label: 'Language',
-			description: "Language of the menus, dates and weather. Auto follows the TV. The long descriptions on this screen stay in English.",
-			value: config.language !== 'auto',
-			...listed(OPTION.language)
-		},
-		{
-			id: OPTION.clock,
-			group: 'language' as const,
-			label: 'Clock',
-			description: "Auto follows the TV's own 12/24-hour setting. Choose 12-hour or 24-hour to override it.",
-			value: config.clockFormat !== 'auto',
-			...listed(OPTION.clock)
-		},
-		{
-			id: OPTION.hideNames,
-			group: 'home' as const,
-			label: 'Hide app names',
-			description: 'No names under the apps on the home screen, not even the one in focus. Settings still shows them.',
-			value: config.hideNames
-		},
-		{
-			id: OPTION.showRecents,
-			group: 'home' as const,
-			label: 'Show recents indicator',
-			description: 'A dot over the apps that are open.',
-			value: config.showRecents
-		},
-		{
-			id: OPTION.reduceMotion,
-			group: 'appearance' as const,
-			label: 'Reduce motion',
-			description: 'Focus, rows and panels change at once, without sliding, fading or zooming.',
-			value: config.reduceMotion
-		},
-		{
-			id: OPTION.dockBlur,
-			group: 'appearance' as const,
-			label: 'Dock blur',
-			description: 'The glass bar blurs whatever is behind it. Off: the same glass look with no blur, and moving left and right is smoother.',
-			value: config.dockBlur
-		},
-		{
-			id: OPTION.liquidDock,
-			group: 'appearance' as const,
-			label: 'Liquid glass dock',
-			description: 'The glass bar bends the picture at its edges, like Liquid Glass on Apple TV. Moving along the dock is slower with it on. Over a video wallpaper it only tints, as the TV draws video where the app cannot reach it.',
-			value: config.liquidDock
-		},
-		{
-			id: OPTION.showAmPm,
-			group: 'language' as const,
-			label: 'AM/PM on the clock',
-			description: 'Show AM or PM beside the time when the TV is set to a 12-hour clock.',
-			value: config.showAmPm
-		},
-		{
-			id: OPTION.restore,
-			group: 'system' as const,
-			label: 'Restore settings from the TV',
-			description: 'Lumen keeps a copy of its settings on the TV (/var/lib/homehook/lumen-config.json) after every change. This puts that copy back, replacing the settings here. Needs the Homebrew Channel.',
-			value: false,
-			valueText: 'Restore'
-		},
-		...(__LUMEN_DEV__ ? [{
-			id: OPTION.fps,
-			group: 'system' as const,
-			label: 'Frame-rate counter (dev builds)',
-			description: 'Frames drawn in the last second and the longest frame, in the top-left corner. Only in dev builds.',
-			value: config.fpsCounter
-		}] : [])
-	], [config.liveTvRow, config.fpsCounter, choices, config.weatherCountry, config.dockHide, config.videoPlaces, config.videoClip, config.darkMode, config.language, config.clockFormat, config.useHomebrew, config.videoWallpaper, config.showAmPm, config.idleSeconds, config.wpAutoMinutes, config.wallpaperType, config.wpNewOnLaunch, config.wallpaperDim, config.dockDim, config.showAllApps, config.showWeather, config.homeForecast, config.homeForecastSize, config.saverForecast, config.saverForecastSize, config.weatherCity, config.hideNames, config.showRecents, config.reduceMotion, config.dockBlur, config.liquidDock, config.ambient, config.ambientOn, config.ambientSeconds, config.ambientBrightness, config.ambientPrint, immich.ready]);
+	// each page lists its options in this order (Settings.tsx GROUPS sets the order of the pages)
+	const options: OptionItem[] = useMemo(() => {
+		const stills = config.wallpaperType === 'pictures' || config.wallpaperType === 'immich';
+		return [
+			// ----- Home Screen -----
+			{
+				id: OPTION.liveTv,
+				group: 'home' as const,
+				label: 'Live TV row',
+				description: 'A row of TV channels under your apps, showing what is on now and next, with the Guide at the end. OK on a channel opens Live TV on it. Settings > Channels picks the channels.',
+				value: config.liveTvRow
+			},
+			{
+				id: OPTION.firstRow,
+				group: 'home' as const,
+				label: 'Apps per row',
+				description: 'How many apps a row holds: the dock, and each row of the grid below it. With 7 the tiles are a little smaller, with 5 a little bigger.',
+				value: true,
+				...listed(OPTION.firstRow)
+			},
+			{
+				id: OPTION.hideNames,
+				group: 'home' as const,
+				label: 'Hide app names',
+				description: 'No names under the apps on the home screen, not even the one in focus. Settings still shows them.',
+				value: config.hideNames
+			},
+			{
+				id: OPTION.showRecents,
+				group: 'home' as const,
+				label: 'Show recents indicator',
+				description: 'A dot over the apps that are open.',
+				value: config.showRecents
+			},
+			{
+				id: OPTION.dockHide,
+				group: 'home' as const,
+				label: 'Hide the dock',
+				description: 'Down arrow: Down on the last row slides the dock away. After idle: it hides itself after 30 seconds without a key press. Any key brings it back.',
+				value: config.dockHide !== 'off',
+				...listed(OPTION.dockHide)
+			},
+			...(config.dockHide !== 'off' ? [{
+				id: OPTION.dockDim,
+				group: 'home' as const,
+				label: 'Dim when the dock is hidden',
+				description: 'With the dock away, the wallpaper fades darker. It brightens again when the dock comes back.',
+				value: config.dockDim
+			}] : []),
+			{
+				id: OPTION.weather,
+				group: 'home' as const,
+				label: 'Date and weather',
+				description: 'Today\'s date and the temperature at the top left. The temperature needs a Weather city in Settings > Language and Region; it comes from open-meteo.com.',
+				value: config.showWeather
+			},
+			{
+				id: OPTION.homeCast,
+				group: 'home' as const,
+				label: 'Weather widget',
+				description: 'The next few hours of weather, above the dock on the left. Small: the next 6 hours. Large: the weather now with today\'s high and low, and the next 7 hours with the chance of rain. Needs a Weather city.',
+				value: config.homeForecast,
+				...listed(OPTION.homeCast)
+			},
+
+			// ----- Wallpaper -----
+			{
+				id: OPTION.wpType,
+				group: 'wallpaper' as const,
+				label: 'Wallpaper type',
+				description: 'Pictures from the library, a video, your photos from Immich, or a plain background. Choose wallpaper then picks which ones.',
+				value: true,
+				...listed(OPTION.wpType)
+			},
+			...(stills ? [{
+				id: OPTION.wpAuto,
+				group: 'wallpaper' as const,
+				label: 'Change wallpaper automatically',
+				description: 'Shows another of your pictures or photos every 30 seconds to 60 minutes.',
+				value: config.wpAutoMinutes > 0,
+				...listed(OPTION.wpAuto)
+			}, {
+				id: OPTION.wpNew,
+				group: 'wallpaper' as const,
+				label: 'New picture on startup',
+				description: 'Opens on another of your pictures or photos each time. Off, it opens on the last one it showed.',
+				value: config.wpNewOnLaunch
+			}] : []),
+			...(config.wallpaperType === 'video' ? [{
+				id: OPTION.videoHours,
+				group: 'wallpaper' as const,
+				label: 'Video wallpaper hours',
+				description: 'When the video wallpaper plays. Outside these hours the still wallpaper shows instead, and nothing streams.',
+				value: config.videoHours !== 'always',
+				...listed(OPTION.videoHours)
+			}] : []),
+			{
+				id: OPTION.nightDim,
+				group: 'wallpaper' as const,
+				label: 'Dim the wallpaper',
+				description: 'A darker wallpaper, easier on the eyes in a dark room. At night: between 7 pm and 6 am.',
+				value: config.wallpaperDim !== 'off',
+				...listed(OPTION.nightDim)
+			},
+
+			// ----- Screensaver -----
+			{
+				id: OPTION.ambientOn,
+				group: 'screensaver' as const,
+				label: 'Screensaver',
+				description: immich.ready
+					? 'LG\'s: the TV\'s own screensaver. My photos: your photos from Immich instead, a slow crossfade with the clock; any key returns to the home screen. Off: no screensaver, in any app. The TV\'s own auto power-off still applies.'
+					: 'LG\'s: the TV\'s own screensaver. My photos needs Immich, set up in Settings > Photos. Off: no screensaver, in any app. The TV\'s own auto power-off still applies.',
+				value: !config.saverOff,
+				...listed(OPTION.ambientOn)
+			},
+			...(config.saverOff ? [] : [{
+				id: OPTION.idle,
+				group: 'screensaver' as const,
+				label: 'Start on the home screen after',
+				description: 'Starts the screensaver when the home screen has been left alone this long. The TV\'s own screensaver timer still covers everything else.',
+				value: config.idleSeconds > 0,
+				...listed(OPTION.idle)
+			}]),
+			...(immich.ready && !config.saverOff ? [{
+				id: OPTION.ambient,
+				group: 'screensaver' as const,
+				label: 'Photos',
+				description: 'Which photos the screensaver shows. Pick several and it mixes them. Screensaver in Control Center shows them even with LG\'s screensaver chosen.',
+				value: true,
+				...ambientPicks()
+			}, {
+				id: OPTION.ambientSeconds,
+				group: 'screensaver' as const,
+				label: 'Time on each photo',
+				description: 'How long each photo stays on the screensaver before the next one fades in.',
+				value: true,
+				...listed(OPTION.ambientSeconds)
+			}, {
+				id: OPTION.ambientBrightness,
+				group: 'screensaver' as const,
+				label: 'Brightness',
+				description: 'Turns the TV\'s backlight down while your photos show, and back up when you press a key.',
+				value: config.ambientBrightness !== 'tv',
+				...listed(OPTION.ambientBrightness)
+			}, {
+				id: OPTION.ambientPrint,
+				group: 'screensaver' as const,
+				label: 'Print look',
+				description: 'Makes your photos look like prints on a wall rather than a glowing screen: softer blacks, paper-white whites and a gentle fall of light.',
+				value: config.ambientPrint
+			}, {
+				id: OPTION.saverCast,
+				group: 'screensaver' as const,
+				label: 'Weather widget',
+				description: 'The next few hours of weather on your photos, at the bottom between the clock and the date. Small: the next 6 hours. Large: the weather now with today\'s high and low, and the next 7 hours with the chance of rain. Needs a Weather city.',
+				value: config.saverForecast,
+				...listed(OPTION.saverCast)
+			}] : []),
+
+			// ----- Appearance -----
+			{
+				id: OPTION.darkMode,
+				group: 'appearance' as const,
+				label: 'Appearance',
+				description: 'Light: bright glass with dark text. Dark: dark glass and a dimmer wallpaper or video. Auto is dark from 7 pm to 6 am.',
+				value: config.darkMode !== 'off',
+				...listed(OPTION.darkMode)
+			},
+			{
+				id: OPTION.focus,
+				group: 'appearance' as const,
+				label: 'Focus highlight',
+				description: 'How much the app in focus stands out: how far it grows and how strong its shadow and shine are.',
+				value: config.focusStrength !== 'normal',
+				...listed(OPTION.focus)
+			},
+			{
+				id: OPTION.reduceMotion,
+				group: 'appearance' as const,
+				label: 'Reduce motion',
+				description: 'Focus, rows and panels change at once, without sliding, fading or zooming.',
+				value: config.reduceMotion
+			},
+			{
+				id: OPTION.dockBlur,
+				group: 'appearance' as const,
+				label: 'Dock blur',
+				description: 'The dock blurs whatever is behind it. Off: the same glass look with no blur, and moving left and right is smoother.',
+				value: config.dockBlur
+			},
+
+			// ----- Photos -----
+			{
+				id: OPTION.immichUrl,
+				group: 'photos' as const,
+				label: 'Server address',
+				description: 'Your Immich server as you would open it in a browser at home: scheme, address and port, for example http://192.168.1.10:2283.',
+				value: immichDraft.url !== '',
+				valueText: immichDraft.url || 'Not set',
+				text: {value: immichDraft.url, placeholder: 'http://192.168.1.10:2283'}
+			},
+			{
+				id: OPTION.immichKey,
+				group: 'photos' as const,
+				label: 'API key',
+				description: 'In Immich: Account Settings > API Keys > New API Key, with only album.read, asset.read, asset.view, memory.read, face.read and stack.read. Read-only, so it can only show photos.',
+				value: immichDraft.key !== '',
+				valueText: immichDraft.key ? '\u2022\u2022\u2022\u2022 ' + immichDraft.key.slice(-4) : 'Not set',
+				text: {value: immichDraft.key, placeholder: 'The key from Immich'}
+			},
+			{
+				id: OPTION.immichTest,
+				group: 'photos' as const,
+				label: 'Test connection',
+				description: 'Checks the address and the key with your server. When it passes, Lumen saves them on the TV and your photos can be the wallpaper and the screensaver.',
+				value: immich.ready,
+				valueText: immichTest === 'testing' ? 'Testing' : immichTest === 'failed' ? 'Failed' : immich.ready ? 'Connected' : 'Not connected'
+			},
+			...(immich.ready ? [{
+				id: OPTION.immichDays,
+				group: 'photos' as const,
+				label: 'Recent photos from',
+				description: 'How far back the Recent and Recent, with people photos reach, for the wallpaper and the screensaver.',
+				value: true,
+				...listed(OPTION.immichDays)
+			}] : []),
+
+			// ----- Language and Region -----
+			{
+				id: OPTION.language,
+				group: 'region' as const,
+				label: 'Language',
+				description: "Language of the menus, dates and weather. Auto follows the TV. The long descriptions on this screen stay in English.",
+				value: config.language !== 'auto',
+				...listed(OPTION.language)
+			},
+			{
+				id: OPTION.clock,
+				group: 'region' as const,
+				label: 'Clock',
+				description: "Auto follows the TV's own 12/24-hour setting. Choose 12-hour or 24-hour to override it.",
+				value: config.clockFormat !== 'auto',
+				...listed(OPTION.clock)
+			},
+			...(config.clockFormat !== '24h' ? [{
+				id: OPTION.showAmPm,
+				group: 'region' as const,
+				label: 'AM/PM on the clock',
+				description: 'Show AM or PM beside the time when the clock is 12-hour.',
+				value: config.showAmPm
+			}] : []),
+			{
+				id: OPTION.country,
+				group: 'region' as const,
+				label: 'Weather country',
+				description: 'Pick your country, then the city below. Until a city is chosen no weather is shown and nothing is fetched.',
+				value: config.weatherCountry !== '',
+				...listed(OPTION.country)
+			},
+			{
+				id: OPTION.city,
+				group: 'region' as const,
+				label: 'Weather city',
+				description: 'Not set: no weather. Auto finds your area from your internet connection, which sends your IP address to ipwho.is and can be a few towns off. Or pick a city.',
+				value: config.weatherCity !== '',
+				...listed(OPTION.city, config.weatherCity)
+			},
+
+			// ----- System -----
+			{
+				id: OPTION.showAll,
+				group: 'system' as const,
+				label: 'Show system apps',
+				description: 'Offer the TV\'s own apps (Live TV, LG Channels, AirPlay, Screen Share, Game Optimizer, TV Settings) in Settings > Apps, so you can add them to the home screen.',
+				value: config.showAllApps
+			},
+			{
+				id: OPTION.restore,
+				group: 'system' as const,
+				label: 'Restore settings from the TV',
+				description: 'Lumen keeps a copy of its settings on the TV (/var/lib/homehook/lumen-config.json) after every change. This puts that copy back, replacing the settings here.',
+				value: false,
+				valueText: 'Restore'
+			},
+			...(__LUMEN_DEV__ ? [{
+				id: OPTION.fps,
+				group: 'system' as const,
+				label: 'Frame-rate counter (dev builds)',
+				description: 'Frames drawn in the last second and the longest frame, in the top-left corner. Only in dev builds.',
+				value: config.fpsCounter
+			}, {
+				id: OPTION.liquidDock,
+				group: 'system' as const,
+				label: 'Liquid glass dock (dev builds)',
+				description: 'The dock bends the picture at its edges, like Liquid Glass on Apple TV. Too slow for everyday use on this TV, so only dev builds offer it.',
+				value: config.liquidDock
+			}] : [])
+		];
+	}, [config, choices, immich.ready, immichDraft, immichTest]);
 
 	const wallpaper: WallpaperTab = useMemo(() => {
 		if (!inSettings) return {categories: [], entries: [], onPick: () => undefined};
@@ -748,7 +779,7 @@ export function App () {
 				entries,
 				summary: 'Pick which of your Immich photos the home screen shows.',
 				onPick: (key: string) => {
-					if (key === 'immich:setup') { showToast('Put your Immich address and an API key in /var/lib/homehook/immich.json on the TV (see docs/immich.md), then open Settings again', 'error'); return; }
+					if (key === 'immich:setup') { showToast('Set up Immich first, in Settings > Photos'); return; }
 					const has = config.immichPicks.indexOf(key) >= 0;
 					if (has && config.immichPicks.length === 1) { showToast('Keep at least one source'); return; }
 					updateConfig({...config, immichPicks: has ? config.immichPicks.filter((x) => x !== key) : config.immichPicks.concat(key)});
@@ -858,6 +889,27 @@ export function App () {
 		}
 	}, [config, inputs, live.channels]);
 
+	/** Settings > Photos > Test connection: on a pass the address and key are saved on the TV and the photo options open up */
+	const testImmich = useCallback(() => {
+		setImmichTest('testing');
+		testServer(immichDraft).then((result) => {
+			if (typeof result === 'string') { setImmichTest('failed'); showToast(result, 'error'); return; }
+			return saveServer(result.server).then(() => {
+				setImmichDraft(result.server);
+				setImmich({ready: true, albums: result.albums});
+				setImmichTest('');
+				showToast('Connected to Immich');
+			});
+		}).catch(() => { setImmichTest('failed'); showToast('Couldn\'t save the Immich settings on the TV', 'error'); });
+	}, [immichDraft, showToast]);
+
+	/** text typed on a Settings text page */
+	const onText = useCallback((optionId: string, value: string) => {
+		if (optionId === OPTION.immichUrl) setImmichDraft((d) => ({...d, url: value.trim()}));
+		else if (optionId === OPTION.immichKey) setImmichDraft((d) => ({...d, key: value.trim()}));
+		setImmichTest('');
+	}, []);
+
 	const onOption = useCallback((optionId: string) => {
 		if (optionId === OPTION.restore) {
 			readBackup().then((saved) => {
@@ -867,17 +919,11 @@ export function App () {
 			});
 			return;
 		}
-		if (optionId === OPTION.useHomebrew) updateConfig({...config, useHomebrew: !config.useHomebrew});
-		else if (optionId === OPTION.liveTv) updateConfig({...config, liveTvRow: !config.liveTvRow});
-		else if (optionId === OPTION.videoWallpaper) updateConfig({...config, videoWallpaper: !config.videoWallpaper});
-		else if (optionId === OPTION.videoClip) {
-			const names = [''].concat(VIDEO_PLACES);
-			updateConfig({...config, videoClip: names[(names.indexOf(config.videoClip) + 1) % names.length]});
-		} else if (optionId === OPTION.showAmPm) updateConfig({...config, showAmPm: !config.showAmPm});
+		if (optionId === OPTION.immichTest) { testImmich(); return; }
+		if (optionId === OPTION.liveTv) updateConfig({...config, liveTvRow: !config.liveTvRow});
+		else if (optionId === OPTION.showAmPm) updateConfig({...config, showAmPm: !config.showAmPm});
 		else if (optionId === OPTION.showAll) updateConfig({...config, showAllApps: !config.showAllApps});
 		else if (optionId === OPTION.weather) updateConfig({...config, showWeather: !config.showWeather});
-		else if (optionId === OPTION.homeCast) updateConfig({...config, homeForecast: !config.homeForecast});
-		else if (optionId === OPTION.saverCast) updateConfig({...config, saverForecast: !config.saverForecast});
 		else if (optionId === OPTION.fps) updateConfig({...config, fpsCounter: !config.fpsCounter});
 		else if (optionId === OPTION.hideNames) updateConfig({...config, hideNames: !config.hideNames});
 		else if (optionId === OPTION.showRecents) updateConfig({...config, showRecents: !config.showRecents});
@@ -885,10 +931,9 @@ export function App () {
 		else if (optionId === OPTION.dockBlur) updateConfig({...config, dockBlur: !config.dockBlur});
 		else if (optionId === OPTION.liquidDock) updateConfig({...config, liquidDock: !config.liquidDock});
 		else if (optionId === OPTION.dockDim) updateConfig({...config, dockDim: !config.dockDim});
-		else if (optionId === OPTION.ambientOn) updateConfig({...config, ambientOn: !config.ambientOn});
 		else if (optionId === OPTION.ambientPrint) updateConfig({...config, ambientPrint: !config.ambientPrint});
 		else if (optionId === OPTION.wpNew) updateConfig({...config, wpNewOnLaunch: !config.wpNewOnLaunch});
-	}, [config]);
+	}, [config, immich.ready, testImmich]);
 
 	/** a value picked from an option's pop-up list */
 	const onChoose = useCallback((optionId: string, index: number) => {
@@ -908,17 +953,26 @@ export function App () {
 		else if (optionId === OPTION.wpAuto) updateConfig({...c, wpAutoMinutes: Number(value)});
 		else if (optionId === OPTION.wpType) updateConfig({...c, wallpaperType: v});
 		else if (optionId === OPTION.dockHide) updateConfig({...c, dockHide: v});
+		else if (optionId === OPTION.ambientOn) {
+			if (v === 'photos' && !cachedServer()) { showToast('Set up Immich first, in Settings > Photos'); return; }
+			updateConfig({...c, ambientOn: v === 'photos', saverOff: v === 'off'});
+		}
 		else if (optionId === OPTION.idle) updateConfig({...c, idleSeconds: Number(value)});
 		else if (optionId === OPTION.darkMode) updateConfig({...c, darkMode: v});
 		else if (optionId === OPTION.language) updateConfig({...c, language: v});
 		else if (optionId === OPTION.clock) updateConfig({...c, clockFormat: v});
 		else if (optionId === OPTION.focus) updateConfig({...c, focusStrength: v});
-		else if (optionId === OPTION.homeCastSize) updateConfig({...c, homeForecastSize: v});
-		else if (optionId === OPTION.saverCastSize) updateConfig({...c, saverForecastSize: v});
+		else if (optionId === OPTION.homeCast) updateConfig(v === 'off' ? {...c, homeForecast: false} : {...c, homeForecast: true, homeForecastSize: v});
+		else if (optionId === OPTION.saverCast) updateConfig(v === 'off' ? {...c, saverForecast: false} : {...c, saverForecast: true, saverForecastSize: v});
 		else if (optionId === OPTION.firstRow) updateConfig({...c, firstRow: Number(value)});
 		else if (optionId === OPTION.videoHours) updateConfig({...c, videoHours: v});
 		else if (optionId === OPTION.nightDim) updateConfig({...c, wallpaperDim: v});
-		else if (optionId === OPTION.ambient) updateConfig({...c, ambient: v});
+		else if (optionId === OPTION.ambient) {
+			const picks = c.ambient.split('|');
+			const has = picks.indexOf(v) >= 0;
+			if (has && picks.length === 1) { showToast('Keep at least one source'); return; }
+			updateConfig({...c, ambient: (has ? picks.filter((k) => k !== v) : picks.concat(v)).join('|')});
+		}
 		else if (optionId === OPTION.ambientSeconds) updateConfig({...c, ambientSeconds: Number(value)});
 		else if (optionId === OPTION.ambientBrightness) updateConfig({...c, ambientBrightness: v});
 	}, [choices]);
@@ -936,7 +990,7 @@ export function App () {
 			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} menuItems={MENU_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} weatherLine={config.showWeather && !(config.homeForecast && config.homeForecastSize === 'large')} forecast={config.homeForecast ? config.homeForecastSize as 'small' | 'large' : undefined} dockHide={config.dockHide} dockDim={config.dockDim} focusRow={focusRow} />
 			{screen === 'ambient' && <Ambient source={config.ambient} seconds={config.ambientSeconds} backlight={AMBIENT_BACKLIGHT[config.ambientBrightness]} weather={weather} weatherLine={config.showWeather && !(config.saverForecast && config.saverForecastSize === 'large')} forecast={config.saverForecast ? config.saverForecastSize as 'small' | 'large' : undefined} showPeriod={config.showAmPm} print={config.ambientPrint} opening={ambientOpening.current} onExit={() => setScreen('home')} />}
 			{screen === 'guide' && <Guide channels={live.channels} listings={live.listings} logos={live.logos} now={live.now} schedule={live.schedule} pending={live.pending} full={config.guideFull} onMode={(full) => { if (configRef.current.guideFull !== full) updateConfig({...configRef.current, guideFull: full}); }} active={!controls} onOpen={watchChannel} onClose={() => setScreen('home')} />}
-			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onChoose={onChoose} onClose={() => setScreen('home')} />}
+			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onChoose={onChoose} onText={onText} onClose={() => setScreen('home')} />}
 			{controls && <ControlCenter
 				darkMode={config.darkMode}
 				clockFormat={config.clockFormat}

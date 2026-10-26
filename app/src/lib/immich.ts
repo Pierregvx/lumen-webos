@@ -1,11 +1,11 @@
-// Your own photos from an Immich server on the home network, as a wallpaper source. Set up by putting the server's address and a read-only
-// API key in /var/lib/homehook/immich.json on the TV (see docs/immich.md); the key never has to be typed with the remote.
+// Your own photos from an Immich server on the home network, as a wallpaper source. The server's address and a read-only API key live in
+// /var/lib/homehook/immich.json on the TV: typed in Settings > Photos, or written over ssh (see docs/immich.md).
 //
 // Immich sends no CORS headers outside its dev mode, so every API call goes through curl on the TV (lib/root.ts). The picture itself is an
 // ordinary <img>/background URL with the key as a query parameter, which needs no CORS. The blurred copies the glass and the lower rows show
 // are made here, once per picture, from Immich's small thumbnail (fetched as base64, so the canvas is never tainted).
 
-import {readFile, immichRequest, immichStackIds} from './root';
+import {readFile, writeFile, immichRequest, immichServerOk, immichStackIds} from './root';
 import {readCache, writeCache} from './boot';
 import {loadConfig} from './storage';
 
@@ -20,7 +20,7 @@ export const IMMICH_SOURCES: {key: string; title: string}[] = [
 	{key: 'immich:all', title: 'All my photos'}
 ];
 
-/** The start of the Recent window (Settings > Wallpaper > Recent photos from). */
+/** The start of the Recent window (Settings > Photos > Recent photos from). */
 function recentSince (): string { return new Date(Date.now() - loadConfig().immichRecentDays * 864e5).toISOString(); }
 
 const SERVER_KEY = 'lumen-immich-server-v1';
@@ -40,6 +40,31 @@ export function loadServer (): Promise<ImmichServer | null> {
 		writeCache(SERVER_KEY, server);
 		return server;
 	}).catch(() => cachedServer());
+}
+
+/** A typed address as Lumen stores it: no trailing slash or /api, and http:// when no scheme was typed. */
+function tidyUrl (url: string): string {
+	const u = url.trim().replace(/\/+$/, '').replace(/\/api$/, '');
+	return u && !/^https?:\/\//.test(u) ? 'http://' + u : u;
+}
+
+/** Settings > Photos > Test connection: the server answers, then the key opens its albums. The tidied server and its albums, or what went wrong. */
+export function testServer (typed: ImmichServer): Promise<{server: ImmichServer; albums: {id: string; title: string}[]} | string> {
+	const server = {url: tidyUrl(typed.url), key: typed.key.trim()};
+	const ok = immichServerOk(server.url, server.key);
+	if (!server.url) return Promise.resolve('Type the server address first');
+	if (!ok.base) return Promise.resolve('The address should look like http://192.168.1.10:2283, with no path');
+	if (!server.key) return Promise.resolve('Type the API key first');
+	if (!ok.key) return Promise.resolve('That API key has characters an Immich key never has');
+	return immichRequest(server.url, server.key, '/api/server/version').then(
+		() => albums(server).then((list) => ({server, albums: list}), () => 'The server answered, but it refused the API key'),
+		() => `No answer from ${server.url}`
+	);
+}
+
+/** Writes the server to /var/lib/homehook/immich.json, where loadServer reads it, and to the cache. */
+export function saveServer (server: ImmichServer): Promise<void> {
+	return writeFile('immich.json', JSON.stringify({url: server.url, key: server.key})).then(() => { writeCache(SERVER_KEY, server); });
 }
 
 export function albums (server: ImmichServer): Promise<{id: string; title: string}[]> {

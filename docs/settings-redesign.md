@@ -1,9 +1,38 @@
 # Settings: tvOS layout
 
-Written 2026-10-17. Plan only, nothing built. Reference: Apple TV Settings (a sidebar picture on the left, a list of rows on the right,
+Written 2026-10-17. Reference: Apple TV Settings (a sidebar picture on the left, a list of rows on the right,
 each row opens a page with the same layout, Back goes up one level).
 
-## What is there now
+## Pages since 2026-10-26
+
+The page stack below is built. On 2026-10-26 the option pages were regrouped from first principles. The rule: each page is named after
+the screen it changes, and anything two screens share (the weather location, the Immich server) is set once, on a page of its own.
+
+| Row | Contents |
+|---|---|
+| Apps, Sources, Channels | grid pages, unchanged. Channels shows only with the Live TV row on |
+| Home Screen | Live TV row, Apps per row, Hide app names, Show recents indicator, Hide the dock, Dim when the dock is hidden, Date and weather, Weather widget |
+| Wallpaper | Wallpaper type, Choose wallpaper, then only the rows the type uses (Change automatically and New picture on startup for pictures and photos, Video wallpaper hours for video), Dim the wallpaper |
+| Screensaver | Screensaver (LG's, My photos or Off), Start on the home screen after, then with Immich set up: Photos, Time on each photo, Brightness, Print look, Weather widget. Off hides the rest |
+| Appearance | Appearance, Focus highlight, Reduce motion, Dock blur |
+| Photos | Server address, API key, Test connection, Recent photos from |
+| Language and Region | Language, Clock, AM/PM on the clock (not with a 24-hour clock), Weather country, Weather city |
+| System | Show system apps, Restore settings from the TV; dev builds add the frame-rate counter and Liquid glass dock |
+
+What changed from the first grouping:
+- The Screensaver page starts with one choice, LG's screensaver, My photos or Off, in place of the Use my photos switch. Off sets
+  `/var/lib/homehook/no-screensaver`, and `watch.sh` ends LG's screensaver as soon as it starts, in every app. Lumen starts none of its own.
+- Each Weather widget is one choice, Off, Small or Large, instead of a switch and a size row. The stored fields are unchanged.
+- The Weather page is gone. Date and weather moved to Home Screen, and the location to Language and Region.
+- Photos is new: the Immich server is typed and tested there (`docs/immich.md`), and Recent photos from moved there, as it changes the
+  wallpaper and the screensaver.
+- Live app list via Homebrew Channel is gone; the app list always comes from the Homebrew Channel, which installs Lumen.
+- Liquid glass dock is in dev builds only, as it is too slow on this TV. A release build loads it as off.
+- Apps, Sources and Channels stay top-level pages, as they are the places people go to change what the home screen shows (Sam's call).
+
+## The first plan (2026-10-17, built)
+
+### What was there
 
 `screens/Settings.tsx` is one screen with a top tab bar: Apps, Sources, Channels (only with Live TV), Wallpaper, Options.
 - Options (`components/OptionList.tsx`) is one flat list of 20 rows built in `app.tsx` (around line 370). Each row is tall: a title, a

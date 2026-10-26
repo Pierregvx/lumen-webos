@@ -1,9 +1,9 @@
 import {t as tr} from '../lib/i18n';
 import {ScreenBackdrop} from '../components/LowerVeil';
-import {useRef, useState} from 'preact/hooks';
+import {useEffect, useRef, useState} from 'preact/hooks';
 import {Grid} from '../components/Grid';
 import {SettingsList, type ListRow, type OptionGroup, type OptionItem} from '../components/SettingsList';
-import type {GlyphName} from '../components/Glyph';
+import {Glyph, type GlyphName} from '../components/Glyph';
 import type {TileModel} from '../components/Tile';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
@@ -43,17 +43,19 @@ interface Props {
 	onOption: (optionId: string) => void;
 	/** a value picked from an option's choices page */
 	onChoose: (optionId: string, index: number) => void;
+	/** text saved on an option's text page */
+	onText: (optionId: string, value: string) => void;
 	onClose: () => void;
 }
 
 /** The option pages, in the order the top page lists them (after the grid pages). */
 const GROUPS: {id: OptionGroup; label: string; glyph: GlyphName}[] = [
-	{id: 'wallpaper', label: 'Wallpaper', glyph: 'image'},
 	{id: 'home', label: 'Home Screen', glyph: 'house'},
+	{id: 'wallpaper', label: 'Wallpaper', glyph: 'picture'},
 	{id: 'screensaver', label: 'Screensaver', glyph: 'screensaver'},
-	{id: 'weather', label: 'Weather', glyph: 'cloud'},
 	{id: 'appearance', label: 'Appearance', glyph: 'contrast'},
-	{id: 'language', label: 'Language and Clock', glyph: 'globe'},
+	{id: 'photos', label: 'Photos', glyph: 'image'},
+	{id: 'region', label: 'Language and Region', glyph: 'globe'},
 	{id: 'system', label: 'System', glyph: 'gear'}
 ];
 const CHOOSE_WALLPAPER = 'choose-wallpaper';
@@ -63,7 +65,8 @@ type Page =
 	| {kind: 'group'; id: OptionGroup}
 	| {kind: 'grid'; tabId: string}
 	| {kind: 'wallpaper'}
-	| {kind: 'choice'; optionId: string};
+	| {kind: 'choice'; optionId: string}
+	| {kind: 'text'; optionId: string};
 
 /** A page on the stack, and the row in focus on it (kept for when Back returns to it). */
 interface Entry {
@@ -114,7 +117,7 @@ function startStack (): Entry[] {
  *  List pages: the top page, one page per option group, and a choices page for each list option.
  *  Grid pages (Apps, Sources, Channels): select mode, OK adds/removes an item; re-order mode (hold OK, or the button) shows only
  *  what's on the home screen, in order: OK picks an item up, arrows move it, OK puts it down. Hold OK or press Done to leave. */
-export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder, onOption, onChoose, onClose}: Props) {
+export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder, onOption, onChoose, onText, onClose}: Props) {
 	const [stack, setStack] = useState<Entry[]>(startStack);
 	// keys can arrive faster than renders: changes go through the latest stack, not the one this render saw
 	const latest = useRef(stack);
@@ -125,13 +128,16 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 	const [held, setHeld] = useState<Held | null>(null);
 	const [wpCat, setWpCat] = useState(0);
 	const [wpIndex, setWpIndex] = useState(0);
+	const [typed, setTyped] = useState('');
+	const field = useRef<HTMLInputElement>(null);
 
 	const top = stack[stack.length - 1];
 	const page = top.page;
 	const tab = page.kind === 'grid' ? tabs.filter((t) => t.id === page.tabId)[0] : undefined;
 	const onWallpaper = page.kind === 'wallpaper';
 	const wpName = wallpaper.categories[wpCat];
-	const wpList = wallpaper.entries.filter((e) => (wpName === 'All' ? e.key.indexOf('shuffle:') !== 0 && e.category !== 'Favorites' && e.category !== 'Video' && e.category !== 'Photos' : e.category === wpName));
+	const wpList = wallpaper.entries.filter((e) => e.category === wpName);
+	const textOption = page.kind === 'text' ? options.filter((o) => o.id === page.optionId)[0] : undefined;
 	const items = tab ? (reordering ? tab.shown : tab.items) : [];
 	const cols = LAYOUT.gridColumns;
 	const keysOf = (list: TileModel[]) => list.map((t) => t.key);
@@ -153,9 +159,10 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 
 	const groupGlyph = (id: OptionGroup) => GROUPS.filter((g) => g.id === id)[0].glyph;
 
-	/** OK on an option: a list option opens its choices page, anything else is handed on (switches flip in place) */
+	/** OK on an option: a list option opens its choices page, a text option its text page, anything else is handed on (switches flip in place) */
 	const activateOption = (o: OptionItem) => {
-		if (o.choices && o.choices.length > 0) push({kind: 'choice', optionId: o.id}, Math.max(0, o.choice || 0));
+		if (o.text) { setTyped(o.text.value); push({kind: 'text', optionId: o.id}); }
+		else if (o.choices && o.choices.length > 0) push({kind: 'choice', optionId: o.id}, Math.max(0, o.choice || 0));
 		else onOption(o.id);
 	};
 
@@ -182,7 +189,7 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 				key: o.id,
 				label: o.label,
 				value: o.valueText !== undefined ? o.valueText : o.value ? 'On' : 'Off',
-				chevron: !!(o.choices && o.choices.length)
+				chevron: !!(o.text || (o.choices && o.choices.length))
 			}));
 			const descriptions = list.map((o) => o.description);
 			// Choose wallpaper sits under Wallpaper type, since the type decides what it offers
@@ -209,10 +216,10 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 			return {
 				title: o.label,
 				glyph: groupGlyph(o.group),
-				rows: o.choices.map((c, i): ListRow => ({key: String(i), label: c, ticked: i === o.choice})),
+				rows: o.choices.map((c, i): ListRow => ({key: String(i), label: c, ticked: o.picks ? o.picks.indexOf(i) >= 0 : i === o.choice})),
 				descriptions: o.choices.map(() => o.description),
 				ticks: true,
-				activate: (i) => { onChoose(o.id, i); pop(); }
+				activate: (i) => { onChoose(o.id, i); if (!o.picks) pop(); }
 			};
 		}
 		return null;
@@ -257,6 +264,7 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 
 	const onPress = () => {
 		if (!current()) return;
+		if (textOption) { onText(textOption.id, field.current ? field.current.value : typed); pop(); return; }
 		if (list) { list.activate(latest.current[latest.current.length - 1].focus); return; }
 		if (zone === 'button') { setMode(!reordering); return; }
 		if (zone === 'chips') { if (wpList.length > 0) setZone('content'); return; }
@@ -281,6 +289,8 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 		}
 
 		if (!current()) return true;
+
+		if (textOption) return false;              // the arrows move the caret in the text field
 
 		if (list) {
 			const at = latest.current[latest.current.length - 1].focus;
@@ -330,6 +340,40 @@ export function Settings ({tabs, wallpaper, options, active, onToggle, onReorder
 	useKeys(handleKey, active);
 
 	const depth = stack.length;
+
+	// a text page: the field takes focus, which brings up the TV's keyboard (verify)
+	useEffect(() => { if (textOption && field.current) field.current.focus(); }, [page]);
+
+	if (textOption && textOption.text) {
+		return (
+			<div class="screen screen--settings">
+				<ScreenBackdrop />
+				<div class="settings settings--list" key={depth}>
+					<div class="slist">
+						<h1 class="slist__title">{tr(textOption.label)}</h1>
+						<div class="slist__side">
+							<div class="slist__icon"><Glyph name={groupGlyph(textOption.group)} /></div>
+							<p class="slist__description">{textOption.description}</p>
+						</div>
+						<div class="slist__view">
+							<input
+								ref={field}
+								class="slist__input"
+								type="text"
+								value={typed}
+								placeholder={textOption.text.placeholder}
+								autocomplete="off"
+								autocapitalize="off"
+								spellcheck={false}
+								onInput={(e) => setTyped((e.target as HTMLInputElement).value)}
+							/>
+							<p class="slist__note">{tr('OK saves · Back cancels')}</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		);
+	}
 
 	if (list) {
 		return (
