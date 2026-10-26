@@ -30,7 +30,7 @@ The agent installs each change on the TV over SSH (`npm run deploy:home`), so "v
 ### Verify on the TV (built, not yet seen working)
 
 Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or later).
-- [ ] Weather widget (verify, branch `ccr-72509a87-7xq7zy`; checked in the preview only, not live over DevTools): Settings > Home and Settings > Screensaver each have Show weather widget, and when on, Weather widget size (Small or Large). Small is the next 6 hours (icon, temperature, time, and a slim bar under each filled by the chance of rain); Large is the weather now with today's high and low and when rain starts, then the next 8 hours over a chance-of-rain chart. No glass: plain text like the clock, and on the home screen a soft dark shade behind it (`.homecast::before`). Home: above the dock on the left, its bottom on the picture caption's line; it fades when the rows come up or the dock hides. Screensaver with Small: centred between the clock and the date, bottom on the date's line. Screensaver with Large: the date moves under the clock on the left and the widget takes the bottom right; the weather line over the date goes, as the widget shows it (at home, Large hides the line under the clock too). The forecast comes in the same open-meteo call as before (cache key now v4, so one fresh read on first launch). The screensaver's bottom shade is taller (520px) and a little darker at the bottom (0.56, was 0.42), eased so it has no visible edge. Under it, a 2.5px live blur of the same band (`.ambient__blur`) fades in 6 s after the screensaver opens, so the opening slide and first photo run without it. Check: the photo's slow zoom (7% over each photo's time, `ambient-zoom`) and the crossfade stay smooth once the blur is in; if not, drop the blur or make it a pre-blurred copy. Also check: it reads over a bright picture, Large still fits beside a 12-hour clock with AM/PM, and the hours move on as time passes.
+- [ ] Weather widget (verify, branch `ccr-72509a87-7xq7zy`; checked in the preview only, not live over DevTools): Settings > Home and Settings > Screensaver each have Show weather widget, and when on, Weather widget size (Small or Large). Small is the next 6 hours (icon, temperature, time, and a slim bar under each filled by the chance of rain); Large is the weather now with today's high and low and when rain starts, then the next 8 hours over a chance-of-rain chart. No glass: plain text like the clock, and on the home screen a soft dark shade behind it (`.homecast::before`). Home: above the dock on the left, its bottom on the picture caption's line; it fades when the rows come up or the dock hides. Screensaver with Small: centred between the clock and the date, bottom on the date's line. Screensaver with Large: the date moves under the clock on the left and the widget takes the bottom right; the weather line over the date goes, as the widget shows it (at home, Large hides the line under the clock too). The forecast comes in the same open-meteo call as before (cache key now v4, so one fresh read on first launch). The screensaver's bottom shade is taller (520px) and a little darker at the bottom (0.56, was 0.42), eased so it has no visible edge. Under it, a 2.5px live blur of the same band (`.ambient__blur`) fades in 1 s after the screensaver opens (was 6 s), just after the opening slide and the first photo's fade. Check: the photo's slow zoom (7% over each photo's time, `ambient-zoom`) and the crossfade stay smooth once the blur is in; if not, drop the blur. Also check: it reads over a bright picture, Large still fits beside a 12-hour clock with AM/PM, and the hours move on as time passes.
 - [ ] Edit mode (verify, branch `home/edit-mode`; checked in the preview): hold OK on an app and it lifts and wobbles. Left and Right
       move it one place, Up and Down a whole row, OK puts it down. Hold OK again while it is lifted: a menu of frosted pills, like the
       Inputs list, rises above the app (held inside the screen's edges, under the app if there is no room above). It offers Uninstall App
@@ -55,9 +55,9 @@ Update Lumen in the Homebrew Channel first (dev build from commit 8e2bd15 or lat
       Hide the dock is on): with the dock away, a black layer at 45% fades in over the wallpaper, and fades out when the dock comes back.
 - [ ] App Store in Settings > Apps (verify, branch `home/wallpaper-dim`; GitHub issue #1, item 6): LG's store (`com.webos.app.discovery`,
       LG's title "Apps") is no longer hidden. It shows as "App Store", with the TV's icon from the Homebrew list, and opens the store.
-- [ ] Down and Up at about 40 fps (verify after the next build; measured live 2026-10-23, in source, `docs/down-up-lag-review.md`): the backdrop behind the lower rows is a canvas (`components/LowerVeil.tsx`) and looks as before, with night dimming too; the bar and first grid row tiles keep a layer each. Up slides in 340 ms, Down in 276 ms. The grid's focused tile grows 1.14x. Check that the backdrop changes with the wallpaper, and that a Down within 4 s of coming back from an app still shows the backdrop (`screen--plainglass` is no longer set under Live blur, so the `settled` rule now also checks `screen--lower`).
+- [ ] Down and Up at about 40 fps (verify after the next build; measured live 2026-10-23, in source, `docs/down-up-lag-review.md`): the backdrop behind the lower rows is a canvas (`components/LowerVeil.tsx`) and looks as before, with night dimming too; the bar and first grid row tiles keep a layer each. Up slides in 340 ms, Down in 276 ms. The grid's focused tile grows 1.14x. Check that the backdrop changes with the wallpaper, and that a Down within 4 s of coming back from an app still shows the backdrop (the `settled` rule also checks `screen--lower`).
 - [ ] Settings and Guide backdrop, Guide rows, Back from the grid (verify after the next build; tried live 2026-10-23, in source): Settings and the Guide draw the blurred picture as a canvas (`ScreenBackdrop`, `lib/blurCanvas.ts`) and look as before; each Guide row has its own layer. Back in the grid returns to the glass bar, on the app it left from.
-- [ ] Settings > Appearance > Dock blur replaces Live blur (verify after the next build; tried live 2026-10-23): off by default, the glass bar keeps its look with no blur; on, it blurs 2px with saturation, and left and right are a little slower. Live blur is now always on underneath, so the pre-blurred copy for the glass is no longer a choice.
+- [ ] Settings > Appearance > Dock blur replaces Live blur (verify after the next build; tried live 2026-10-23): off by default, the glass bar keeps its look with no blur; on, it blurs 2px with saturation, and left and right are a little slower. Live blur is now always on underneath.
 - [ ] Settings > Home > Show recents indicator (verify after the next build): on by default; off hides the open-app dots.
 - [x] Running dot (seen 2026-10-22; dots match the open apps, checked over DevTools, and Sam says it looks fine): a small white dot sits above each app that is open in the background, inside the glass, and rises with the app when it has focus. It is read when Lumen comes to the front and again 5 s later. A folder has a dot when an app inside it is open. Apps the TV opens itself in the background get a dot too (YouTube no longer opens at start-up: its preload is off).
 - [ ] Glass sheen and focus lift (verify, branch `home/dock-names`; seen live over DevTools, now in source): the glass bar's rim has a faint blue fringe top left and a weaker pink one bottom right. A highlight on the bar's top edge sits over the focused app, slides with focus, stops short of the rounded ends, and fades when focus leaves the bar. The glass bar, Control Center and Inputs blur 3px; the top buttons stay at 2px. A focused app lifts 7.5px as it grows (it was 3px), on the bar and the grid, and its name rises with it.
@@ -270,7 +270,7 @@ showing `splash.png` until the first frame), and the live blur test is settled.
 - [x] Cold start: the last launch's apps, inputs, Recent row, weather, clock format and wallpaper are drawn at once (lib/boot.ts), the TV is
       asked again 400 ms after the first frame. Accepted on the TV.
 - [x] Live blur: the glass bar and top buttons blur live (`backdrop-filter`) and look right; a live full-screen backdrop was too slow, so the
-      lower rows and Settings keep the pre-blurred copy. Now the default (Settings > Options > Live blur, on).
+      lower rows and Settings keep a blurred copy of the wallpaper as their backdrop. Live blur is now always on.
 - [ ] ~~Baseline numbers with DevTools~~: dropped, not needed for now.
 - [ ] Cloud wallpaper at cold start (shuffle or a fixed cloud picture): the next launch's picture is chosen and downloaded 8 s after the
       current one is up, stored on the TV in IndexedDB (lib/wpstore.ts), and its strong blur (about 7 KB, a data: URL) is put in the boot
@@ -280,8 +280,7 @@ showing `splash.png` until the first frame), and the live blur test is settled.
 
 ### Lower rows transition (Down from the dock to the blurred backdrop)
 Done so far (commit 167253b, dev 1.0.9003): the rows slide with `transform` instead of `top`; the blurred backdrop is a permanent
-`.lowerveil` layer that only fades; the glass shows a plain tint (`.screen--plainglass`) while lower and for 300 ms after, instead of the
-fixed-position wallpaper copy; the lower rows stay painted at opacity 0. Going down is better on the TV.
+`.lowerveil` layer that only fades; the lower rows stay painted at opacity 0. Going down is better on the TV.
 Tuned live with Sam 2026-10-22, in source, not built yet:
 - Live blur only on the focused top button, Control Center or Inputs control (the rest a plain tint). Sam: snappier.
 - Sound and Picture lists open and close 15% quicker (7 choices); Theme and Clock as before. Sam: right.
@@ -292,8 +291,8 @@ Tuned live with Sam 2026-10-22, in source, not built yet:
 
 Still wrong, seen on the TV:
 - [ ] Frame rate (measured 2026-10-22, `docs/frame-rate.md`): every focus move runs at about 22-25 fps, because each live blur adds about
-      2 ms of GPU draw to every frame and the home screen has four. With no live blur the same move runs at about 50 fps. Next: decide
-      on static glass (the pre-blurred copy with a scroll offset, rastered once) in place of Live blur.
+      2 ms of GPU draw to every frame and the home screen has four. With no live blur the same move runs at about 50 fps. Since then only the
+      focused control blurs live, and the glass bar not at all.
 - [ ] Next (Sam, 2026-10-22): draw the lower rows one row at a time, not all at once 3.5 s after launch (`docs/startup-perf.md`, Still open).
 - [ ] Control Center: the move from a button to its sub-menu is laggy (about 16 fps open, 20 fps close). Measured on the TV 2026-10-22 with
       Live blur on. `settled` makes no difference, and nor does blur 2px against 3px. The GPU draws each frame in 31 ms on average (up to
@@ -305,18 +304,10 @@ Still wrong, seen on the TV:
       the list instead of seven. Catch (Sam): a blur switched off at the start of the fade shows, so the switch must wait until a control
       is nearly faded out, or crossfade. Sam also feels the open was smoother before; no Control Center commit since 2026-10-19, so compare
       against an older build if the fix is not enough.
-- Note 2026-10-22: the two items below predate Live blur. With it on, the glass is a `backdrop-filter` and `--wp-blur` is empty, so there
-  is no fixed picture to switch back to. They apply only with Live blur off.
-- [ ] Coming back up is now noticeably laggy. Likely cause: after the 300 ms the glass switches back to the fixed-position picture, so
-      every glass shape repaints at once, and the lower rows fading out may still repaint. Trace it on the TV before changing anything.
-- [ ] The backgrounds don't change together: the glass flips to a plain tint at once while the backdrop fades over 220 ms (and flips
-      back 300 ms after the backdrop has gone). Options: crossfade the two glass looks as two stacked layers (opacity only); or give the
-      glass a fixed-offset `scroll` background (as `.panel` already does) so it never needs `background-attachment: fixed` and can move
-      with the rows; or drop the picture from the dock glass entirely and use a tint everywhere.
 
 Settings > Options > Live blur (test), 2026-10-15. First version (every glass shape and the full-screen lower backdrop as `backdrop-filter`)
 on the TV: the glass bar looked much better, but moving between apps on the lower rows lagged. Now a hybrid: the glass bar and top buttons
-are live blurs (no light copy loaded), the full-screen backdrops (lower rows, Settings) are the pre-blurred `-bg` copy again. **(verify)**
+are live blurs, the full-screen backdrops (lower rows, Settings) are the blurred `-bg` copy of the wallpaper again. **(verify)**
 smoothness on the lower rows, and with the video wallpaper. If it is still bad: go back to the transition from before 167253b and try a
 different approach.
 

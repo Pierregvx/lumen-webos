@@ -5,14 +5,14 @@
 // Cold start with a cloud picture: the picture the next launch will show is chosen and downloaded while Lumen is
 // idle (lib/wpstore.ts keeps it on the TV), and its strongly blurred copy (a few KB) goes into the boot record, so index.html paints that
 // blur before the script has loaded. The app then draws, and the sharp picture, read from the TV rather than the internet, fades in over it.
-// Immich (immich:<source>): the same, except that the sharp picture comes from the Immich server on the home network and the blurred copies
-// are made on the TV from its thumbnail (lib/immich.ts). Two portrait photos show side by side as one picture: their URLs travel as one
+// Immich (immich:<source>): the same, except that the sharp picture comes from the Immich server on the home network and the blurred copy
+// is made on the TV from its thumbnail (lib/immich.ts). Two portrait photos show side by side as one picture: their URLs travel as one
 // src joined by PAIR_SEP.
 
 import {LOCAL_WALLPAPERS, WALLPAPERS, cloudUrl} from '../config/wallpapers';
 import {BOOT_WALLPAPER_KEY, readCache, writeCache, type BootWallpaper} from './boot';
 import {blobToDataUrl, fetchBlob, getPics, keepOnly, putPics, type Pics} from './wpstore';
-import {blurredCopies, cachedServer, loadServer, nextAsset, picturePosition, previewUrls} from './immich';
+import {blurredCopy, cachedServer, loadServer, nextAsset, picturePosition, previewUrls} from './immich';
 import {bootMark} from './log';
 
 const HTML_CLASS = 'wp-image';
@@ -87,47 +87,30 @@ function candidates (sel: string): Candidate[] {
 	return ([{src: resized(url, 1920), id, key, caption: cap}, {src: url, id, key, caption: cap}] as Candidate[]).concat(fallback);
 }
 
-/** The light blurred copy the glass shapes show: bundled defaults have a -blur.jpg beside them; cloud pictures get one from the resizer. */
-function lightFor (shown: string): string | undefined {
-	if (shown.indexOf('wallpapers/default-') === 0) return new URL(shown.replace(/\.jpg$/, '-blur.jpg'), location.href).href;
-	if (shown.indexOf(PROXY) === 0) return shown.replace(/w=\d+&h=\d+/, 'w=960&h=540').replace(/q=\d+/, 'q=80') + '&blur=5';
+/** The small, strongly blurred copy shown full-screen behind the lower rows, Settings and the Guide (a full-screen live blur there made
+ *  moving between apps lag on the TV): bundled defaults have a -bg.jpg beside them; cloud pictures get one from the resizer. */
+function strongFor (shown: string): string | undefined {
+	if (shown.indexOf('wallpapers/default-') === 0) return new URL(shown.replace(/\.jpg$/, '-bg.jpg'), location.href).href;
+	if (shown.indexOf(PROXY) === 0) return shown.replace(/w=\d+&h=\d+/, 'w=480&h=270').replace(/q=\d+/, 'q=80') + '&blur=18';
 	return undefined;
-}
-/** The strong, smaller blurred copy shown behind the lower rows. */
-function strongFor (light: string): string {
-	return light.replace(/-blur\.jpg$/, '-bg.jpg').replace('w=960&h=540', 'w=480&h=270').replace(/blur=\d+/, 'blur=18');
-}
-
-/** Settings > Live blur: the glass shapes blur what is behind them (backdrop-filter), so the light copy (--wp-blur) is not loaded. The strong
- *  copy (--wp-bg) still is: a full-screen live blur behind the lower rows made moving between apps lag on the TV. */
-let liveBlur = false;
-export function setLiveBlur (on: boolean): void {
-	if (on === liveBlur) return;
-	liveBlur = on;
-	setBlur(shown);
 }
 
 /** Object URLs of the stored copies of the picture on screen (cloud pictures read from the TV), in place of the resizer's URLs. */
-let local: {full: string; light: string; strong: string} | null = null;
-function useLocal (pics: Pics | {full: string; light: string; strong: string} | null): void {
-	if (local) [local.full, local.light, local.strong].forEach((u) => { if (u.indexOf('blob:') === 0) URL.revokeObjectURL(u); });
+let local: {full: string; strong: string} | null = null;
+function useLocal (pics: Pics | {full: string; strong: string} | null): void {
+	if (local) [local.full, local.strong].forEach((u) => { if (u.indexOf('blob:') === 0) URL.revokeObjectURL(u); });
 	if (!pics) { local = null; return; }
 	const url = (v: Blob | string) => typeof v === 'string' ? v : URL.createObjectURL(v);
-	local = {full: url(pics.full), light: url(pics.light), strong: url(pics.strong)};
+	local = {full: url(pics.full), strong: url(pics.strong)};
 }
 
 function setBlur (shown: string | null): void {
 	const style = document.documentElement.style;
-	const light = local ? local.light : shown ? lightFor(shown) : undefined;
-	if (!light) { style.removeProperty('--wp-blur'); style.removeProperty('--wp-bg'); return; }
-	const load = (name: string, src: string) => {
-		const probe = new Image();
-		probe.onload = () => { style.setProperty(name, `url("${src}")`); saveBoot(); bootMark(name.slice(2) + '-set'); };
-		probe.src = src;
-	};
-	if (liveBlur) style.removeProperty('--wp-blur');
-	else load('--wp-blur', local ? local.light : light);
-	load('--wp-bg', local ? local.strong : strongFor(light));
+	const strong = local ? local.strong : shown ? strongFor(shown) : undefined;
+	if (!strong) { style.removeProperty('--wp-bg'); return; }
+	const probe = new Image();
+	probe.onload = () => { style.setProperty('--wp-bg', `url("${strong}")`); saveBoot(); bootMark('wp-bg-set'); };
+	probe.src = strong;
 }
 
 let element: HTMLElement | null = null;
@@ -143,7 +126,7 @@ function saveBoot (): void {
 	if (!shown || released || !currentSel) return;
 	if (currentSel.indexOf('local:') !== 0) return;      // cloud choices are written by prepareNext
 	const style = document.documentElement.style;
-	const boot: BootWallpaper = {sel: currentSel, url: shown, blur: style.getPropertyValue('--wp-blur') || undefined, bg: style.getPropertyValue('--wp-bg') || undefined};
+	const boot: BootWallpaper = {sel: currentSel, url: shown, bg: style.getPropertyValue('--wp-bg') || undefined};
 	writeCache(BOOT_WALLPAPER_KEY, boot);
 }
 
@@ -162,20 +145,20 @@ function prepareNext (sel: string): void {
 		// nothing picked: the next launch opens on the default picture, as this one does
 		const next = picks.length === 0 ? 'local:0' : newOnLaunch && others.length > 0 ? randomOf(others) : shownKey;
 		if (next.indexOf('local:') === 0) {
-			// a bundled picture: index.html paints it sharp, with its blurred copies beside it
+			// a bundled picture: index.html paints it sharp, with its blurred copy beside it
 			const item = LOCAL_WALLPAPERS[Number(next.slice(6))];
-			const light = item && lightFor(item.file);
-			if (light) writeCache(BOOT_WALLPAPER_KEY, {sel, next, url: item.file, blur: `url("${light}")`, bg: `url("${strongFor(light)}")`} as BootWallpaper);
+			const strong = item && strongFor(item.file);
+			if (strong) writeCache(BOOT_WALLPAPER_KEY, {sel, next, url: item.file, bg: `url("${strong}")`} as BootWallpaper);
 			return;
 		}
 		const id = next.slice(6);
 		const item = WALLPAPERS.filter((w) => w.id === id)[0];
 		if (!item) return;
 		const full = resized(cloudUrl(item), 1920);
-		const light = lightFor(full) as string;
+		const strong = strongFor(full) as string;
 		getPics(full)
-			.then((have) => have || Promise.all([fetchBlob(full), fetchBlob(light), fetchBlob(strongFor(light))])
-				.then(([f, l, s]) => { const pics = {full: f, light: l, strong: s}; return putPics(full, pics).then(() => pics); }))
+			.then((have) => have || Promise.all([fetchBlob(full), fetchBlob(strong)])
+				.then(([f, s]) => { const pics = {full: f, strong: s}; return putPics(full, pics).then(() => pics); }))
 			.then((pics) => blobToDataUrl(pics.strong))
 			.then((bg) => {
 				if (sel !== currentSel) return;
@@ -188,26 +171,26 @@ function prepareNext (sel: string): void {
 	}, PREPARE_DELAY_MS);
 }
 
-/** Immich: the next picture is chosen now and its blurred copies made, so the next launch (or the next auto-change) paints them at once. */
+/** Immich: the next picture is chosen now and its blurred copy made, so the next launch (or the next auto-change) paints them at once. */
 function prepareImmich (sel: string): void {
 	const server = cachedServer();
 	if (!server || sel !== currentSel) return;
 	nextAsset(server, sel, shownId)
-		.then((id) => id ? blurredCopies(server, id).then((b) => ({id, b})) : null)
-		.then((r) => { if (r && sel === currentSel) writeCache(BOOT_WALLPAPER_KEY, {sel, next: r.id, bg: r.b.strong, blur: r.b.light} as BootWallpaper); })
+		.then((id) => id ? blurredCopy(server, id).then((bg) => ({id, bg})) : null)
+		.then((r) => { if (r && sel === currentSel) writeCache(BOOT_WALLPAPER_KEY, {sel, next: r.id, bg: r.bg} as BootWallpaper); })
 		.catch(() => undefined);
 }
 
-/** The Immich picture to show now: the one prepared by the last launch (its blurred copies are in the boot record), else a fresh pick. */
-function immichNow (sel: string): Promise<{id: string; full: string; light: string; strong: string} | null> {
+/** The Immich picture to show now: the one prepared by the last launch (its blurred copy is in the boot record), else a fresh pick. */
+function immichNow (sel: string): Promise<{id: string; full: string; strong: string} | null> {
 	const boot = readCache<BootWallpaper>(BOOT_WALLPAPER_KEY);
 	const server = cachedServer();
 	if (server && boot && boot.sel === sel && boot.next && boot.next !== shownId && boot.bg) {
-		return Promise.resolve({id: boot.next, full: previewUrls(server, boot.next).join(PAIR_SEP), light: boot.blur || boot.bg, strong: boot.bg});
+		return Promise.resolve({id: boot.next, full: previewUrls(server, boot.next).join(PAIR_SEP), strong: boot.bg});
 	}
 	return (server ? Promise.resolve(server) : loadServer()).then((srv) => {
 		if (!srv) return null;
-		return nextAsset(srv, sel, shownId).then((id) => id ? blurredCopies(srv, id).then((b) => ({id, full: previewUrls(srv, id).join(PAIR_SEP), light: b.light, strong: b.strong})) : null);
+		return nextAsset(srv, sel, shownId).then((id) => id ? blurredCopy(srv, id).then((strong) => ({id, full: previewUrls(srv, id).join(PAIR_SEP), strong})) : null);
 	});
 }
 
@@ -228,7 +211,6 @@ function ensureElement (): HTMLElement {
 				released = true;
 				decoded.imgs = [];
 				element.style.backgroundImage = 'none';
-				document.documentElement.style.removeProperty('--wp-blur');
 				document.documentElement.style.removeProperty('--wp-bg');
 			}, 5000);
 		} else if (released && element && shown) {

@@ -306,10 +306,10 @@ export function previewUrl (server: ImmichServer, id: string): string {
 /** The pictures to show for a pick from nextAsset: one URL, or two for a portrait pair (left, then right). */
 export function previewUrls (server: ImmichServer, pic: string): string[] { return pictureIds(pic).map((id) => previewUrl(server, id)); }
 
-/** The two blurred copies (light for the glass, strong for the lower rows and the cold-start backdrop), as data: URLs, made from the small
- *  thumbnails: blurred once on a canvas here, never per frame. A portrait pair is blurred side by side, as it is shown. */
-export function blurredCopies (server: ImmichServer, pic: string): Promise<{light: string; strong: string}> {
-	return Promise.all(pictureIds(pic).map((id) => thumbnail(server, id))).then((imgs) => ({light: blur(imgs, 960, 540, 6, 0.8), strong: blur(imgs, 480, 270, 14, 0.7)}));
+/** The blurred copy for the full-screen backdrops and the cold-start backdrop, as a data: URL, made from the small thumbnails: blurred once
+ *  on a canvas here, never per frame. A portrait pair is blurred side by side, as it is shown. */
+export function blurredCopy (server: ImmichServer, pic: string): Promise<string> {
+	return Promise.all(pictureIds(pic).map((id) => thumbnail(server, id))).then((imgs) => blur(imgs, 480, 270, 14, 0.7));
 }
 
 function thumbnail (server: ImmichServer, id: string): Promise<HTMLImageElement> {

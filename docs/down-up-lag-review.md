@@ -17,7 +17,7 @@ Tested overnight over DevTools, with no build. Each row is the median of 8 to 16
 | Item 4 only: a layer on each bar and first grid row tile | 9 | 39 | 147 | 6 | 62 | 200 | 98 |
 | Canvas, veil layer and tile layers | 15 | 23 | 37 | 12 | 29 | 62 | 98 |
 | Same, Up 340 ms, grid focus 1.14 | 14 | 24 | 36 | 12 | 29 | 56 | 101 |
-| Same, no `screen--plainglass` under Live blur | 14 | 24 | 39 | 13 | 27 | 54 | 79 |
+| Same, without the old plain-tint class | 14 | 24 | 39 | 13 | 27 | 54 | 79 |
 
 The last row is the result: from about 7 to 10 fps during the move to about 37 to 42 fps. All of it is in source, not built.
 
@@ -26,7 +26,7 @@ What caused it:
 1. The veil's picture was rastered in full 2 times on every Down and 3 times on every Up: about 80 and 120 tiles of 256 px. This happened even with the veil left at opacity 1 and never changing, so it is not the opacity 0 effect of item 1. During the moves the TV sends Chromium memory-pressure signals (`V8.MemoryPressureNotification`, level 1). WebAppMgr runs Chromium with `--force-low-end-device-mode`, `--enable-aggressive-release-policy` and `--tile-manager-low-mem-policy-bytes-limit-reduction-factor=2`, so the compositor drops tiles and rasters them again. A veil with a flat colour and no picture rastered almost nothing. The fix draws the 480 x 270 blurred copy into a canvas once, and the GPU scales it up. A canvas is a texture, not tiles. It looks the same in screenshots (`components/LowerVeil.tsx`).
 2. The bar's track and the grid rows were rastered again on each move, because the focused tile changes in them. A permanent layer on each tile in the bar and the first grid row stops that. The first test (`docs/frame-rate.md`) found no frame gain, because the veil hid it. The focused tile is as sharp as before in screenshots.
 3. `will-change: opacity` on the veil keeps it on its own layer. Without it, at the end of each fade the veil joins the vignette layer, and that full-screen layer rasters again.
-4. Under Live blur, `screen--plainglass` changes nothing visible but costs a full restyle. Skipping it cuts Up's style work from about 100 ms to about 80 ms. Down does not change.
+4. Under Live blur, the old plain-tint class (`screen--plainglass`, now removed) changed nothing visible but cost a full restyle. Skipping it cut Up's style work from about 100 ms to about 80 ms. Down does not change.
 
 What did not help: opacity 0.01 (item 1), no transitions on labels and dots (item 3), layers on the row viewports, a flat 2D focus transform (item 9), and no background colour on the canvas veil. Item 7 needs nothing: the CPUs already run the `performance` governor at a fixed 1 GHz, and the GPU has no clock controls in sysfs. Item 6 (720p) needs a build, so it was not tried.
 
@@ -69,16 +69,13 @@ Fix if it holds: rest at 0.01 instead of 0 for anything that fades back in durin
 
 ## 2. The 330 ms before the first frame: main-thread work on Down
 
-Mechanism. The key handler calls `render()`, which re-renders the whole `Home` tree: every `Row`, every `Tile`, every `ChannelTile`, because nothing is memoised and each row gets new callback closures each render. Then the class change on `.screen` (`screen--lower`, `screen--plainglass`) invalidates style for the whole subtree, because selectors such as `.screen--plainglass .tile__box` and `.screen--lower .rows > .row` hang off it. Then `--lower-shift` is written on `.rows`; a custom property is inherited, so every descendant is recalculated again. Then the `useLayoutEffect` reads `offsetTop` on every render, which forces a synchronous layout. Then paint, commit, and the raster from item 1. The 16:21 trace measured "about 190 ms of style, layout, paint and commit before the first frame" but did not split script from style.
+Mechanism. The key handler calls `render()`, which re-renders the whole `Home` tree: every `Row`, every `Tile`, every `ChannelTile`, because nothing is memoised and each row gets new callback closures each render. Then the class change on `.screen` (`screen--lower`) invalidates style for the whole subtree, because selectors such as `.screen--lower .rows > .row` hang off it. Then `--lower-shift` is written on `.rows`; a custom property is inherited, so every descendant is recalculated again. Then the `useLayoutEffect` reads `offsetTop` on every render, which forces a synchronous layout. Then paint, commit, and the raster from item 1. The 16:21 trace measured "about 190 ms of style, layout, paint and commit before the first frame" but did not split script from style.
 
-Two parts of this are pure waste under Live blur:
+Two parts of this were pure waste under Live blur: the plain-tint class on `.screen`, and a CSS variable for the glass's old wallpaper copy. Both are now removed from the code, with the copy itself.
 
-- `.screen--plainglass` changes nothing visible when `html.liveblur` is on: its `--wp-blur` is overridden by `html.liveblur * { --wp-blur: … !important }`, and the glass already has `background-attachment: scroll !important`. It still costs a full subtree style recalc on Down, on Up, and a third time 300 ms after Up when `settling` clears, right when the next key may arrive.
-- `.screen.screen--lower { --wp-blur: inherit }` is overridden the same way.
+Test: trace Down with `devtools.timeline` and `disabled-by-default-devtools.timeline` and read `FunctionCall` (the handler and Preact), `UpdateLayoutTree` (element count) and `Layout` for the key. `walk-report.mjs` already prints `key script ms` and `style+layout ms` per segment, so one `vert` walk gives the split.
 
-Test: trace Down with `devtools.timeline` and `disabled-by-default-devtools.timeline` and read `FunctionCall` (the handler and Preact), `UpdateLayoutTree` (element count) and `Layout` for the key. `walk-report.mjs` already prints `key script ms` and `style+layout ms` per segment, so one `vert` walk gives the split. Then, live, skip `screen--plainglass` under liveblur (`eval` can patch the class toggle, or inject a rule that neutralises its selectors) and compare `key→screen`.
-
-Fix: memoise `Row` and `Tile` so only the two rows whose focus changed re-render; do not set `screen--plainglass` or `--wp-blur` when `html.liveblur` is on; move the lower-state hooks for `.status`, `.topbar` and the rows onto those elements (or `.rows`) so the state class does not sit on `.screen`; write the shift as a transform on `.rows` rather than an inherited custom property; cache the row geometry so the layout effect reads nothing on a plain focus move.
+Fix: memoise `Row` and `Tile` so only the two rows whose focus changed re-render; move the lower-state hooks for `.status`, `.topbar` and the rows onto those elements (or `.rows`) so the state class does not sit on `.screen`; write the shift as a transform on `.rows` rather than an inherited custom property; cache the row geometry so the layout effect reads nothing on a plain focus move.
 
 ## 3. Transitions on elements with no permanent layer, and main-thread transitions
 

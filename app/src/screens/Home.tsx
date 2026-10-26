@@ -486,17 +486,6 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 	const rowIndex = clamp(n.rowIndex, 0, Math.max(0, rows.length - 1));
 	// the grid stays open under the hold-OK menu of an app in it
 	const lower = (n.zone === 'rows' || (n.zone === 'ctx' && n.ctxFrom === 'rows')) && rowIndex >= 1;
-	// the glass stays a plain tint until the rows have slid back (see .screen--plainglass in global.css); Live blur has no picture to swap, so it skips the class and its full restyle
-	const [settling, setSettling] = useState(false);
-	const wasLower = useRef(false);
-	useEffect(() => {
-		const leaving = wasLower.current && !lower;
-		wasLower.current = lower;
-		if (!leaving) return;
-		setSettling(true);
-		const t = setTimeout(() => setSettling(false), 300);
-		return () => clearTimeout(t);
-	}, [lower]);
 	// going down into the grid slides everything up until the glass bar is near the top of the screen with the grid under it, as on tvOS;
 	// a focused row lower than GRID_BOTTOM scrolls the grid on
 	const rowsRef = useRef<HTMLDivElement>(null);
@@ -516,7 +505,7 @@ export function Home ({rows, topItems, menuItems, inputs, active, onActivate, sh
 	const topPointer = (i: number) => () => { if (!overlay && realPointer.current) { n.mode = 'pointer'; n.engaged = true; n.zone = 'top'; n.topIndex = i; render(); } };
 	const focusedTop = (i: number) => n.engaged && n.zone === 'top' && i === n.topIndex;
 	return (
-		<div class={`screen${active ? '' : ' screen--inactive'}${lower ? ' screen--lower' : ''}${(lower || settling) && !document.documentElement.classList.contains('liveblur') ? ' screen--plainglass' : ''}${n.moving ? ' screen--moving' : ''}${n.dockHidden ? ' screen--dockhidden' : ''}${dockDim ? ' screen--dockdim' : ''}`}>
+		<div class={`screen${active ? '' : ' screen--inactive'}${lower ? ' screen--lower' : ''}${n.moving ? ' screen--moving' : ''}${n.dockHidden ? ' screen--dockhidden' : ''}${dockDim ? ' screen--dockdim' : ''}`}>
 			<div class="dockdim" />
 			<LowerVeil />
 			<Status weather={weatherLine ? weather : null} showPeriod={showPeriod} />

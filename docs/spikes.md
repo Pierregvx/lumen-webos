@@ -159,6 +159,8 @@ The plan and the measure are in `docs/keep-alive.md`. Each run: reboot, wait 2 m
 - `com.webos.app.inputcommon` is a different native QML app (Live TV banners, popups, LG's screensaver), in `/usr/palm/applications/com.webos.app.inputcommon/qml`.
 - A changed copy works: copy the file to `/tmp`, edit it, `mount --bind` it over the original, then `systemctl restart surface-manager-daemon.service`. The panel turned purple. The mount also shows in each app jail, and it is gone after a reboot.
 - The compositor reads the file only at start, so each change needs that restart. The restart blanks the screen for a few seconds and closes Lumen. To make a change permanent, the boot hook would add the mount. The compositor probably starts before the hook runs, so the hook would also restart it once (not tested).
+- 2026-10-26: Lumen's glass on the gear menu's buttons works (a sheen and rims from `LinearGradient` in `QtGraphicalEffects`, which the TV has, and a 1.08x grow on focus). Sam: looks good, needs tweaks. Five files changed; the main one is `Component/BaseControlPanelButton.qml`. LG's QML is not kept in this repo.
+- The whole screen, the gear menu included, can be captured with `luna://com.webos.service.capture/executeOneShot` (`"method":"DISPLAY"`). Opening the gear menu over SSH is not solved: `com.webos.app.quicksettings` is not an app id.
 
 ## Power-on and the Local Control Panel (2026-10-24)
 - The menu that came up after the compositor restart on 2026-10-23 is LG's Local Control Panel, `com.webos.app.tvhotkey` (native QML). It is not the service menu (`com.webos.app.factorywin`, EZ Adjust and InStart, which asks for a PIN). Launched with no `activateType`, it opens its main menu.

@@ -120,8 +120,7 @@ Most useful first:
    Decided 2026-10-22: no visible change on return. The hidden rows built (`html.away`, rows and veil hidden for 2 s) and Sam saw it at
    the TV: the screen is already drawn when Lumen returns, so rows that vanish and come back look broken, though the freeze is shorter.
    iPlayer flickers the same way as it redraws. The lag only shows if a button is pressed in the first 3.5 s, so an invisible lag is
-   better than a visible change. Any fix here must cut the GPU work without changing what is on screen (fewer layers, glass baked into the
-   wallpaper copy).
+   better than a visible change. Any fix here must cut the GPU work without changing what is on screen (fewer layers).
 2. Trim Lumen's memory footprint. Measured 2026-10-22, see "Lumen's memory" below. The drawn layers are the biggest part, and cutting
    them also shortens the return lag (item 1) with nothing changed on screen. Then the channel logos out of `localStorage`.
 3. Done 2026-10-22 (verify): Lumen at boot. When the TV booted into Live TV, nothing started Lumen, so the first Home press was a cold

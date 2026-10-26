@@ -21,7 +21,7 @@
       (function () {
         try {
           var config = JSON.parse(localStorage.getItem('launcher-config-v2') || '{}');
-          // Live blur from the first frame, or the glass first shows the heavier blurred copy; Dock blur as lib/storage.ts reads it
+          // Live blur from the first frame; Dock blur as lib/storage.ts reads it
           document.documentElement.classList.add('liveblur');
           if (config.dockBlur === true) document.documentElement.classList.add('dockblur');
           var boot = JSON.parse(localStorage.getItem('lumen-boot-wallpaper-v1') || 'null');
@@ -33,14 +33,12 @@
           root.classList.add('wp-image');
           if (boot.url) {
             // a bundled picture: sharp at once
-            if (boot.blur) root.style.setProperty('--wp-blur', boot.blur);
             if (boot.bg) root.style.setProperty('--wp-bg', boot.bg);
             document.getElementById('wpimage').style.backgroundImage = 'url("' + boot.url + '")';
           } else {
             // a cloud or Immich picture: its strong blur (a data: URL) until the sharp one fades in over it
             var bg = 'url("' + boot.bg + '")';
             root.style.setProperty('--wp-bg', bg);
-            root.style.setProperty('--wp-blur', boot.blur ? 'url("' + boot.blur + '")' : bg);
             document.getElementById('wpimage').style.backgroundImage = bg;
           }
         } catch (e) { /* no stored wallpaper: the app loads it as before */ }

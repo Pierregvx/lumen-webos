@@ -15,7 +15,7 @@ grep ' boot ' /var/lib/homehook/lumen.log | tail -3
 ```
 
 Every number is ms since the page started.
-- **Stages:** `script`, `wp-start`, `frame`, `wallpaper`, `wp-blur-set` / `wp-bg-set` (each blurred copy applied), `apps-parsed <n>`,
+- **Stages:** `script`, `wp-start`, `frame`, `wallpaper`, `wp-bg-set` (the backdrop's blurred copy applied), `apps-parsed <n>`,
   `apps-colours`, `apps`, `grid-start` / `grid` (the app grid drawn, 3.5 s after launch), `live-cache <channels> <logos> <ms>`,
   `live-drawn`, `live-read`.
 - **Details:** `iconcache <KB> <ms>` (the saved app icons parsed), `sample <app id>` (an icon colour worked out again), `sampled` and
@@ -102,7 +102,7 @@ looked at.
 
 ## Live blur and launch time (2026-10-22)
 
-Six warm relaunches on the dev build, Live blur off and on in turn, bundled still wallpaper. Off shows the pre-blurred copy (`--wp-blur`).
+Six warm relaunches on the dev build, Live blur off and on in turn, bundled still wallpaper. Live blur is now always on.
 
 | Live blur | script | wallpaper | grid | wallpaper - script | grid - script |
 |---|---|---|---|---|---|
@@ -123,8 +123,6 @@ the 1.2 s after the key (about 72 is smooth; standing still it holds about 60).
 | As built (veil and rows 3+ hidden until Down) | 41-47 |
 | Veil and rows always drawn (before the hidden-layers change) | 46-49 |
 | Veil off | 48-50 |
-| Live blur off (glass shows the fixed wallpaper copy) | 22-36 |
-| Live blur off on the glass only while down | 23-37 |
 
 - A trace of one press: about 190 ms of style, layout, paint and commit before the first frame, then frames reach the screen 60-170 ms
   apart. Each frame costs the GPU 15-27 ms to draw and 20-40 ms to swap. Four frames show during the 240 ms slide.

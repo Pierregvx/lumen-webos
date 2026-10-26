@@ -32,9 +32,8 @@ export interface BootWallpaper {
 	sel?: string;
 	/** a bundled picture's URL (a local file), painted sharp at once */
 	url?: string;
-	/** the --wp-blur and --wp-bg values (the pre-blurred copies the glass shows). For a cloud choice, bg is a data: URL of the strong blur of
+	/** the --wp-bg value (the blurred copy behind the lower rows, Settings and the Guide). For a cloud choice, a data: URL of the strong blur of
 	 *  the picture the next launch opens on, painted full-screen until the sharp one fades in. */
-	blur?: string;
 	bg?: string;
 	/** the picture the next launch shows: cloud:<id> (stored on the TV by lib/wpstore.ts) or local:N, or an Immich id */
 	next?: string;

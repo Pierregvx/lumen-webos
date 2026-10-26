@@ -1,13 +1,11 @@
 // Cloud wallpapers kept on the TV (IndexedDB). webOS throws away the HTTP cache when an app ends, and the TV ends Lumen whenever another app
 // opens, so without this every Home press downloads the picture again. The next launch's picture is fetched while Lumen is idle and stored
-// here under its full-size URL, with its two blurred copies. Any failure (no IndexedDB, quota, network) just means the network is used, as before.
+// here under its full-size URL, with its blurred copy. Any failure (no IndexedDB, quota, network) just means the network is used, as before.
 
 export interface Pics {
 	/** the picture, 1920 wide */
 	full: Blob;
-	/** the light blur the glass shows (--wp-blur) */
-	light: Blob;
-	/** the strong blur behind the lower rows (--wp-bg) */
+	/** the strong blur behind the lower rows, Settings and the Guide (--wp-bg) */
 	strong: Blob;
 }
 

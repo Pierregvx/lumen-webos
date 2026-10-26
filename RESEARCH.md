@@ -34,12 +34,13 @@ More measurements from the webOS 25 TV are in `docs/frame-rate.md`, `docs/down-u
 - LG's own table: webOS 22 = Chromium 87. 2022 entry-level TV chips have a weak GPU (Mali-T820-class on the O22 platform).
 
 ## 4. Decisions made
-1. No live blur and no SVG refraction anywhere. Glass = a pre-blurred copy of the wallpaper shown through the glass shapes
-   (background-attachment: fixed) + static rim-light shadows. Settings is a solid dark panel.
+1. The glass is a sheen over a tint with static rim-light shadows, and a light live blur only on the focused control (`docs/frame-rate.md`
+   has the costs). The full-screen backdrops behind the lower rows, Settings and the Guide are a small, strongly
+   blurred copy of the wallpaper, drawn once into a canvas: a full-screen live blur lagged.
 2. Only `transform` animates on focus; the shadow/shine appear instantly; `will-change` only on the focused tile.
 3. The clock is its own component (the home screen no longer re-renders every second).
 4. The wallpaper picker draws only the rows near the one in view, not all 233 thumbnails.
-5. Default 5 wallpapers bundled (each with a 960x540 pre-blurred copy); the 233-image library loads from the cloud on demand.
+5. Default 5 wallpapers bundled (each with a 480x270 blurred copy for the backdrops); the 233-image library loads from the cloud on demand.
 
 ## 5. Liquid Glass refraction on the webOS 25 TV (tested 2026-10-18)
 - Chromium 120 accepts `backdrop-filter: blur(10px) saturate(1.8) brightness(1.06) url(#lg)`, where `#lg` is an SVG `feImage` + `feDisplacementMap` with a convex-bezel map made once on a canvas (the kube.io method).
@@ -55,14 +56,13 @@ More measurements from the webOS 25 TV are in `docs/frame-rate.md`, `docs/down-u
   - Kept: a highlight on the bar's top edge that slides to the focused app (transform only).
   - Rejected: the same fringe on the Control Center blocks. A fixed pink there reads as a coloured edge, not a reflection, and a strong bottom-right shadow makes a pill look inset, not rounded.
   - Rejected: a fringe coloured from the blurred wallpaper under each corner (sampled once on a canvas). It did not read as a reflection, and it cannot work over video.
-  - Not tried: thickness shading and corner highlights (the same inset risk), grain, and bending the rim into the pre-blurred wallpaper copy.
+  - Not tried: thickness shading and corner highlights (the same inset risk), and grain.
 - Third round (2026-10-22), with `tools/tv/glass-lab.mjs` (sliders on the Mac that restyle the glass bar live, with an fps check), still wallpaper, focus moving along the dock:
   - Standing still, every setting holds about 60 fps. The cost only shows while something moves over the glass.
   - Any backdrop filter halves the frame rate while moving: the 3px live blur 16-24 fps, refraction with no blur 14-27 fps. Frost only (a tint, no backdrop filter) 40-47 fps.
   - Refraction strength (60 or 140) and bezel depth (14 or 40) make no clear difference. The cost is reading the backdrop at all, not the lens settings.
   - The colour fringe (3 passes) drops to 4-7 fps while moving.
   - Each layer alone, moving (3 runs each): tint, sheen and rims only 41 fps (45-47 without the focus highlight); colour boost (saturate and brightness) 33; 3px blur 25; refraction 18; refraction with the boost 19; refraction with blur and boost 15; refraction with the fringe 7. The first layer that reads the backdrop pays most of the cost.
-  - Thus the next thing to try is to bake the lens into the pre-blurred wallpaper copy once, so the glass reads nothing per frame.
 - Online, only SVG displacement or WebGL does real refraction. The static rim and highlight tricks are from https://dev.to/kevinbism/recreating-apples-liquid-glass-effect-with-pure-css-3gpl and https://dev.to/afif/border-with-gradient-and-radius-387f.
 
 ## Sources
@@ -72,5 +72,4 @@ More measurements from the webOS 25 TV are in `docs/frame-rate.md`, `docs/down-u
 - https://developer.apple.com/videos/play/wwdc2025/219/ (Meet Liquid Glass)
 - https://theplusaddons.com/blog/liquid-glass-ui/ (what CSS can and cannot reproduce)
 - https://appleinsider.com/articles/25/06/18/tvos-26-hands-on-sleek-liquid-glass-redesign-new-control-center-and-more (tvOS 26)
-- https://takazudomodular.com/pj/zcss/docs/styling/effects/backdrop-filter-and-glassmorphism/ (pre-blurred image technique)
 - https://github.com/BasThomas/tvOS-guidelines, https://github.com/ehmo/platform-design-skills (tvOS rules summarised)

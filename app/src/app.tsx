@@ -20,7 +20,7 @@ import {appTile, inputTile, pickInOrder} from './lib/tiles';
 import {TIMING} from './config/constants';
 import {LOCAL_WALLPAPERS, WALLPAPERS, WALLPAPER_CATEGORIES, cloudUrl} from './config/wallpapers';
 import {setLiquidDock} from './lib/liquidGlass';
-import {resized, setLiveBlur, setPicks, setWallpaper, shownWallpaper} from './lib/wallpaper';
+import {resized, setPicks, setWallpaper, shownWallpaper} from './lib/wallpaper';
 import {restoreLeftoverBacklight} from './lib/tvcontrols';
 import {albums as immichAlbums, cachedServer, IMMICH_SOURCES, loadServer} from './lib/immich';
 import {Ambient} from './components/Ambient';
@@ -269,8 +269,8 @@ export function App () {
 		return () => { window.clearTimeout(timer); document.removeEventListener('visibilitychange', onVisibility); root.remove('settled'); };
 	}, []);
 	useEffect(() => setFpsCounter(__LUMEN_DEV__ && config.fpsCounter), [config.fpsCounter]);
-	// the glass is always live blur now (index.html sets the class first); the old pre-blurred copy for the glass is no longer a choice
-	useEffect(() => { document.documentElement.classList.add('liveblur'); setLiveBlur(true); }, []);
+	// the glass is always live blur (index.html sets the class first)
+	useEffect(() => { document.documentElement.classList.add('liveblur'); }, []);
 	useEffect(() => { document.documentElement.classList.toggle('dockblur', config.dockBlur); }, [config.dockBlur]);
 	useEffect(() => setLiquidDock(config.liquidDock), [config.liquidDock]);
 	useEffect(() => setVideoChoice(config.videoPlaces), [config.videoPlaces]);

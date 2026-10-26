@@ -431,17 +431,13 @@ html, body {
 	z-index: 10;
 }
 
-/* ---------- lite glass: no live blur; a pre-blurred wallpaper copy (--wp-blur) shows through the shapes ---------- */
+/* ---------- glass: a sheen over a dark tint, with bright rims; the live blur is further down (html.liveblur) ---------- */
 
-:root { --glass-fallback: linear-gradient(rgba(74, 84, 106, 0.60), rgba(40, 46, 62, 0.60)); }
 .row:not(.row--dock)::before,
 .clock,
 .row--dock .tile__box,
 .wp__chip, .settings__button {
-	background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.07) 42%, rgba(255, 255, 255, 0.16) 100%), var(--wp-blur, var(--glass-fallback));
-	background-size: auto, 1920px 1080px;
-	background-attachment: scroll, fixed;
-	background-position: 0 0, var(--dev-left, 0px) var(--dev-top, 0px);
+	background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.07) 42%, rgba(255, 255, 255, 0.16) 100%);
 	background-repeat: no-repeat;
 	background-color: rgba(30, 36, 50, 0.30);
 }
@@ -464,12 +460,12 @@ html, body {
 	box-shadow: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.9), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.42), inset 0 0 14px rgba(255, 255, 255, 0.10), 0 8px 18px rgba(0, 0, 0, 0.25);
 }
 .row--dock .tile--focused .tile__box {
-	background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0.16) 55%, rgba(255, 255, 255, 0.30)), var(--wp-blur, var(--glass-fallback));
+	background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0.16) 55%, rgba(255, 255, 255, 0.30));
 }
 .wp__chip, .settings__button {
 	box-shadow: inset 2px 2px 1px -1px rgba(255, 255, 255, 0.7), inset -2px -2px 1px -1px rgba(255, 255, 255, 0.28);
 }
-.wp__chip--on { background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.14)), var(--wp-blur, var(--glass-fallback)); }
+.wp__chip--on { background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.14)); }
 .wp__chip--focused { background-image: none; background-color: #fff; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35); }
 
 /* Settings: a solid dark panel (a full-screen blur would be the single most expensive thing on this TV) */
@@ -509,19 +505,16 @@ html, body {
 .pill__label { position: absolute; top: 92px; left: 50%; transform: translateX(-50%); font-size: 22px; white-space: nowrap; opacity: 0; transition: opacity var(--motion-focus-ms) ease-out; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8); }
 .pill--focused, .pill--open { transform: scale(1.14); }
 .pill--focused .pill__label { opacity: 1; }
-.pill--focused, .pill--open { background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.20) 55%, rgba(255, 255, 255, 0.34)), var(--wp-blur, var(--glass-fallback)); }
+.pill--focused, .pill--open { background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.20) 55%, rgba(255, 255, 255, 0.34)); }
 .pill--focused svg, .pill--open svg { stroke: rgba(255, 255, 255, 0.62); }
 
 .pill, .panel {
-	background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.07) 42%, rgba(255, 255, 255, 0.16) 100%), var(--wp-blur, var(--glass-fallback));
-	background-size: auto, 1920px 1080px;
-	background-attachment: scroll, fixed;
-	background-position: 0 0, var(--dev-left, 0px) var(--dev-top, 0px);
+	background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.07) 42%, rgba(255, 255, 255, 0.16) 100%);
 	background-repeat: no-repeat;
 	background-color: rgba(30, 36, 50, 0.30);
 	box-shadow: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.9), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.42), inset 0 0 14px rgba(255, 255, 255, 0.10), 0 8px 18px rgba(0, 0, 0, 0.25);
 }
-.pill--focused, .pill--open { background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.20) 55%, rgba(255, 255, 255, 0.34)), var(--wp-blur, var(--glass-fallback)); }
+.pill--focused, .pill--open { background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.20) 55%, rgba(255, 255, 255, 0.34)); }
 
 .panel-backdrop { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.38); z-index: 19; }
 /* Control Center and Inputs float over the home screen undimmed, as on tvOS; the layer stays so a click outside closes them */
@@ -581,7 +574,7 @@ html, body {
 /* a fully solid backdrop (nothing of the home screen shows through): the blurred wallpaper copy, darkened */
 .screen.screen--settings, .wp-image .screen.screen--settings, .wp-video .screen.screen--settings {
 	background-color: #0b0e16;
-	background-image: linear-gradient(rgba(8, 10, 18, 0.50), rgba(8, 10, 18, 0.66)), var(--wp-blur, none);
+	background-image: linear-gradient(rgba(8, 10, 18, 0.50), rgba(8, 10, 18, 0.66));
 	background-size: cover;
 	background-position: center;
 	background-repeat: no-repeat;
@@ -620,14 +613,13 @@ html, body {
 .rows > .row:not(:first-child) .row__track--centered { margin-left: calc((1640px - var(--first-w, 1556px)) / 2); margin-right: 0; }
 
 .rows > .row:not(:first-child) .row__track--centered { justify-content: flex-start; padding-left: calc((1640px - var(--first-w, 1556px)) / 2); margin-left: 0; }
-.screen--lower { --wp-blur: var(--wp-bg); }
 
 
 /* the shared pill: Home and Settings icons, then the time. The selected icon gets a white circle (like a tvOS segmented control). */
 .topcap {
 	position: relative; display: flex; flex-direction: row; align-items: center; height: 58px; padding: 0 6px 0 8px; border-radius: 29px;
-	background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.07) 42%, rgba(255, 255, 255, 0.16) 100%), var(--wp-blur, var(--glass-fallback));
-	background-size: auto, 1920px 1080px; background-attachment: scroll, fixed; background-position: 0 0, var(--dev-left, 0px) var(--dev-top, 0px); background-repeat: no-repeat;
+	background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.07) 42%, rgba(255, 255, 255, 0.16) 100%);
+	background-repeat: no-repeat;
 	background-color: rgba(30, 36, 50, 0.30);
 	box-shadow: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.9), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.42), inset 0 0 14px rgba(255, 255, 255, 0.10), 0 8px 18px rgba(0, 0, 0, 0.25);
 }
@@ -641,7 +633,7 @@ html, body {
 /* ---------- the time pill is a button; its menu is a narrow glass list ---------- */
 .topcap { padding: 0 6px; transition: transform var(--motion-focus-ms) ease-out; }
 .topcap .clock { padding: 0 22px; }
-.topcap--focused, .topcap--open { transform: scale(1.06); background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.20) 55%, rgba(255, 255, 255, 0.34)), var(--wp-blur, var(--glass-fallback)); }
+.topcap--focused, .topcap--open { transform: scale(1.06); background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.20) 55%, rgba(255, 255, 255, 0.34)); }
 .topcap .pill__label { position: absolute; top: 72px; left: 50%; transform: translateX(-50%); font-size: 20px; white-space: nowrap; opacity: 0; transition: opacity var(--motion-focus-ms) ease-out; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8); }
 .topcap--focused .pill__label { opacity: 1; }
 .panel--menu { width: 440px; padding: 16px; top: 150px; }
@@ -675,18 +667,11 @@ html.wp-art #wpimage::after {
 	content: ''; position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none;
 	background: linear-gradient(rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.14)), linear-gradient(rgba(236, 228, 212, 0.09), rgba(236, 228, 212, 0.09)), radial-gradient(ellipse 85% 95% at 24% 6%, rgba(255, 244, 222, 0.07) 0%, rgba(0, 0, 0, 0) 38%, rgba(0, 0, 0, 0.36) 100%);
 }
-/* the glass and the lower backdrop show a blurred copy of the wallpaper, which has to dim with it: multiplying the copy by a grey of 55%
-   matches the picture at opacity 0.55 over black. Not over the video (night dimming only dims the still picture), not in the light look. */
-html.night:not(.light):not(.wp-video):not(.liveblur) .row:not(.row--dock)::before, html.night:not(.light):not(.wp-video):not(.liveblur) .topcap,
-html.night:not(.light):not(.wp-video):not(.liveblur) .topbar > .pill, html.night:not(.light):not(.wp-video):not(.liveblur) .panel, html.night:not(.light):not(.wp-video) .lowerveil {
+/* the lower backdrop is a blurred copy of the wallpaper, which has to dim with it: multiplying it by a grey of 55% matches the picture
+   at opacity 0.55 over black. Not over the video (night dimming only dims the still picture), not in the light look. */
+html.night:not(.light):not(.wp-video) .lowerveil {
 	background-color: rgb(140, 140, 140);
 	background-blend-mode: normal, multiply;
-}
-/* while the glass shows the plain tint (lower rows, and settling back) there is no picture to dim: keep the usual see-through tint */
-html.night:not(.light):not(.wp-video):not(.liveblur) .screen--plainglass .row:not(.row--dock)::before, html.night:not(.light):not(.wp-video):not(.liveblur) .screen--plainglass .topcap,
-html.night:not(.light):not(.wp-video):not(.liveblur) .screen--plainglass .topbar > .pill {
-	background-color: rgba(30, 36, 50, 0.30);
-	background-blend-mode: normal;
 }
 
 /* ---------- pointer ---------- */
@@ -771,11 +756,8 @@ html, body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibi
 /* ---------- icons: small square icons stay sharp on a tile of their own colour ---------- */
 .tile__image--icon { left: 50%; top: 50%; width: auto; height: 66%; max-width: 70%; transform: translate(-50%, -50%); object-fit: contain; border-radius: 16%; }
 
-/* ---------- panels: no entry animation, glass placed with a fixed offset instead of background-attachment: fixed ---------- */
+/* ---------- panels: no entry animation ---------- */
 .panel { animation: none; box-shadow: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.5), 0 10px 24px rgba(0, 0, 0, 0.3); }
-.panel { --pw: 760px; --pt: 190px; background-attachment: scroll, scroll; background-position: 0 0, calc(var(--pw) + var(--layout-edge-padding) - 1920px) calc(-1 * var(--pt)); }
-.panel--ctx { background-position: 0 0, -740px -300px; }
-.panel--folder { background-position: 0 0, -580px -250px; }
 
 /* ---------- smoother dock: no clip on the tile that scales; the rounded corners are on what is drawn ---------- */
 .tile__box { overflow: visible; }
@@ -785,15 +767,13 @@ html, body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibi
 .row:not(.row--dock) .tile--focused .tile__box::after { border-radius: inherit; }
 .tile__folder { border-radius: inherit; }
 
-/* video wallpaper playing: hide the still picture that would otherwise cover it, and give the glass a plain tinted fill (it is made from a blurred copy of the still picture, which would not match the video) */
+/* video wallpaper playing: hide the still picture that would otherwise cover it, and give the backdrop a plain tinted fill (its blurred copy of the still picture would not match the video) */
 html.wp-video #wpimage { display: none; }
-html.wp-video { --wp-blur: linear-gradient(rgba(70, 76, 96, 0.90), rgba(44, 48, 66, 0.94)) !important; --wp-bg: linear-gradient(rgba(70, 76, 96, 0.90), rgba(44, 48, 66, 0.94)) !important; }
+html.wp-video { --wp-bg: linear-gradient(rgba(70, 76, 96, 0.90), rgba(44, 48, 66, 0.94)) !important; }
 
-/* dark mode: the original blurred-wallpaper glass (the picture or video is not dimmed) */
-
-/* glass over the video: see-through with a light tint (later and more specific than the plain fills above) */
-html.wp-video { --wp-blur: linear-gradient(rgba(20, 24, 38, 0.30), rgba(20, 24, 38, 0.30)) !important; --wp-bg: linear-gradient(rgba(20, 24, 38, 0.46), rgba(20, 24, 38, 0.46)) !important; }
-html.dark.wp-video { --wp-blur: linear-gradient(rgba(8, 10, 18, 0.50), rgba(8, 10, 18, 0.50)) !important; --wp-bg: linear-gradient(rgba(8, 10, 18, 0.62), rgba(8, 10, 18, 0.62)) !important; }
+/* the backdrop over the video: see-through with a light tint (later and more specific than the plain fill above) */
+html.wp-video { --wp-bg: linear-gradient(rgba(20, 24, 38, 0.46), rgba(20, 24, 38, 0.46)) !important; }
+html.dark.wp-video { --wp-bg: linear-gradient(rgba(8, 10, 18, 0.62), rgba(8, 10, 18, 0.62)) !important; }
 
 /* the dock slides away (Hide the dock) */
 .rows { transition: top 240ms cubic-bezier(0.2, 0.7, 0.2, 1), transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1), opacity 220ms ease; }
@@ -815,14 +795,13 @@ html.light {
 	--color-text-secondary: #43465a !important;
 	--color-text-muted: #5d6072 !important;
 }
-/* light glass: the blurred wallpaper copy, lifted with a light colour (screen blend), so it reads as frosted glass with the picture showing through */
+/* light glass: a light base colour under the sheen, so it reads as frosted glass */
 html.light .row:not(.row--dock)::before, html.light .clock, html.light .row--dock .tile__box, html.light .wp__chip, html.light .settings__button,
 html.light .pill, html.light .panel, html.light .topcap {
 	background-color: rgb(120, 128, 148);
 	background-blend-mode: normal, screen;
 }
 html.light.wp-video {
-	--wp-blur: linear-gradient(rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.42)) !important;
 	--wp-bg: linear-gradient(rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.58)) !important;
 }
 /* over the video the glass is see-through: no opaque base colour, just a light tint */
@@ -840,7 +819,7 @@ html.light .status, html.light .status * { color: #fff !important; text-shadow: 
 html.light .screen.screen--settings, html.light .wp-image .screen.screen--settings, html.light .wp-video .screen.screen--settings { background: rgba(243, 244, 249, 0.97); }
 html.light .settings__hint { color: rgba(255, 255, 255, 0.85); text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5); }
 html.light .wp__chip--focused, html.light .settings__button--focused, html.light .menu__row--focused, html.light .pill--focused, html.light .topcap--focused { background-color: #14151b !important; color: #fff !important; box-shadow: 0 8px 18px rgba(20, 24, 40, 0.30); }
-html.light .panel { background-image: linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10)), var(--wp-blur) !important; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.85), 0 24px 60px rgba(20, 24, 40, 0.28); }
+html.light .panel { background-image: linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10)) !important; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.85), 0 24px 60px rgba(20, 24, 40, 0.28); }
 html.light .menu__row svg, html.light .pill svg, html.light .topcap svg { stroke: rgba(20, 22, 32, 0.72); }
 html.light .menu__row--focused svg, html.light .pill--focused svg, html.light .topcap--focused svg { stroke: #fff; }
 
@@ -856,15 +835,15 @@ html.wp-video .rows--lower { top: var(--layout-rows-top); transform: translateY(
 /* Settings lists: no mask-image fade (it costs an off-screen draw per frame) */
 .wp__viewport, .grid__viewport { -webkit-mask-image: none; mask-image: none; }
 
-/* Settings: frosted and see-through like the dock (the blurred wallpaper copy on a faded layer behind the content) */
+/* Settings: a faded layer behind the content (its picture is set further down, with the lower rows' backdrop) */
 .screen.screen--settings, .wp-image .screen.screen--settings, .wp-video .screen.screen--settings { background: transparent !important; background-image: none !important; isolation: isolate; }
 .screen--settings::before {
 	content: ''; position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: -1; pointer-events: none; opacity: 0.9; animation: none;
-	background-image: linear-gradient(rgba(10, 12, 22, 0.46), rgba(10, 12, 22, 0.58)), var(--wp-blur, none);
+	background-image: linear-gradient(rgba(10, 12, 22, 0.46), rgba(10, 12, 22, 0.58));
 	background-size: cover; background-position: center; background-repeat: no-repeat; background-color: rgb(24, 28, 40);
 }
 html.light .screen--settings::before {
-	background-image: linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10)), var(--wp-blur, none);
+	background-image: linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10));
 	background-color: rgb(120, 128, 148); background-blend-mode: normal, screen;
 }
 html.light.wp-video .screen--settings::before { background-color: transparent; background-blend-mode: normal; }
@@ -917,11 +896,8 @@ html.wp-video .screen--lower::before { background-color: transparent; background
    - the backdrop (.lowerveil) fades; it and the rows below the screen are not drawn for the first 4 s after Lumen comes back (html.settled,
      app.tsx), so a return from another app redraws no hidden layers (docs/keep-alive.md), but a later Down has them ready;
    - the rows slide with transform;
-   - while lower (and for a moment after, .screen--plainglass) the glass shows a plain tint instead of the fixed-position wallpaper copy:
-     a fixed background is repainted on every frame of movement, and a transformed ancestor would misplace it. Over the strongly
-     blurred backdrop the plain tint looks the same. */
+   - the glass is a live blur with no picture of its own, so nothing on it changes when the rows go down or come back. */
 .screen--lower::before { content: none; animation: none; }
-.screen.screen--lower { --wp-blur: inherit; }
 .lowerveil {
 	position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none;
 	opacity: 0; transition: opacity 312ms cubic-bezier(0.3, 0, 0.15, 1); will-change: opacity;
@@ -930,7 +906,7 @@ html.wp-video .screen--lower::before { background-color: transparent; background
 	background-size: auto, cover; background-position: 0 0, center; background-repeat: no-repeat;
 }
 .screen--lower .lowerveil { opacity: 1; transition: opacity 253ms cubic-bezier(0.55, 0, 0.75, 1); }
-html:not(.settled) .screen:not(.screen--plainglass):not(.screen--lower) .lowerveil, html:not(.settled) .screen:not(.screen--plainglass):not(.screen--lower) .rows > .row:nth-child(n+3) { visibility: hidden; }
+html:not(.settled) .screen:not(.screen--lower) .lowerveil, html:not(.settled) .screen:not(.screen--lower) .rows > .row:nth-child(n+3) { visibility: hidden; }
 html.wp-video .lowerveil { background-color: transparent; background-image: linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42)); }
 .screen--dockhidden .lowerveil { display: none; }
 /* the picture is drawn in a canvas (components/LowerVeil.tsx): the veil itself draws nothing, so it is one layer with no tiles */
@@ -940,11 +916,6 @@ html.wp-video .lowerveil { background-color: transparent; background-image: line
 /* both ways slowest near the dock: Down eases out of it slowly, Up eases into it long. Up is longer (340 ms against 276): Sam felt it too fast */
 .rows, html.wp-video .rows { transition: transform 340ms cubic-bezier(0.3, 0, 0.15, 1), opacity 220ms ease; }
 .rows--lower, html.wp-video .rows--lower { top: var(--layout-rows-top); transform: translateY(calc(-1 * var(--lower-shift, 300px))); transition: transform 276ms cubic-bezier(0.55, 0, 0.75, 1), opacity 220ms ease; }
-
-html:not(.wp-video) .screen--plainglass { --wp-blur: linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)); }
-html.light:not(.wp-video) .screen--plainglass { --wp-blur: linear-gradient(rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.42)); }
-.screen--plainglass .row::before, .screen--plainglass .tile__box, .screen--plainglass .clock,
-.screen--plainglass .pill, .screen--plainglass .topcap { background-attachment: scroll !important; }
 
 /* the lower rows stay painted (opacity 0 rather than visibility: hidden), so showing them is a fade, not a first paint of every tile */
 .rows > .row:not(:first-child) { will-change: opacity, transform; }
@@ -959,11 +930,9 @@ html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after 
 html.hide-names .rows .tile__label, html.hide-names .panel--folder .tile__label { display: none; }
 html.hide-recents .tile__dot { display: none; }
 
-/* ---------- Settings > Live blur (test): the glass shapes blur what is behind them (backdrop-filter) ----------
-   Hybrid: the glass bar and the top buttons are live blurs, so they never change picture when the rows go down or come back. The full-screen
-   backdrops (behind the lower rows, behind Settings) stay the pre-blurred copy (--wp-bg): a full-screen live blur made moving between apps lag
-   on the TV. The light copy (--wp-blur) is not loaded (lib/wallpaper.ts) and is emptied here. */
-html.liveblur, html.liveblur * { --wp-blur: linear-gradient(transparent, transparent) !important; }
+/* ---------- live blur: the glass shapes blur what is behind them (backdrop-filter) ----------
+   The full-screen backdrops (behind the lower rows, behind Settings) are a blurred copy of the wallpaper (--wp-bg) instead: a full-screen
+   live blur made moving between apps lag on the TV. */
 /* closer to tvOS 26 Liquid Glass: a very light blur so the picture reads through, extra colour and a dark tint; the rims do the rest */
 html.liveblur { --live-glass: blur(2px) saturate(1.5) brightness(1.1); --live-tint: rgba(0, 0, 0, 0.3); }
 /* Control Center (Inputs too) blurs a little more; the glass bar and the top buttons stay at 2px */
@@ -1100,7 +1069,7 @@ html.focus-strong .rows > .row:first-child { --motion-focus-scale: 1.1; }
 /* the clock, the top buttons and the panels line up with the glass bar's outer tiles */
 .screen > .pill.status { left: var(--layout-rows-edge); }
 .topbar { right: var(--layout-rows-edge); }
-.panel { right: var(--layout-rows-edge); background-position: 0 0, calc(var(--pw) + var(--layout-rows-edge) - 1920px) calc(-1 * var(--pt)); }
+.panel { right: var(--layout-rows-edge); }
 
 /* ---------- glass bar: 40px of glass round the tiles (it was 24), sitting low so the grid peeks in just under it ----------
    The bar's focused tile is named under the icon, inside the glass; the grid's are named under the tile. The grid rows are a little further apart
@@ -1170,8 +1139,8 @@ html.light .cc__mod--focused .cc__inputicon { filter: brightness(0) invert(1); }
 .cc__row > * + * { margin-left: var(--cc-gap); }
 .cc__mod {
 	position: relative; flex: 0 0 auto; height: var(--cc-u); border-radius: calc(var(--cc-u) / 2); box-sizing: border-box; color: #fff;
-	background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.07) 42%, rgba(255, 255, 255, 0.16) 100%), var(--wp-blur, var(--glass-fallback));
-	background-size: auto, 1920px 1080px; background-attachment: scroll, fixed; background-position: 0 0, var(--dev-left, 0px) var(--dev-top, 0px); background-repeat: no-repeat;
+	background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.07) 42%, rgba(255, 255, 255, 0.16) 100%);
+	background-repeat: no-repeat;
 	background-color: rgba(30, 36, 50, 0.30);
 	box-shadow: inset 2px 2px 1.5px -1px rgba(255, 255, 255, 0.9), inset -2px -2px 1.5px -1px rgba(255, 255, 255, 0.42), inset 0 0 14px rgba(255, 255, 255, 0.10), 0 8px 18px rgba(0, 0, 0, 0.25);
 	text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
@@ -1179,10 +1148,10 @@ html.light .cc__mod--focused .cc__inputicon { filter: brightness(0) invert(1); }
 }
 /* a layer each, kept: the open and close fades would otherwise make and drop a layer per control, and each drop redraws its shadow */
 .panel--cc .cc__mod, .panel--cc .cc__caption { will-change: transform, opacity; }
-.cc__mod--focused { transform: scale(1.1); background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.20) 55%, rgba(255, 255, 255, 0.34)), var(--wp-blur, var(--glass-fallback)); }
+.cc__mod--focused { transform: scale(1.1); background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.50), rgba(255, 255, 255, 0.20) 55%, rgba(255, 255, 255, 0.34)); }
 html.liveblur .cc__mod {
 	-webkit-backdrop-filter: var(--live-glass); backdrop-filter: var(--live-glass);
-	background-attachment: scroll !important; background-color: var(--live-tint) !important; background-blend-mode: normal !important;
+	background-color: var(--live-tint) !important; background-blend-mode: normal !important;
 }
 /* only the focused or open control keeps its live blur: each one adds about 2 ms of GPU draw to every frame (docs/frame-rate.md) */
 html.liveblur .topbar > .pill:not(.pill--focused):not(.pill--open), html.liveblur .topcap:not(.topcap--focused):not(.topcap--open),
@@ -1279,7 +1248,7 @@ html.night .ambient__night { opacity: 0.45; }
 .ambient__shade { position: absolute; left: 0; right: 0; bottom: 0; height: 520px; background: linear-gradient(rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.03) 25%, rgba(0, 0, 0, 0.09) 45%, rgba(0, 0, 0, 0.17) 65%, rgba(0, 0, 0, 0.24) 82%, rgba(0, 0, 0, 0.28) 100%); pointer-events: none; }
 /* a light live blur along the bottom, under the shade: it fades in once the screensaver has settled (the opening slide and the first photo are done),
    so it costs nothing while they run; it fades in from the top of the band, so there is no edge (verify on the TV: the zoom and crossfade stay smooth with it) */
-.ambient__blur { position: absolute; left: 0; right: 0; bottom: 0; height: 520px; -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); -webkit-mask-image: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6) 40%, #000 70%); mask-image: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6) 40%, #000 70%); opacity: 0; animation: ambient-in 1.2s ease 6s forwards; pointer-events: none; }
+.ambient__blur { position: absolute; left: 0; right: 0; bottom: 0; height: 520px; -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); -webkit-mask-image: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6) 40%, #000 70%); mask-image: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6) 40%, #000 70%); opacity: 0; animation: ambient-in 1.2s ease 1s forwards; pointer-events: none; }
 html.reduce-motion .ambient__blur { animation: none; opacity: 1; }
 .screen.ambient__status { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: none; pointer-events: none; }
 .ambient .screen > .pill.status { top: auto; bottom: 72px; }
@@ -1456,8 +1425,8 @@ html.light .fg__prog--focused { background: #14151b; color: #fff; }
 html.light .fg__nowline, html.light .fg__nowline::before { background: #14151b; }
 
 /* ---------- Settings and the Guide over the same backdrop as the lower rows (.lowerveil) ----------
-   The strong blurred copy (--wp-bg) under the same veil, fully opaque: before, Settings was at 0.9 opacity, so the sharp wallpaper showed
-   through, and with Live blur off it used the lighter copy (--wp-blur). The video wallpaper keeps its own see-through fill. */
+   The blurred copy (--wp-bg) under the same veil, fully opaque: before, Settings was at 0.9 opacity, so the sharp wallpaper showed
+   through. The video wallpaper keeps its own see-through fill. */
 html:not(.wp-video) body .screen.screen--settings::before {
 	opacity: 1; background-color: #10131c; background-blend-mode: normal;
 	background-image: linear-gradient(rgba(0, 0, 0, 0.26), rgba(0, 0, 0, 0.26)), var(--wp-bg, none);

@@ -8,7 +8,7 @@ The target TV is an LG 43UT91006LA on webOS 25 (Chromium 120). The repo was firs
 
 - Code that needs a TV answer is written defensively (harmless if the answer is no) and marked **(verify)** in `PLAN.md` until Sam has seen it work.
 - The build still targets `chrome79` and a classic script, not a module (`app/vite.config.ts`). Keep it that way unless Sam decides otherwise.
-- The TV's graphics chip is weak. Animate only `transform` and `opacity`; glass is a pre-blurred wallpaper copy, not live blur. The reasons are in `RESEARCH.md` section 4.
+- The TV's graphics chip is weak. Animate only `transform` and `opacity`; glass is a light live blur on the focused control only, with a plain tint and rims elsewhere; the full-screen backdrops are a blurred copy of the wallpaper, not live blur. The reasons are in `RESEARCH.md` section 4.
 - Numbers use the font's normal, proportional digits. Never set `font-variant-numeric: tabular-nums` or `'tnum'` on text, because it spaces digits too far apart (the 1s in "11°"). The one exception is the clock time, so it does not jitter as it changes.
 - Every root command goes through `app/src/lib/root.ts`, one fixed command per export, with each value checked against a list or pattern. Add new root commands there, in the same shape.
 

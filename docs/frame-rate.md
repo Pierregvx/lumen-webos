@@ -38,7 +38,6 @@ Smaller things, measured but not the main cause:
 - Each hidden open-app dot (`.tile__dot::before`) runs a `transform` transition on every focus move. Chromium does not put an animation with no visible change on the compositor, so it runs on the main thread.
 - The focused tile gets `will-change: transform` only while it is focused, so each move removes one layer and makes another. A permanent layer on every row tile cut raster in the lower rows by about 40% and the key-to-screen time from about 120 ms to 65 ms, but not the frame rate.
 - The focused tile's larger shadow and its shine (`::after`) cost some raster (800 ms to 590 ms over the rows walk), not frame rate.
-- Live blur off (the pre-blurred copy with `background-attachment: fixed`) draws in 3.4 ms, but the glass repaints when the rows move: raster went from 1.2 s to 4 s over the rows walk.
 
 ## Down and Up, 2026-10-23
 
@@ -46,7 +45,7 @@ The full-screen blurred backdrop (`.lowerveil`) was rastered again 2 to 3 times 
 
 ## The overall fix
 
-The glass should be a static texture: the pre-blurred wallpaper copy, laid out with `background-attachment: scroll` and an offset from the element's place on screen (as `.panel` already does), so it is rastered once and only moves by transform. Over a still wallpaper it looks the same as the live blur, because the live blur only blurs the wallpaper. This is the rule in `CLAUDE.md` and `RESEARCH.md` section 4, which Live blur broke.
+Taken instead (2026-10-22): only the focused top button or Control Center control blurs live, and the glass bar has no live blur (Settings > Appearance > Dock blur puts it back). The glass keeps its sheen and rims, so it still reads as glass.
 
 ## The Guide (2026-10-23)
 
