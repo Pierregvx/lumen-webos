@@ -135,6 +135,34 @@ the 1.2 s after the key (about 72 is smooth; standing still it holds about 60).
   Measured: Down 39-47 frames. A return from iPlayer caught up in about 1.8-2.4 s, with an Art wallpaper; the earlier 1.3-2.1 s
   was with a different one, so the two are not directly comparable. Down in the first 4 s after a return still draws the rows from scratch.
 
+## Back from an app opened in row 2 (2026-10-26)
+
+Sam: after an app opened from the lower rows, Home brings Lumen back at once, but parts of the screen go and come back. Measured with
+`tools/tv/perf/return.mjs`, Moonlight 8 s away, three returns per case. Times are ms from the page's `visibilitychange`.
+
+| Case | Frames shown | GPU busy | Raster tiles |
+|---|---|---|---|
+| From rest (dock), as built | 3-5, the last at about 4.2 s | 1.4-2.2 s | 259-367 |
+| From row 2, as built | 5-6, the last at about 4.2 s | 1.7-2.0 s | 287-378 |
+| From row 2, home reset while hidden | 3, as from rest | 1.4-1.8 s | 259 |
+| From rest, `settled` never removed | 3-4, all by 1.5 s (one at 3.6 s) | 1.2-1.3 s | 238-245 |
+| From row 2, reset while hidden and `settled` never removed | 2, both by 1.2 s | 1.1-1.3 s | 244 |
+
+- The cause of what Sam sees: Lumen goes hidden still on the rows (`screen--lower`) and `html.settled` is removed. On return, Home's
+  `visibilitychange` handler moves back to the glass bar, so the first frames are the rows view with the veil and rows 3+ already hidden,
+  then the slide back down plays at 2-5 frames a second while the GPU redraws. Frames captured by screencast show it.
+- With home put back at rest while hidden (a live test: the same reset on the hidden event, transitions off for it, style flushed),
+  every frame drawn on return is the finished home screen.
+- The 4 s `settled` hold no longer helps. With it, the return draws more tiles and uses more GPU time, and the veil and rows are drawn
+  again at about 4.2 s, so a Down near then pays for them. Rows below the screen get no tiles until they are near the screen, and the
+  veil is at opacity 0, so drawing them costs little. The hold was measured before the glass changes on 2026-10-23 and 2026-10-25.
+- Away 3 s or 8 s made no difference: the same 25 image decodes, so Lumen's 5 s wallpaper release is not the cost.
+- What is left, about 1 s of GPU work for 250 tiles and the wallpaper decode, is the browser dropping a hidden page's tiles.
+- Seen on the TV: the system does show Lumen's last frame from before it was hidden. Lumen gets `blur` only 11 ms before it is hidden,
+  about 250 ms after OK on a tile, too late to draw anything. So any reset to home shows as a jump.
+- Done 2026-10-26: Lumen comes back where it left (Home.tsx no longer resets on return; a launch that asks for a row still goes there),
+  and `html.settled` is gone, so the veil and rows are always drawn. Sam tried both live.
+
 ## Still open
 
 - **Grid:** the lower rows are drawn 3.5 s after launch in one go, followed by a 0.4-1 s frozen stretch. Draw them one row at a time.
