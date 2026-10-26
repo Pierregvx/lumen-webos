@@ -13,9 +13,18 @@ This repository is a personal fork of [ammar027/lumen-webos](https://github.com/
 | Web engine | Chromium 120 |
 | Set-up | Rooted, with the [Homebrew Channel](https://www.webosbrew.org/) and [LG Input Hook](https://github.com/Simon34545/lginputhook) |
 
+Lumen is tested on this one TV only. Other webOS TVs may work, but nobody has checked them.
+
 The original project was written for an LG 65UQ8040PSB on webOS 22 (Chromium 87). Some rules in the code were tuned for that TV. This fork treats each of those rules as an assumption until it works on the TV above. [PLAN.md](PLAN.md) lists what is still to verify.
 
 The build still targets `chrome79` and a classic script, not a module. The TV's graphics chip is weak, so only `transform` and `opacity` animate.
+
+## Requirements
+
+- An LG webOS TV with root access. Lumen runs its TV commands as root through the Homebrew Channel. Without root, Control Center, app removal and the TV-side scripts do not work.
+- The [Homebrew Channel](https://www.webosbrew.org/), with root enabled.
+- [LG Input Hook](https://github.com/Simon34545/lginputhook), if you want the remote's Home button to open Lumen.
+- Optional: an [Immich](https://immich.app/) server for your own photos as the wallpaper and screensaver. See [docs/immich.md](docs/immich.md).
 
 ## What this fork adds
 
@@ -36,12 +45,14 @@ The features from the original project are still here. These include the glass d
 
 ## Screenshots
 
-These screenshots show the original project, before this fork's changes. The wallpaper is a public-domain painting from the Cleveland Museum of Art.
+These screenshots come from the TV. The wallpaper is "Amanhecer no Hercules" by Carlos Perez Couto (CC BY-SA 3.0).
 
-![Home screen: a glass dock of apps, date and weather top left, Inputs and Control Center top right](docs/screenshots/home.jpg)
-![Moving down: the second row of apps appears over a blurred wallpaper](docs/screenshots/more-apps.jpg)
-![Control Center: sound, picture, sleep timer, screensaver, quick actions and volume](docs/screenshots/control-center.jpg)
-![Settings, Options tab: a scrolling list with a scroll indicator](docs/screenshots/settings-options.jpg)
+![Home screen: a glass dock of apps, the clock, weather and hourly forecast top left, Control Center, Settings and Inputs top right](docs/screenshots/home.jpg)
+![Moving down: the second row of apps and the Live TV row over a blurred wallpaper](docs/screenshots/more-apps.jpg)
+![Live TV row: a channel tile in focus shows what is on now, the time left and what is next](docs/screenshots/live-tv.jpg)
+![Control Center: sound, picture, theme, clock, quick actions and backlight](docs/screenshots/control-center.jpg)
+![Screensaver: a large clock and date bottom left, with the weather and hourly forecast bottom right](docs/screenshots/screensaver.jpg)
+![Settings: one page for each part of the launcher](docs/screenshots/settings.jpg)
 
 ## Install from the Homebrew Channel
 
@@ -57,6 +68,34 @@ To get the builds on the TV:
 The [releases page](https://github.com/samrenfrew/lumen-webos/releases) also has each `.ipk`. You can install one with [Dev Manager](https://github.com/webosbrew/dev-manager-desktop/releases) or `ares-install`.
 
 The public build does not include third-party app logos, private wallpapers or the SF font. Apps without an icon get a plain tile.
+
+### After you install: the TV-side scripts
+
+The Channel installs only the app. Some features also need the scripts in [tools/tv/](tools/tv/) on the TV. Without them, these do not work:
+
+- Lumen opens again after the TV wakes.
+- The Recent row.
+- Settings > Screensaver > My photos replaces LG's screensaver.
+- Settings > Screensaver > Off ends LG's screensaver.
+
+To install the scripts, run these commands from a copy of this repository. Replace `<tv-ip>` with your TV's address.
+
+```sh
+ssh root@<tv-ip> 'mkdir -p /var/lib/homehook /var/lib/webosbrew/init.d'
+scp tools/tv/watch.sh tools/tv/stadia.sh root@<tv-ip>:/var/lib/homehook/
+scp tools/tv/60-homehook root@<tv-ip>:/var/lib/webosbrew/init.d/
+ssh root@<tv-ip> 'chmod +x /var/lib/homehook/*.sh /var/lib/webosbrew/init.d/60-homehook && /var/lib/webosbrew/init.d/60-homehook'
+```
+
+The last command starts the scripts now. After that, the Homebrew Channel starts them at each boot. `stadia.sh` is only for a Stadia controller in Moonlight. It does nothing if you do not have one.
+
+To remove the scripts, run `rm /var/lib/webosbrew/init.d/60-homehook` on the TV, then restart the TV.
+
+### Open Lumen with the Home button
+
+Use LG Input Hook to map the Home button to the app `com.samrenfrew.lumen`.
+
+If you do not use Input Hook, `watch.sh` can do this instead. Create the file `/var/lib/homehook/home-takeover` on the TV. When LG Home opens, the script then opens Lumen. This is slower than Input Hook, because LG Home shows for a moment first.
 
 ## Set up for development
 
@@ -116,7 +155,15 @@ After each start, a dev build writes a "boot" line to `/var/lib/homehook/lumen.l
 | `python3 tools/build_catalog.py` | Turns `tools/catalog.json` into the cloud wallpaper list. |
 | `python3 tools/harvest_open.py [met\|cleveland\|commons]` | Adds paintings and landscapes, with credits, to the catalogue. |
 
-## Commit and push
+## Contributing
+
+Lumen is built for one TV and one person's taste. This sets what is accepted:
+
+- Bug reports are welcome. Reports from other TV models are the most useful. Give the model, the webOS version and what you saw.
+- Pull requests are accepted for bug fixes only.
+- New features and design changes are not accepted. If you want something different, fork the project. The MIT licence lets you do this.
+
+### Commit and push
 
 Write a commit subject that names the area, then says what changed for the user. Use plain words.
 
