@@ -157,7 +157,19 @@ function listViaHomebrew (): Promise<AppEntry[]> {
 		});
 }
 
-/** Read the icons as data URIs in one shell round-trip, cached in localStorage by path.
+/** Reads icons as "<index> <base64>" lines, the index counting from `from`. The Homebrew Channel's exec fails the whole call once its output
+ *  passes Node's maxBuffer (1 MB on webOS 25, 200 KB on webOS 6's Node 8), so only then is the read split in half and tried again; an icon
+ *  too large on its own is left out. Any other failure (a timeout, no service) is passed on, not retried. */
+function readIconLines (paths: string[], from = 0): Promise<string[]> {
+	return readIcons(paths).then((out) => out.split('\n').map((line) => line.replace(/^(\d+) /, (_, i: string) => `${Number(i) + from} `)), (e: Error) => {
+		if (!/maxBuffer/.test(e && e.message) || paths.length < 2) throw e;
+		const half = Math.ceil(paths.length / 2);
+		// one half after the other, to keep the TV's CPU free
+		return readIconLines(paths.slice(0, half), from).then((first) => readIconLines(paths.slice(half), from + half).then((second) => first.concat(second), () => first));
+	});
+}
+
+/** Read the icons as data URIs, cached in localStorage by path: one shell round-trip, split only when the TV's limit refuses it.
  *  Icons are requested by *index*, so app IDs never reach the shell. */
 function loadIcons (points: LaunchPoint[]): Promise<Record<string, string>> {
 	const cache = readIconCache();
@@ -172,8 +184,8 @@ function loadIcons (points: LaunchPoint[]): Promise<Record<string, string>> {
 	if (!missing.length) return Promise.resolve(result);
 
 	// one line per icon, "<index> <base64>" (lib/root.ts skips any path that is not a plain absolute path); app IDs never reach the shell
-	return readIcons(missing.map((m) => m.path)).then((out) => {
-		for (const line of out.split('\n')) {
+	return readIconLines(missing.map((m) => m.path)).then((lines) => {
+		for (const line of lines) {
 			const match = /^(\d+) ([A-Za-z0-9+\/=]+)$/.exec(line);
 			const entry = match && missing[Number(match[1])];
 			if (!match || !entry) continue;
