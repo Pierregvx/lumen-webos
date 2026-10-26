@@ -27,6 +27,7 @@ import {Ambient} from './components/Ambient';
 import {setVideoChoice, setVideoPaused, setVideoWallpaper, VIDEO_PLACES} from './lib/wallpaperVideo';
 import {setAmbientFlag, setSaverOffFlag, setVideoFlag, startScreensaver} from './lib/system';
 import {setFpsCounter} from './lib/fps';
+import {setWhere} from './lib/where';
 import {onMinute} from './lib/minute';
 import {useHtmlClasses} from './hooks/useHtmlClasses';
 import {ControlCenter, prefetchControls, type CenterAction} from './components/ControlCenter';
@@ -251,6 +252,7 @@ export function App () {
 		return () => { window.clearTimeout(timer); document.removeEventListener('visibilitychange', onVisibility); };
 	}, []);
 	useEffect(() => setFpsCounter(__LUMEN_DEV__ && config.fpsCounter), [config.fpsCounter]);
+	useEffect(() => setWhere(screen === 'guide' && config.guideFull ? 'full guide' : screen, controls), [screen, controls, config.guideFull]);
 	useEffect(() => setLiquidDock(config.liquidDock), [config.liquidDock]);
 	useEffect(() => setVideoChoice(config.videoPlaces), [config.videoPlaces]);
 	// the video wallpaper plays only within its hours (checked each minute); the still wallpaper shows the rest of the time
