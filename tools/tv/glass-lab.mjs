@@ -193,7 +193,7 @@ frame.onkeydown = (e) => { if (e.key === 'ArrowLeft') setFocus(focus - 1); else 
 let timer = 0;
 document.getElementById('auto').onchange = (e) => { clearInterval(timer); if (e.target.checked) timer = setInterval(() => setFocus(focus + 1), 700); };
 
-// each layer that costs the TV frames can be turned off; the costs are fps on the TV while focus moves along the dock (2026-10-22, RESEARCH.md section 5)
+// each layer that costs the TV frames can be turned off; the costs are fps on the TV while focus moves along the dock (2026-10-22, docs/research/RESEARCH.md section 5)
 const u = {dark: true, frost: 0, sheen: true, lumenRims: true, slide: true, boost: true, blurOn: false, blur: 3, refOn: true, refraction: 100, depth: 14, fringe: false, on: true};
 const layers = [
 	{name: "Dark tint (Lumen's, 30% black)", key: 'dark', cost: 'free'},

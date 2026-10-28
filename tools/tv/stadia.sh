@@ -1,6 +1,6 @@
 #!/bin/sh
 # Stadia controller watcher, for Moonlight. After the controller is switched off and on it reconnects but sends no input until it is paired
-# again (docs/spikes.md). While Moonlight is in front, this notices that and pairs it again as soon as you hold Stadia + Y (orange light).
+# again (docs/research/spikes.md). While Moonlight is in front, this notices that and pairs it again as soon as you hold Stadia + Y (orange light).
 #  - A connection counts as working once a report arrives on its hidraw node. A pairing made here counts as working at once.
 #  - Broken: a connection this script did not pair sends nothing for SILENT_SECS, or a connection drops (it always comes back broken).
 #  - Repair: forget the controller, scan, pair, connect. Tried again and again until its input device appears, for up to REPAIR_SECS.

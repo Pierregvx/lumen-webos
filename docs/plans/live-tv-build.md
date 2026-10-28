@@ -1,7 +1,7 @@
 # Live TV row and guide: build plan
 
 Written 2026-10-17 at the end of the Live TV spike, for a fresh session to build from. The spike trail (every call tried, what failed and why)
-is in `docs/live-tv.md`; this file only keeps what the build needs.
+is in `docs/research/live-tv.md`; this file only keeps what the build needs.
 
 ## What we are building
 
@@ -97,7 +97,7 @@ white capsule with dark text.
    luna-send -n 1 -f luna://com.webos.epgdb/find '{"query":{"from":"com.webos.service.legacybroadcast.programPF:4","limit":4}}'
    ```
    Expect the same fields as the schedule kind (`programName`, `signalChannelId`, `startTime`/`endTime` in UTC, `localStartTime`/
-   `localEndTime`, `duration`, `isPresent`; see `docs/live-tv.md` Step 1). Then try filtering to one channel:
+   `localEndTime`, `duration`, `isPresent`; see `docs/research/live-tv.md` Step 1). Then try filtering to one channel:
    `{"query":{"from":"...programPF:4","where":[{"prop":"signalChannelId","op":"=","val":"16522_17472_9018"}]}}`. db8 only filters on
    indexed properties; if that is refused, read all PF rows instead (about two per channel, so about 380 for 188 channels; db8 returns at
    most 500 per page, with a `next` key for more) and group them by `signalChannelId` in the app.
@@ -111,7 +111,7 @@ white capsule with dark text.
 | Logos | read the file at `imgUrl` | PNGs, 2 to 3 KB, under `/tmp/gibbips/logo/`. 176 of 188 channels have one. `/tmp` is cleared on reboot and the TV refetches them, probably when Live TV runs; cache them in Lumen and fall back to a text tile. `readIcons()` in `lib/root.ts` already returns files as base64. |
 | Now and next | `luna://com.webos.epgdb/find` on `com.webos.service.legacybroadcast.programPF:4` | See the spike above. Join to channels on `signalChannelId`. |
 | Full schedule (phase 2) | same, on `com.webos.service.legacybroadcast.programSCH:4` | Read works (`limit:1` returned a programme). No index on the times, so no time filter: read every page and keep the window. |
-| Guide service (used first) | `luna://com.webos.service.iepg/getEventList` `{"bFVPChannelId":true,"channelId":[up to 10 ids],"dataType":0,"fepgType":"Forward","localStartTime":"2026,10,18,06,30,00","localEndTime":...,"sort":0}` | What LG's Guide reads (`docs/live-tv.md` Step 2d). Takes a time window and ten channels a call. The Full guide reads the rows in view first, then the rest; the schedule table above is the fallback. The row's channels and the first 10 at start-up, every channel when the Guide opens. |
+| Guide service (used first) | `luna://com.webos.service.iepg/getEventList` `{"bFVPChannelId":true,"channelId":[up to 10 ids],"dataType":0,"fepgType":"Forward","localStartTime":"2026,10,18,06,30,00","localEndTime":...,"sort":0}` | What LG's Guide reads (`docs/research/live-tv.md` Step 2d). Takes a time window and ten channels a call. The Full guide reads the rows in view first, then the rest; the schedule table above is the fallback. The row's channels and the first 10 at start-up, every channel when the Guide opens. |
 | Switch channel | `luna://com.webos.service.apiadapter/tv/openChannel` `{"channelId":"1_41_104_104_16522_17664_9018"}` | Opens Live TV on that channel, also from Home. Not tried without root, or with Live TV already open on another channel. |
 
 Don't use: `utp.broadcast/changeChannel` (needs Live TV's broadcast id, which changes every time Live TV starts), launching Live TV with a
@@ -136,7 +136,7 @@ what the guide rows carry.
 - **The Guide screen.** A new screen beside `screens/Home.tsx` and `screens/Settings.tsx`, opened by the Guide tile, closed with Back.
   Reuse the row/focus handling rather than writing new key handling.
 - **Settings.** A "Live TV row" switch, and the channel choice (see Open questions).
-- Keep to the performance rules in `RESEARCH.md` section 4: no new live blur, only `transform` animates, the Guide list draws
+- Keep to the performance rules in `docs/research/RESEARCH.md` section 4: no new live blur, only `transform` animates, the Guide list draws
   only the rows near the focused one.
 
 ## Verify on the TV (phase 1)

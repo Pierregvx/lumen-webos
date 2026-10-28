@@ -179,7 +179,7 @@ export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, o
 	}, [focusRow && focusRow.seq]);
 	useEffect(() => { if (wanted.current) focusWanted(); }, [rows]);
 
-	// coming back from another app stays where it left, as the TV shows Lumen's last frame first and a reset would jump (docs/startup-perf.md); a launch that asks for a row still goes there
+	// coming back from another app stays where it left, as the TV shows Lumen's last frame first and a reset would jump (docs/research/startup-perf.md); a launch that asks for a row still goes there
 	useEffect(() => {
 		const back = () => { if (!document.hidden) focusWanted(); };
 		document.addEventListener('visibilitychange', back);

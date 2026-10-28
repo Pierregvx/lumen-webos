@@ -1,4 +1,4 @@
-// Live TV: the aerial channels, their logos, and what is on now and next (docs/live-tv-build.md). Everything comes through the root shell
+// Live TV: the aerial channels, their logos, and what is on now and next (docs/plans/live-tv-build.md). Everything comes through the root shell
 // (lib/root.ts). A cold start draws the last answer from localStorage at once (lib/boot.ts); the TV is asked again after the first frame.
 
 import {isWebOS} from './luna';

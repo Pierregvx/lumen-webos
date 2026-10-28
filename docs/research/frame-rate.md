@@ -50,7 +50,7 @@ With frames on time, Down and Up felt too quick, so they now take 600 ms each, a
 
 ## Down and Up, 2026-10-23
 
-The full-screen blurred backdrop (`.lowerveil`) was rastered again 2 to 3 times on every Down and Up, because the TV's memory pressure makes Chromium drop its tiles. It is now a canvas, which has no tiles, and the bar and first grid row tiles keep a layer each. Down and Up went from about 10 fps to about 40 fps. The full table is in `docs/down-up-lag-review.md`. Note: `walk.mjs vert` starts with focus on the top buttons, so its Down and Up move between the top buttons and the dock, not into the grid.
+The full-screen blurred backdrop (`.lowerveil`) was rastered again 2 to 3 times on every Down and Up, because the TV's memory pressure makes Chromium drop its tiles. It is now a canvas, which has no tiles, and the bar and first grid row tiles keep a layer each. Down and Up went from about 10 fps to about 40 fps. The full table is in `docs/research/down-up-lag-review.md`. Note: `walk.mjs vert` starts with focus on the top buttons, so its Down and Up move between the top buttons and the dock, not into the grid.
 
 ## The overall fix
 

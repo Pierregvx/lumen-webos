@@ -24,7 +24,7 @@ The last row is the result: from about 7 to 10 fps during the move to about 37 t
 What caused it:
 
 1. The veil's picture was rastered in full 2 times on every Down and 3 times on every Up: about 80 and 120 tiles of 256 px. This happened even with the veil left at opacity 1 and never changing, so it is not the opacity 0 effect of item 1. During the moves the TV sends Chromium memory-pressure signals (`V8.MemoryPressureNotification`, level 1). WebAppMgr runs Chromium with `--force-low-end-device-mode`, `--enable-aggressive-release-policy` and `--tile-manager-low-mem-policy-bytes-limit-reduction-factor=2`, so the compositor drops tiles and rasters them again. A veil with a flat colour and no picture rastered almost nothing. The fix draws the 480 x 270 blurred copy into a canvas once, and the GPU scales it up. A canvas is a texture, not tiles. It looks the same in screenshots (`components/LowerVeil.tsx`).
-2. The bar's track and the grid rows were rastered again on each move, because the focused tile changes in them. A permanent layer on each tile in the bar and the first grid row stops that. The first test (`docs/frame-rate.md`) found no frame gain, because the veil hid it. The focused tile is as sharp as before in screenshots.
+2. The bar's track and the grid rows were rastered again on each move, because the focused tile changes in them. A permanent layer on each tile in the bar and the first grid row stops that. The first test (`docs/research/frame-rate.md`) found no frame gain, because the veil hid it. The focused tile is as sharp as before in screenshots.
 3. `will-change: opacity` on the veil keeps it on its own layer. Without it, at the end of each fade the veil joins the vignette layer, and that full-screen layer rasters again.
 4. Under Live blur, the old plain-tint class (`screen--plainglass`, now removed) changed nothing visible but cost a full restyle. Skipping it cut Up's style work from about 100 ms to about 80 ms. Down does not change.
 
@@ -36,7 +36,7 @@ Visual changes Sam chose live: Up slides in 340 ms (Down stays 276 ms), and the 
 
 ## What the numbers say
 
-Three measurements from 2026-10-22 frame the problem (`docs/startup-perf.md`, `docs/frame-rate.md`, PLAN.md):
+Three measurements from 2026-10-22 frame the problem (`docs/research/startup-perf.md`, `docs/research/frame-rate.md`, docs/plans/PLAN.md):
 
 1. The screen does not change for about 330 ms after the key. The slide itself is 276 ms. So most of the lag is the wait before anything moves, not the frame rate during the move.
 2. During the move the GPU thread spends 100 to 170 ms rastering. On this TV raster runs on the same GPU thread that draws the frames (`RasterDecoderImpl::DoEndRasterCHROMIUM` on `Chrome_InProcGpuThread`), so every millisecond of raster during the slide is a frame not drawn. This is why the move runs at about 10 fps even though every moving element is on its own layer.
@@ -86,7 +86,7 @@ What fires on Down and Up:
 - `.row__label` colour: `.rows .row--titled.row--focused .row__label { color }` with `transition: color` (`~line 98`). Colour is main-thread. The label sits inside a row layer, so a 1920 x 256 strip of that row re-rasters on every frame of the 200 ms transition.
 - `.tile__label` opacity on the newly focused and unfocused tiles: layer churn per label.
 - `.status`, `.topbar`, `.videocap` opacity: layer churn on top of item 1.
-- `.tile__dot::before` transform: known (`docs/frame-rate.md`), main thread.
+- `.tile__dot::before` transform: known (`docs/research/frame-rate.md`), main thread.
 
 Test: inject `transition: none !important` on these selectors only, keep everything else, and compare `raster ms` per move. One at a time if the first run shows a drop.
 
@@ -94,7 +94,7 @@ Fix: drop the colour transition on row labels (two stacked spans crossfaded by o
 
 ## 4. Adopt the per-tile permanent layer for the rows that take part in the slide
 
-Already measured, not adopted: a permanent `will-change: transform` on every row tile cut raster in the rows walk by about 40% and key-to-screen from about 120 ms to 65 ms, and was set aside because it did not raise the frame rate (`docs/frame-rate.md`). Given item 1 and the raster-on-the-GPU-thread finding, latency and raster are the lag. Adopt it, but only for the bar and the first grid row (the tiles whose focus changes on Down and Up), to keep GPU memory down.
+Already measured, not adopted: a permanent `will-change: transform` on every row tile cut raster in the rows walk by about 40% and key-to-screen from about 120 ms to 65 ms, and was set aside because it did not raise the frame rate (`docs/research/frame-rate.md`). Given item 1 and the raster-on-the-GPU-thread finding, latency and raster are the lag. Adopt it, but only for the bar and the first grid row (the tiles whose focus changes on Down and Up), to keep GPU memory down.
 
 ## 5. Off-screen row tiles may be evicted, so the slide rasters them again
 
@@ -137,7 +137,7 @@ Fix: bake the vignette into the wallpaper or the veil; make the veil opaque and 
 
 ## Already covered (do not redo)
 
-Sliding with transform instead of top. A permanent veil that fades instead of a pseudo-element made on the spot. No live blur on the bar, with the bar on its own layer. Live blur only on the focused control. Permanent layers on the rows, veil and dock (no gain, see item 1 for why). The veil as a plain tint (better frames, lost the look). The rows hidden (better frames). Slower, eased timing (Sam: smoother). The dot transition and the focused tile's layer churn (named in `docs/frame-rate.md`). Blur radius 2 against 3 px. `settled` on against off. Launch time with blur on against off.
+Sliding with transform instead of top. A permanent veil that fades instead of a pseudo-element made on the spot. No live blur on the bar, with the bar on its own layer. Live blur only on the focused control. Permanent layers on the rows, veil and dock (no gain, see item 1 for why). The veil as a plain tint (better frames, lost the look). The rows hidden (better frames). Slower, eased timing (Sam: smoother). The dot transition and the focused tile's layer churn (named in `docs/research/frame-rate.md`). Blur radius 2 against 3 px. `settled` on against off. Launch time with blur on against off.
 
 ## The external review
 

@@ -32,7 +32,7 @@
 .cc__row { display: flex; flex-direction: row; margin-bottom: var(--cc-gap); }
 .cc__row > * + * { margin-left: var(--cc-gap); }
 
-/* glass-control. Only the focused control has the live blur: each one adds about 2ms of GPU draw to every frame (docs/frame-rate.md) */
+/* glass-control. Only the focused control has the live blur: each one adds about 2ms of GPU draw to every frame (docs/research/frame-rate.md) */
 .cc__mod {
 	position: relative; flex: 0 0 auto; height: var(--cc-u); border-radius: calc(var(--cc-u) / 2);
 	background-color: var(--glass-tint); background-image: var(--glass-sheen); background-repeat: no-repeat;

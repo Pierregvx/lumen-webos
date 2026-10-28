@@ -1,9 +1,9 @@
 # Live TV channel list: spike done
 
-The build plan that came out of this, with mockups, is `docs/live-tv-build.md`.
+The build plan that came out of this, with mockups, is `docs/plans/live-tv-build.md`.
 
 Goal: read the TV's aerial (Freeview, DVB-T, digital only) channel list, so Lumen can show channel tiles and later a guide
-(PLAN.md, Spikes and Later item 9). The TV has been scanned and Live TV shows channels.
+(docs/plans/PLAN.md, Spikes and Later item 9). The TV has been scanned and Live TV shows channels.
 
 All commands so far are read-only and run as root over SSH on the TV.
 
@@ -213,7 +213,7 @@ channel and a time window (db8 `where` on `signalChannelId` and `startTime` need
 4. **Fall back to LG's second-screen API (SSAP).** This is what phone remote apps use, and community libraries (lgtv2, aiowebostv) call
    `ssap://tv/getChannelList`, `ssap://tv/getCurrentChannel` and `ssap://tv/getChannelProgramInfo` over the websocket on port 3000 (3001
    for TLS). It needs a one-off pairing prompt on the TV, but no root, so Lumen could call it itself. Untested on webOS 25.
-5. **Write down the answer** in `docs/spikes.md`: which call works, the fields per channel (number, name, id, logo), and how to tune to
-   one from Lumen (launching Live TV with a channel id is a guess until tried). Then tick the Live TV spike in PLAN.md.
+5. **Write down the answer** in `docs/research/spikes.md`: which call works, the fields per channel (number, name, id, logo), and how to tune to
+   one from Lumen (launching Live TV with a channel id is a guess until tried). Then tick the Live TV spike in docs/plans/PLAN.md.
 
-If none of these returns the aerial channels, the Freeview tiles idea goes to Not doing in PLAN.md, with the reason.
+If none of these returns the aerial channels, the Freeview tiles idea goes to Not doing in docs/plans/PLAN.md, with the reason.

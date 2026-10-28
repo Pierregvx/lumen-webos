@@ -25,7 +25,7 @@ The config changes survive a reboot. The memory manager reads them only when it 
 
 ## How the TV closes apps
 
-Found with `ls-monitor` during app switches. The details are in `docs/spikes.md` (Keeping apps alive).
+Found with `ls-monitor` during app switches. The details are in `docs/research/spikes.md` (Keeping apps alive).
 
 - The memory manager (`/usr/sbin/memchute`, `com.webos.memorymanager`) closes the app you were in the moment another app opens:
   `applicationManager/closeByAppId`, reason `memoryReclaim`. It does this with 250 MB free and when the new app asks for 0 MB. It is policy,

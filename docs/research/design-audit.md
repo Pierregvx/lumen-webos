@@ -52,7 +52,7 @@ The glass is the core of the look, but there is no single definition of it. Ther
 4. Settings rows: a 145° gradient from 0.16 to 0.06, no rim (`.slist__row`).
 5. A flat fill with no rim (`.slist__icon`, 0.22) and other one-off fills (`.wp__chip` 0.08, `.qc__bar` 0.28).
 
-Live blur is now always on (`app.tsx:273`: "the glass is always live blur now"). So the first recipe is mostly dead. Live blur empties `--wp-blur` on every element (`global.css:966`), and the night-dimming rules for the glass all say `:not(.liveblur)` (`global.css:680` to `:690`), so they never apply. `RESEARCH.md` section 4 still says "No live blur anywhere". The decision changed, but the old code and the old doc stayed.
+Live blur is now always on (`app.tsx:273`: "the glass is always live blur now"). So the first recipe is mostly dead. Live blur empties `--wp-blur` on every element (`global.css:966`), and the night-dimming rules for the glass all say `:not(.liveblur)` (`global.css:680` to `:690`), so they never apply. `docs/research/RESEARCH.md` section 4 still says "No live blur anywhere". The decision changed, but the old code and the old doc stayed.
 
 ### 3. Focus: four styles where two would do
 
@@ -209,7 +209,7 @@ Ordered so that each step can be checked on the TV on its own, and the early ste
 7. Bring focus to two styles and the scale values to two per setting. Visible change; try it live first.
 8. Snap font sizes and weights to the scale. Visible change; try it live first.
 9. Share the list and focus-zone helpers. No visible change if done right; check scroll feel on each list.
-10. Fix the doc drift: `RESEARCH.md` section 4 (live blur), `docs/settings-redesign.md` (it names `OptionList.tsx` and `ChoicePicker.tsx`, which are gone).
+10. Fix the doc drift: `docs/research/RESEARCH.md` section 4 (live blur), `docs/plans/settings-redesign.md` (it names `OptionList.tsx` and `ChoicePicker.tsx`, which are gone).
 
 Steps 1 to 4 are mechanical and low risk. Steps 6 to 8 are design decisions and need you to look at the TV.
 
@@ -224,7 +224,7 @@ Steps 1 to 5 and 10 are done. Nothing is meant to look different.
 - Dead code is gone: the small dock (`.row--dock`, `compact`), `Header.tsx`, the time pill and its menu (no top button had its key), the `liveblur` class (it was always on), the pre-blurred glass, and the Quick Controls, switch and old status styles.
 - Renamed: the status block is `.status` (it was `.pill.status`).
 - Step 9, the lists part, is done. `lib/windowedList.ts` holds the scroll maths. `rowWindow` serves `SettingsList`, `Guide` and `FullGuide`, which scroll by whole rows. `gridWindow` serves `Grid` and `WallpaperPicker`, which centre the focused row by pixels. Each list keeps its own numbers and markup. Some parts stay inline because only one list has them: the grid measures its row height, Settings shows the bottom fade, and the grid draws empty tiles for far rows. A script compared the old and new maths for lists of 0 to 250 rows and each focus, and found no difference. The focus-zone part of step 9 is not done.
-- Step 10 needed no change: `RESEARCH.md` section 4 already said "a light live blur only on the focused control", and `docs/settings-redesign.md` names the old components only in its history.
+- Step 10 needed no change: `docs/research/RESEARCH.md` section 4 already said "a light live blur only on the focused control", and `docs/plans/settings-redesign.md` names the old components only in its history.
 
 How it was checked: `tools/style-snapshot.mjs` records the computed style and box of every element on 122 screens, in dark and light (home, the glass bar, the grid, the top buttons, Control Center and its lists, a folder, Settings pages, the wallpaper picker, the Guide, the Full guide, the screensaver with each weather widget, and each focus strength). `tools/style-diff.mjs` compares the old build with the new one. Run on the same build twice, it finds no differences. Between the old and new builds, the only differences are values nothing draws: a corner radius on the status block (it has no background), a fully transparent tile outline, where a background image would sit on boxes that have none, `align-self` on the absolutely placed Re-order button, and `flex-wrap` on the wallpaper picker's track, which is not a flex box. No box moved by a pixel.
 
@@ -241,7 +241,7 @@ A bug was found and kept at first, so that the cleanup changed nothing: in the l
 
 ## Step 6 (Sam, 2026-10-26, live on the TV)
 
-- Settings rows and the wallpaper chips are glass-row, as in the Guide. Each Settings row has its own layer, which fixed a slow Up and Down (`docs/frame-rate.md`).
+- Settings rows and the wallpaper chips are glass-row, as in the Guide. Each Settings row has its own layer, which fixed a slow Up and Down (`docs/research/frame-rate.md`).
 - The folder panel stays glass-control. The glass bar's blue and pink rim fringe is for the dock only: it is subtle there and echoes the pink icons at the dock's ends. On a bigger shape the pink shows too much. So the materials are glass-bar (the dock alone), glass-control (controls and the folder panel) and glass-row.
 
 ## Steps 7 and 8 (Sam, 2026-10-26, live on the TV)

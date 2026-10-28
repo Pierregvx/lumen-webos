@@ -92,7 +92,7 @@ export function readIcons (paths: string[]): Promise<string> {
 	return script ? run(script, 15000) : Promise.resolve('');
 }
 
-// ---------- Live TV (docs/live-tv-build.md) ----------
+// ---------- Live TV (docs/plans/live-tv-build.md) ----------
 
 /** "1_41_2_102_16522_17472_9018": seven numbers. */
 const CHANNEL_ID = /^\d+(_\d+){6}$/;
@@ -135,7 +135,7 @@ const LOCAL_TIME = /^\d{4}(,\d{2}){5}$/;
 export const EVENT_BATCH = 10;
 
 /** Every programme on up to EVENT_BATCH channels between two local times, from the TV's guide service (what LG's Guide reads, which can
- *  also draw on the online Freeview Play guide), as the TV's JSON reply. The call is copied from LG's Guide (docs/live-tv.md Step 2d). */
+ *  also draw on the online Freeview Play guide), as the TV's JSON reply. The call is copied from LG's Guide (docs/research/live-tv.md Step 2d). */
 export function eventList (channelIds: string[], localStart: string, localEnd: string): Promise<string> {
 	if (channelIds.length === 0 || channelIds.length > EVENT_BATCH || !channelIds.every((id) => CHANNEL_ID.test(id))) return Promise.reject(new Error('refused: channel ids'));
 	if (!LOCAL_TIME.test(localStart) || !LOCAL_TIME.test(localEnd)) return Promise.reject(new Error('refused: guide time'));
@@ -174,7 +174,7 @@ export function screenOff (): Promise<void> {
 	return run(luna('luna://com.webos.service.tvpower/power/turnOffScreen', {})).then(() => undefined);
 }
 
-// every tvpower reboot reason comes back in Active Standby (docs/spikes.md); the shell's reboot comes back on. Detached so the call returns.
+// every tvpower reboot reason comes back in Active Standby (docs/research/spikes.md); the shell's reboot comes back on. Detached so the call returns.
 export function reboot (): Promise<void> {
 	return run('(sleep 1; reboot) >/dev/null 2>&1 &').then(() => undefined);
 }

@@ -4,11 +4,11 @@ A tvOS-style launcher for a rooted LG webOS TV. `app/` is the Preact app (a fork
 
 ## The TV
 
-The target TV is an LG 43UT91006LA on webOS 25 (Chromium 120). The repo was first written for a webOS 22 TV, so any rule tuned for that TV is an assumption until it is seen working on this one. `PLAN.md` holds the roadmap and the **Verify on the TV** list; read its "Where things stand" section before starting work.
+The target TV is an LG 43UT91006LA on webOS 25 (Chromium 120). The repo was first written for a webOS 22 TV, so any rule tuned for that TV is an assumption until it is seen working on this one. `docs/plans/PLAN.md` holds the roadmap and the **Verify on the TV** list; read its "Where things stand" section before starting work.
 
-- Code that needs a TV answer is written defensively (harmless if the answer is no) and marked **(verify)** in `PLAN.md` until Sam has seen it work.
+- Code that needs a TV answer is written defensively (harmless if the answer is no) and marked **(verify)** in `docs/plans/PLAN.md` until Sam has seen it work.
 - The build still targets `chrome79` and a classic script, not a module (`app/vite.config.ts`). Keep it that way unless Sam decides otherwise.
-- The TV's graphics chip is weak. Animate only `transform` and `opacity`; glass is a light live blur on the focused control only, with a plain tint and rims elsewhere; the full-screen backdrops are a blurred copy of the wallpaper, not live blur. The reasons are in `RESEARCH.md` section 4.
+- The TV's graphics chip is weak. Animate only `transform` and `opacity`; glass is a light live blur on the focused control only, with a plain tint and rims elsewhere; the full-screen backdrops are a blurred copy of the wallpaper, not live blur. The reasons are in `docs/research/RESEARCH.md` section 4.
 - Numbers use the font's normal, proportional digits. Never set `font-variant-numeric: tabular-nums` or `'tnum'` on text, because it spaces digits too far apart (the 1s in "11°"). The one exception is the clock time, so it does not jitter as it changes.
 - The stylesheet is split by part in `app/src/theme/`, imported in order in `main.tsx`. Colours, glass, shapes and timings are tokens in `tokens.css`; the light look and the focus strength only give them new values in `themes.css`. To change a look, edit its one rule or token. Never add an override rule further down. To prove a CSS refactor changes nothing, run `tools/style-snapshot.mjs` on a dev build before and after, then `tools/style-diff.mjs`.
 - Mark the focused part of any new screen or panel with a `<part>--focused` class (`tile--focused`, `slist__row--focused`). On dev builds, `lumen.where()` (`app/src/lib/where.ts`) finds focus from that class, so an agent on DevTools can tell where Sam is. The `tv` skill says how to read it.
@@ -26,7 +26,7 @@ Every push to `main` makes a release, docs-only pushes included, so each one nee
 
 This Mac has SSH and DevTools access to the TV. With it you can install a build, read the log, run JS or CSS in the live page, take screenshots, or develop live while Sam watches. The `tv` skill (`.claude/skills/tv/SKILL.md`) has the steps and quirks.
 
-Dev builds write a "boot" timeline line to `/var/lib/homehook/lumen.log` after each launch. `docs/startup-perf.md` explains how to read it.
+Dev builds write a "boot" timeline line to `/var/lib/homehook/lumen.log` after each launch. `docs/research/startup-perf.md` explains how to read it.
 
 ## Checking work locally
 
@@ -36,7 +36,7 @@ Dev builds write a "boot" timeline line to `/var/lib/homehook/lumen.log` after e
 
 ## Docs
 
-Feature plans and findings live in `docs/` (`live-tv.md`, `live-tv-build.md`, `settings-redesign.md`, `startup-perf.md`, `frame-rate.md`, `immich.md`, `spikes.md`, `keep-alive.md`). Read the one for the area you touch before changing it, and update it when a finding changes.
+Plans and specs live in `docs/plans/` (`PLAN.md`, `live-tv-build.md`, `settings-redesign.md`). Research, audits, spikes and measurements live in `docs/research/` (`RESEARCH.md`, `live-tv.md`, `startup-perf.md`, `frame-rate.md`, `spikes.md`, `design-audit.md`, `prior-art.md`, `down-up-lag-review.md`). Docs that describe how a feature works now stay in `docs/` (`immich.md`, `keep-alive.md`). Do not put a plan, spec or finding in `.scratch/`: it is deleted when the work ships. Read the one for the area you touch before changing it, and update it when a finding changes.
 
 ## Commits
 
