@@ -172,7 +172,7 @@ Sam: after an app opened from the lower rows, Home brings Lumen back at once, bu
 
 ## Where the Live TV work stands
 
-See `docs/live-tv-build.md` (Status). In short: the row (under the app grid, channels picked in Settings > Channels, scrolls so the focused
+See `docs/plans/live-tv-build.md` (Status). In short: the row (under the app grid, channels picked in Settings > Channels, scrolls so the focused
 channel's now/next fits), the Guide (Now and Next, typed channel numbers), Settings and the Guide on the dock's backdrop. Not yet confirmed
 on the TV: the number keys arriving as digit key codes in the Guide, and OK opening Live TV from the row. Phase 2 (full guide grid) not
 started.

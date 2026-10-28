@@ -1,4 +1,4 @@
-// Cold start. The TV ends Lumen whenever another app opens (docs/spikes.md), so every Home press starts it from nothing. What the last launch
+// Cold start. The TV ends Lumen whenever another app opens (docs/research/spikes.md), so every Home press starts it from nothing. What the last launch
 // showed (apps, inputs, the Recent row, weather, clock format, wallpaper) is kept in localStorage and drawn at once; the TV is asked again
 // after the first frame is up, and the screen only changes if the answer differs.
 

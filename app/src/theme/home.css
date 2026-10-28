@@ -56,7 +56,7 @@
 	transition: transform var(--dur-focus) ease-out;
 }
 .pill svg { width: 28px; height: 28px; fill: none; stroke: var(--ink-glyph); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-/* only the focused or open button has the live blur: each one adds about 2ms of GPU draw to every frame (docs/frame-rate.md) */
+/* only the focused or open button has the live blur: each one adds about 2ms of GPU draw to every frame (docs/research/frame-rate.md) */
 .pill--focused, .pill--open { transform: scale(1.14); background-image: var(--glass-sheen-focus); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
 .pill--focused { color: var(--ink-photo-1); box-shadow: var(--glass-rim-focus); }
 .pill--focused svg { stroke: var(--ink-glyph-focus); }

@@ -106,7 +106,7 @@ Steps 1 and 2 touch the same files, so build them one after the other. Steps 3 a
 - Every option from today's list can be found and changed.
 - Back from any depth returns to the row you came from.
 - Re-order and Favorites still work on the grid pages.
-- The page opens without a visible delay. Settings is in the main bundle (see `PLAN.md`, lazy loading was dropped), so keep the new
+- The page opens without a visible delay. Settings is in the main bundle (see `docs/plans/PLAN.md`, lazy loading was dropped), so keep the new
   component small and draw only the current page.
 
 ## Open questions

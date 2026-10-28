@@ -16,7 +16,7 @@ seen unless something looks wrong.
 
 ## Where things stand (2026-10-26)
 
-- Design audit done (branch `design/system-cleanup`, `docs/design-audit.md`): the stylesheet split, three glass materials, two focus
+- Design audit done (branch `design/system-cleanup`, `docs/research/design-audit.md`): the stylesheet split, three glass materials, two focus
   styles, one type scale (18, 22, 26, 32, 56, 80, 120), the wallpaper category bar with a sliding pill, and left-aligned Settings
   headers. Sam checked each change live on the TV on 2026-10-26, and the build is installed. Step 9's focus-zone helper was dropped
   (no shared logic to pull out). Not committed yet.
@@ -43,13 +43,13 @@ Add new items here, with the branch and what to check. Delete an item once Sam h
       them match: compare their open durations and easing in source, pick one, and try it live over DevTools with Sam before building.
 - [ ] Control Center sub-menus are laggy again (Sam, 2026-10-26; about 16 fps open, 20 fps close, measured 2026-10-22): 21 live blurs
       change every frame, and the key press runs 60-70 ms of script before the first frame. Possible fix: the grid controls drop their live
-      blur late in their fade (a switch at the start shows), and the list choices share one blur. Details in `docs/frame-rate.md`. Measure
+      blur late in their fade (a switch at the start shows), and the list choices share one blur. Details in `docs/research/frame-rate.md`. Measure
       again first, since the design cleanup may have changed the cost.
 - [ ] Exiting an app, or pressing Exit on the remote, opens LG Home, not Lumen (Sam, 2026-10-26). Only the Home key is rebound by Input
       Hook. The likely fix is the Native Home item under "Next" (`setDefaultApp`), so check whether it covers Exit and app close first.
-- [ ] Draw the lower rows one row at a time, not all at once 3.5 s after launch (`docs/startup-perf.md`, Still open).
+- [ ] Draw the lower rows one row at a time, not all at once 3.5 s after launch (`docs/research/startup-perf.md`, Still open).
 
-### Spikes (yes/no answers, noted in `docs/spikes.md`)
+### Spikes (yes/no answers, noted in `docs/research/spikes.md`)
 - [ ] Recents button: rebind it with Input Hook to launch Lumen with `{"view":"recent"}`.
 - [ ] Guide button: rebind it with Input Hook to launch Lumen with `{"view":"guide"}`.
 - [ ] Colour buttons: which does this remote have, and which key codes reach the app? (Gates the colour-button idea in Later.)
@@ -60,7 +60,7 @@ Add new items here, with the branch and what to check. Delete an item once Sam h
 
 ## Next: ideas from other launchers (2026-10-24)
 
-From `docs/prior-art.md` and upstream (ammar027/lumen-webos). Build without the TV; try each one on the TV later.
+From `docs/research/prior-art.md` and upstream (ammar027/lumen-webos). Build without the TV; try each one on the TV later.
 
 - [ ] Frigate front door card: over the home screen or the screensaver, a card with the door camera's live view when Frigate sees a person or
       motion. Lumen listens to Home Assistant over its WebSocket API. Test which stream the TV plays (HLS, or JPEG frames from go2rtc).

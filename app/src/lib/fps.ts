@@ -1,5 +1,5 @@
 // Settings > Frame-rate counter (dev builds only): a small readout in the top-left corner with the frames drawn in the last second and the
-// longest frame in that second. A rough check on the TV until DevTools traces work (PLAN.md, Phase 4); it costs one requestAnimationFrame
+// longest frame in that second. A rough check on the TV until DevTools traces work (docs/plans/PLAN.md, Phase 4); it costs one requestAnimationFrame
 // callback per frame and one text update per second, and nothing at all while it is off.
 
 let box: HTMLDivElement | null = null;

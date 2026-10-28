@@ -1,6 +1,6 @@
 # Spikes: answers from the TV
 
-LG 43UT91006LA, webOS 25. One entry per question in PLAN.md "Spikes", with the date and what was run.
+LG 43UT91006LA, webOS 25. One entry per question in docs/plans/PLAN.md "Spikes", with the date and what was run.
 
 ## Background apps (2026-10-15)
 Opened Lumen, then Plex; with Plex in front, `luna-send -n 1 luna://com.webos.applicationManager/running '{}'` listed lgchannels, LG Home,
@@ -66,7 +66,7 @@ Yes. As root: `iepg/getChannelList` with `"channelMode":"Terrestrial"` gives the
 (PNGs under `/tmp/gibbips/logo`); the guide is in `epgdb`, kind `com.webos.service.legacybroadcast.programSCH:4`, joined on
 `signalChannelId`. Tuning: `luna://com.webos.service.apiadapter/tv/openChannel {"channelId":...}` opens Live TV on that channel, even
 from Home (found from the SSAP gateway's `filtering-uris.js`; Home Assistant's `tv/openChannel` ends up there). Found by watching `ls-monitor` while
-`com.webos.app.channeledit` loaded. The full trail and the calls are in `docs/live-tv.md`.
+`com.webos.app.channeledit` loaded. The full trail and the calls are in `docs/research/live-tv.md`.
 
 ## Reboot reason (2026-10-21)
 `tvpower/power/reboot` with `{"reason":"restart"}` returns `Invalid reason, invalid param`, so the Control Center's Restart did nothing.

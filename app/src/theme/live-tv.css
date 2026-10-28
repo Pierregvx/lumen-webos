@@ -1,4 +1,4 @@
-/* The Live TV row (components/ChannelTile.tsx, docs/live-tv-build.md): logos on brand colours, a progress bar, and the focused channel's now/next block under it. */
+/* The Live TV row (components/ChannelTile.tsx, docs/plans/live-tv-build.md): logos on brand colours, a progress bar, and the focused channel's now/next block under it. */
 
 .tile--channel { position: relative; }
 /* a light-to-shade sweep over the brand colour (lib/livetv.ts channelColor, set inline), or over the dark default when a channel has none */

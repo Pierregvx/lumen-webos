@@ -1,6 +1,6 @@
 // The full-screen blurred wallpaper copy (--wp-bg) drawn once into a canvas at its own size (480x270), which the GPU scales up. As a CSS
 // background it was rastered again on many moves, because the TV's memory pressure makes Chromium drop its tiles; a canvas has no tiles
-// (docs/frame-rate.md). The stylesheet stays the one record of the look: the canvas copies whatever background the element (or its ::before) has.
+// (docs/research/frame-rate.md). The stylesheet stays the one record of the look: the canvas copies whatever background the element (or its ::before) has.
 
 /** Draws `host`'s background (or its `pseudo`'s) into a canvas inside `into`, and puts `on` on `host` while the canvas shows, for CSS to drop the
  *  picture. Redraws when the wallpaper or the look changes. Returns the stop function. */

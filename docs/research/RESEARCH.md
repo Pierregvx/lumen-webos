@@ -2,7 +2,7 @@
 
 Sections 1 to 4 were written for the original project's TV: an LG UQ80 (65UQ8040PSB), webOS 22, alpha 5 Gen5 chip, 1.5 GB RAM, Chromium 87.
 Section 5 was measured on this fork's TV: an LG 43UT91006LA, webOS 25, Chromium 120. Treat the decisions in section 4 as assumptions until they are tested on that TV.
-More measurements from the webOS 25 TV are in `docs/frame-rate.md`, `docs/down-up-lag-review.md` and `docs/startup-perf.md`.
+More measurements from the webOS 25 TV are in `docs/research/frame-rate.md`, `docs/research/down-up-lag-review.md` and `docs/research/startup-perf.md`.
 
 ## 1. tvOS design rules (what the launcher copies)
 - Icons are 400x240 pt (800x480 px @2x), 5:3 landscape; the system adds the rounded corners, rim light and shadow.
@@ -34,7 +34,7 @@ More measurements from the webOS 25 TV are in `docs/frame-rate.md`, `docs/down-u
 - LG's own table: webOS 22 = Chromium 87. 2022 entry-level TV chips have a weak GPU (Mali-T820-class on the O22 platform).
 
 ## 4. Decisions made
-1. The glass is a sheen over a tint with static rim-light shadows, and a light live blur only on the focused control (`docs/frame-rate.md`
+1. The glass is a sheen over a tint with static rim-light shadows, and a light live blur only on the focused control (`docs/research/frame-rate.md`
    has the costs). The full-screen backdrops behind the lower rows, Settings and the Guide are a small, strongly
    blurred copy of the wallpaper, drawn once into a canvas: a full-screen live blur lagged.
 2. Only `transform` animates on focus; the shadow/shine appear instantly; `will-change` only on the focused tile.
