@@ -2,6 +2,8 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {Home, type HomeRow} from './screens/Home';
 import {Settings, type SettingsTab, type WallpaperTab} from './screens/Settings';
 import {Guide} from './screens/Guide';
+import {Media} from './screens/Media';
+import {Player} from './screens/Player';
 import type {WallpaperEntry} from './components/WallpaperPicker';
 import type {OptionItem} from './components/SettingsList';
 import {Toast, type ToastMessage} from './components/Toast';
@@ -37,19 +39,36 @@ import {useLiveTv} from './hooks/useLiveTv';
 import {channelColor, nowNextAt, rowChannels, type Channel} from './lib/livetv';
 import {openChannel, runningApps, uninstallApp} from './lib/root';
 import {bootMark, navMark} from './lib/log';
-import {LANGS, setClockMode, setLang} from './lib/i18n';
+import {LANGS, setClockMode, setLang, t as tr} from './lib/i18n';
+import {useMedia} from './hooks/useMedia';
+import {cleanUrl, imageUrl, quickConnectCheck, quickConnectStart, saveServer as saveJellyfin, signIn, signOut} from './lib/jellyfin';
+import {saveSeerr, testSeerr} from './lib/seerr';
+import {playAndOpen} from './lib/play';
+import {request as requestSeerr} from './lib/seerr';
+import {forgetNewSeason, lookAgain} from './lib/seasons';
+import {rate, toRate} from './lib/ratings';
+import {RatePanel} from './components/RatePanel';
+import type {MediaItem} from './lib/jellyfin';
+import {recoSettings, saveRecoSettings} from './lib/recos';
 
-type Screen = 'home' | 'settings' | 'ambient' | 'guide';
+type Screen = 'home' | 'settings' | 'ambient' | 'guide' | 'media';
 
 const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock', live: 'livetv', channels: 'channels'} as const;
 /** the Live TV row: the Guide tile first, then its channels' tiles (channel:<channelId>) */
 const LIVE = {prefix: 'channel:', guide: 'livetv:guide'} as const;
+/** the Resume row (Films & séries): a Jellyfin title (media:item:<id>) or a title requested in Seerr (media:req:<tmdb id>) */
+const MEDIA = {row: 'resume', item: 'media:item:', req: 'media:req:', season: 'media:season:'} as const;
+/** an input on the home screen (Films & séries: the inputs with something plugged in) */
+const INPUT_PREFIX = 'input:';
+/** how often a Quick Connect code is checked, and for how long */
+const QUICK_EVERY_MS = 2000;
+const QUICK_FOR_MS = 180000;
 /** the width of a channel tile's now/next block (.chan__info in theme/live-tv.css): the row scrolls on so the focused tile always has this to its right */
 const LIVE_INFO_W = 660;
 /** how much higher the Live TV row sits when focused, so its now/next block fits on screen */
 const LIVE_BELOW = 150;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', ambientPrint: 'ambient-print', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', dockBlur: 'dock-blur', liquidDock: 'liquid-dock', reduceMotion: 'reduce-motion', hideNames: 'hide-names', showRecents: 'show-recents', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', homeCast: 'home-forecast', saverCast: 'saver-forecast', immichUrl: 'immich-url', immichKey: 'immich-key', immichTest: 'immich-test', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', immichDays: 'immich-recent-days', wpType: 'wp-type', wpNew: 'wp-new', nightDim: 'night-dim', dockDim: 'dock-dim', captions: 'wallpaper-captions', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
+const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', ambientPrint: 'ambient-print', fps: 'fps-counter', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', dockBlur: 'dock-blur', liquidDock: 'liquid-dock', reduceMotion: 'reduce-motion', hideNames: 'hide-names', showRecents: 'show-recents', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', homeCast: 'home-forecast', saverCast: 'saver-forecast', immichUrl: 'immich-url', immichKey: 'immich-key', immichTest: 'immich-test', jfUrl: 'jf-url', jfQuick: 'jf-quick', jfUser: 'jf-user', jfPass: 'jf-pass', jfSignIn: 'jf-signin', jfOut: 'jf-signout', seerrUrl: 'seerr-url', seerrKey: 'seerr-key', seerrTest: 'seerr-test', homeInputs: 'home-inputs', aiKey: 'ai-key', aiProfile: 'ai-profile', aiRedo: 'ai-redo', aiRow: 'ai-row', autoSeasons: 'auto-seasons', playIn: 'play-in', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', immichDays: 'immich-recent-days', wpType: 'wp-type', wpNew: 'wp-new', nightDim: 'night-dim', dockDim: 'dock-dim', captions: 'wallpaper-captions', darkMode: 'dark-mode', language: 'language', clock: 'clock-format'} as const;
 const WP_AUTO_CHOICES = [0, 0.5, 1, 5, 15, 30, 60];   // minutes
 /** when the video wallpaper plays (Settings > Wallpaper > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
 const VIDEO_HOURS: Record<string, [number, number]> = {day: [7, 19], evening: [17, 23], night: [19, 7]};
@@ -107,6 +126,39 @@ export function App () {
 	const [restoring, setRestoring] = useState(() => !hasSavedConfig());
 	const [focusRow, setFocusRow] = useState<{id: string; seq: number} | undefined>(undefined);
 	const live = useLiveTv(config.liveTvRow, screen === 'guide', config.liveChannels);
+	const media = useMedia(config.autoSeasons);
+	// a rating asked for what was just finished (lib/ratings.ts)
+	const [toRateNow, setToRateNow] = useState<MediaItem | null>(null);
+	/** looks for something just finished to rate (set by the effect below); the player calls it when it closes */
+	const lookForRating = useRef<() => void>(() => undefined);
+	// the player, over whatever screen started it (that screen stays mounted and keeps its place)
+	const [playing, setPlaying] = useState<MediaItem | null>(null);
+	useEffect(() => { if (playing && !media.jellyfin) setPlaying(null); }, [playing, media.jellyfin]);
+	/** plays a title where Settings > Films & series > Play in says: Lumen's player, or the Jellyfin app */
+	const startPlay = useCallback((it: MediaItem) => {
+		const jf = media.jellyfin;
+		if (configRef.current.playIn === 'jellyfin' && jf) playAndOpen(jf, it, () => { showToast('Opening Jellyfin: pick it there'); return new Promise((done) => window.setTimeout(done, 1500)); });
+		else setPlaying(it);
+	}, [media.jellyfin]);
+	/** a New season request on its way: a second OK does nothing */
+	const seasonSending = useRef('');
+	// what was just finished is asked about once Lumen is back in front (and after a cold start)
+	useEffect(() => {
+		const jf = media.jellyfin;
+		if (!jf) return undefined;
+		// a panel already up stays: the next title waits in the queue (lib/ratings.ts)
+		const look = () => { if (!document.hidden) toRate(jf).then((it) => { if (it) setToRateNow((now) => now || it); }); };
+		lookForRating.current = look;
+		const cancel = afterFirstFrame(look, 1500);
+		document.addEventListener('visibilitychange', look);
+		return () => { cancel(); document.removeEventListener('visibilitychange', look); };
+	}, [media.jellyfin && media.jellyfin.token]);
+	// Settings > Films & series: what is being typed, the Quick Connect code waiting for approval, and how the last test went
+	const [mediaDraft, setMediaDraft] = useState(() => ({jfUrl: media.jellyfin ? media.jellyfin.url : '', user: '', pass: '', seerrUrl: media.seerr ? media.seerr.url : '', seerrKey: media.seerr ? media.seerr.key : ''}));
+	const [quick, setQuick] = useState<{url: string; code: string; secret: string; until: number} | null>(null);
+	// Settings > Films & series: the Claude key and taste profile for Discover's AI picks (lib/recos.ts)
+	const [ai, setAi] = useState(recoSettings);
+	const [mediaTest, setMediaTest] = useState<{jellyfin: '' | 'testing' | 'failed'; seerr: '' | 'testing' | 'failed'}>({jellyfin: '', seerr: ''});
 
 	const showToast = useCallback((text: string, kind: ToastMessage['kind'] = 'info') => {
 		window.clearTimeout(toastTimer.current);
@@ -144,9 +196,9 @@ export function App () {
 			// watch.sh opens Lumen with {"view":"ambient"} when the TV's screensaver starts (Settings > Screensaver)
 			if (p.view === 'ambient' && configRef.current.ambientOn) { ambientOpening.current = null; setScreen('ambient'); }
 			// {"view":"guide"} is the remote's Guide button, rebound with LG Input Hook; the Guide only has data with the Live TV row on
-			if (p.view === 'guide' && configRef.current.liveTvRow) { setScreen('guide'); setControls(false); }
+			if (p.view === 'guide' && configRef.current.liveTvRow) { setPlaying(null); setScreen('guide'); setControls(false); }
 			// a plain relaunch is the remote's Home button: back to the home screen from Settings, the Guide, the screensaver or Control Center
-			if (!p.view) { setScreen('home'); setControls(false); }
+			if (!p.view) { setPlaying(null); setScreen('home'); setControls(false); }
 		};
 		apply(startParams());
 		return onRelaunch(apply);
@@ -296,7 +348,7 @@ export function App () {
 
 	// idle screensaver: after the chosen time on the home screen without a key press or pointer move, while the launcher is in front
 	useEffect(() => {
-		if (!config.idleSeconds || config.saverOff || videoOn || screen !== 'home' || controls) return;   // no screensaver of our own while the video plays
+		if (!config.idleSeconds || config.saverOff || videoOn || screen !== 'home' || controls || playing) return;   // no screensaver of our own while the video plays
 		let timer = 0;
 		const arm = () => {
 			window.clearTimeout(timer);
@@ -306,7 +358,7 @@ export function App () {
 		const events = ['keydown', 'mousemove', 'click'];
 		events.forEach((e) => window.addEventListener(e, arm));
 		return () => { window.clearTimeout(timer); events.forEach((e) => window.removeEventListener(e, arm)); };
-	}, [config.idleSeconds, config.saverOff, videoOn, screen, controls]);
+	}, [config.idleSeconds, config.saverOff, videoOn, screen, controls, playing]);
 	useEffect(() => { setVideoFlag(videoOn); }, [videoOn]);
 
 	// ----- derived rows -----
@@ -330,9 +382,35 @@ export function App () {
 	const homeTiles = useMemo(() => {
 		const inFolder = config.folders.reduce((all, f) => all.concat(f.appIds), [] as string[]);
 		const open = (id: string) => running.indexOf(id) !== -1;
-		return shownApps.filter((a) => inFolder.indexOf(a.id) === -1).map((a): TileModel => ({...appTile(a), running: open(a.id)}))
-			.concat(folderTiles.map((f): TileModel => ({key: 'folder:' + f.name, label: f.name, color: '#3b4256', children: f.items.map((t) => t.imageUrl), running: f.items.some((t) => open(t.key))})));
-	}, [shownApps, folderTiles, config.folders, running]);
+		// Films & series only once Jellyfin is signed in; then each input with something plugged in, at the end
+		const plugged = config.homeInputs ? inputs.filter((i) => i.connected).map((i): TileModel => ({...inputTile(i), key: INPUT_PREFIX + i.appId})) : [];
+		return shownApps.filter((a) => inFolder.indexOf(a.id) === -1 && (a.id !== BUILTIN.media || !!media.jellyfin)).map((a): TileModel => ({...appTile(a), running: open(a.id)}))
+			.concat(folderTiles.map((f): TileModel => ({key: 'folder:' + f.name, label: f.name, color: '#3b4256', children: f.items.map((t) => t.imageUrl), running: f.items.some((t) => open(t.key))})))
+			.concat(plugged);
+	}, [shownApps, folderTiles, config.folders, config.homeInputs, inputs, running, media.jellyfin]);
+
+	/** the Resume row: what is in progress in Jellyfin, then what was requested in Seerr and is not in the library yet */
+	const resumeTiles = useMemo((): TileModel[] => {
+		const jf = media.jellyfin;
+		if (!jf) return [];
+		const watching = media.resume.map((it): TileModel => ({
+			key: MEDIA.item + it.id,
+			label: it.title,
+			resume: {title: it.title, subtitle: it.subtitle || (it.year ? String(it.year) : undefined), imageUrl: imageUrl(jf, it, 'Thumb', 640) || undefined, backdrop: imageUrl(jf, it, 'Backdrop', 1280) || undefined, progress: it.progress}
+		}));
+		const asked = media.pending.map((t): TileModel => ({
+			key: MEDIA.req + t.tmdbId,
+			label: t.title,
+			resume: {title: t.title, subtitle: t.year ? String(t.year) : undefined, imageUrl: t.backdropUrl, backdrop: t.backdropUrl, requested: true, percent: t.availability === 'downloading' ? t.percent : undefined}
+		}));
+		// new seasons of the series followed lead the row
+		const fresh = media.seasons.map((n): TileModel => ({
+			key: MEDIA.season + n.title.tmdbId,
+			label: n.title.title,
+			resume: {title: n.title.title, subtitle: `${tr('Season')} ${n.season}`, imageUrl: n.title.backdropUrl, backdrop: n.title.backdropUrl, badge: tr('New season')}
+		}));
+		return fresh.concat(watching, asked);
+	}, [media.jellyfin, media.resume, media.pending, media.seasons, config.language]);
 
 	// the first row (in the glass bar) holds config.firstRow apps; the rest make a grid of rows as wide below it, like the tvOS home screen
 	// (the grid rows are 'dock', 'dock:1', 'dock:2'...)
@@ -355,9 +433,10 @@ export function App () {
 	const rows: HomeRow[] = useMemo(() => {
 		const list: HomeRow[] = [{id: ROW.apps, label: 'Apps', items: homeTiles.slice(0, firstRow), emptyText: 'No apps selected — add some in Settings'}];
 		for (let at = firstRow, n = 0; at < homeTiles.length; at += firstRow, n++) list.push({id: n ? `${ROW.dock}:${n}` : ROW.dock, label: 'More apps', items: homeTiles.slice(at, at + firstRow)});
+		if (resumeTiles.length) list.push({id: MEDIA.row, label: 'Resume', titled: true, className: 'row--resume', below: LIVE_BELOW, slot: liveSlot, items: resumeTiles});
 		if (liveTiles.length) list.push({id: ROW.live, label: 'Live TV', titled: true, className: 'row--live', below: LIVE_BELOW, slot: liveSlot, items: liveTiles});
 		return list;
-	}, [homeTiles, shownInputs, config.language, firstRow, liveTiles, liveSlot]);
+	}, [homeTiles, shownInputs, config.language, firstRow, liveTiles, liveSlot, resumeTiles]);
 
 	// Settings' tabs are only built while Settings is open
 	const inSettings = screen === 'settings';
@@ -390,6 +469,7 @@ export function App () {
 			[OPTION.immichDays]: {labels: ['Last month', 'Last 3 months', 'Last 6 months', 'Last year'], values: [30, 90, 180, 365], now: config.immichRecentDays},
 			[OPTION.wpAuto]: {labels: ['Off', '30 sec', '1 min', '5 min', '15 min', '30 min', '60 min'], values: WP_AUTO_CHOICES, now: config.wpAutoMinutes},
 			[OPTION.dockHide]: {labels: ['Off', 'Down arrow', 'After idle', 'Both'], values: ['off', 'down', 'idle', 'both'], now: config.dockHide},
+			[OPTION.playIn]: {labels: ['Lumen', 'The Jellyfin app'], values: ['lumen', 'jellyfin'], now: config.playIn},
 			[OPTION.ambientOn]: {labels: ['LG\'s screensaver', 'My photos', 'Off'], values: ['lg', 'photos', 'off'], now: config.saverOff ? 'off' : config.ambientOn ? 'photos' : 'lg'},
 			[OPTION.idle]: {labels: ['Never', '30 seconds', '1 minute', '2 minutes', '5 minutes'], values: IDLE_SECONDS, now: config.idleSeconds},
 			[OPTION.darkMode]: {labels: ['Light', 'Dark', 'Auto'], values: ['off', 'on', 'auto'], now: config.darkMode},
@@ -430,6 +510,13 @@ export function App () {
 				label: 'Live TV row',
 				description: 'A row of TV channels under your apps, showing what is on now and next, with the Guide at the end. OK on a channel opens Live TV on it. Settings > Channels picks the channels.',
 				value: config.liveTvRow
+			},
+			{
+				id: OPTION.homeInputs,
+				group: 'home' as const,
+				label: 'Plugged-in inputs',
+				description: 'A tile at the end of your apps for each input with something plugged in and switched on, named as in the TV\'s input settings. OK switches to it.',
+				value: config.homeInputs
 			},
 			{
 				id: OPTION.firstRow,
@@ -653,6 +740,133 @@ export function App () {
 				...listed(OPTION.immichDays)
 			}] : []),
 
+			// ----- Films & series (docs/films-series.md) -----
+			{
+				id: OPTION.jfUrl,
+				group: 'media' as const,
+				label: 'Jellyfin address',
+				description: 'Your Jellyfin server as you would open it in a browser at home: scheme, address and port, for example http://192.168.1.10:8096.',
+				value: mediaDraft.jfUrl !== '',
+				valueText: mediaDraft.jfUrl || 'Not set',
+				text: {value: mediaDraft.jfUrl, placeholder: 'http://192.168.1.10:8096'}
+			},
+			{
+				id: OPTION.jfQuick,
+				group: 'media' as const,
+				label: media.jellyfin ? 'Jellyfin' : 'Sign in with Quick Connect',
+				description: media.jellyfin
+					? 'Signed in. Your films and series in progress show on the home screen, and Films & series opens your library.'
+					: 'Shows a code. In Jellyfin on your phone, open your avatar > Quick Connect and type it: Lumen is then signed in, with no password typed on the TV.',
+				value: !!media.jellyfin,
+				valueText: media.jellyfin ? 'Connected' : quick ? quick.code : mediaTest.jellyfin === 'testing' ? 'Testing' : mediaTest.jellyfin === 'failed' ? 'Failed' : mediaDraft.jfUrl ? 'Not connected' : 'Address first'
+			},
+			...(media.jellyfin ? [{
+				id: OPTION.jfOut,
+				group: 'media' as const,
+				label: 'Sign out of Jellyfin',
+				description: 'Lumen forgets its Jellyfin sign-in. The Resume row and the Films & series tile go until you sign in again.',
+				value: false,
+				valueText: ''
+			}] : [{
+				id: OPTION.jfUser,
+				group: 'media' as const,
+				label: 'Or: user name',
+				description: 'To sign in with a user name and password instead of Quick Connect. The password is not kept, only the sign-in Jellyfin gives back.',
+				value: mediaDraft.user !== '',
+				valueText: mediaDraft.user || 'Not set',
+				text: {value: mediaDraft.user, placeholder: 'Your Jellyfin user name'}
+			}, {
+				id: OPTION.jfPass,
+				group: 'media' as const,
+				label: 'Password',
+				description: 'Your Jellyfin password. It is only sent to your server to sign in, and not kept.',
+				value: mediaDraft.pass !== '',
+				valueText: mediaDraft.pass ? '\u2022\u2022\u2022\u2022' : 'Not set',
+				text: {value: mediaDraft.pass, placeholder: 'Password'}
+			}, {
+				id: OPTION.jfSignIn,
+				group: 'media' as const,
+				label: 'Sign in',
+				description: 'Signs in to Jellyfin with the user name and password above.',
+				value: false,
+				valueText: ''
+			}]),
+			{
+				id: OPTION.seerrUrl,
+				group: 'media' as const,
+				label: 'Seerr address',
+				description: 'Your Seerr server, for example http://192.168.1.10:5055. With it, Films & series can find titles you do not have and request them.',
+				value: mediaDraft.seerrUrl !== '',
+				valueText: mediaDraft.seerrUrl || 'Not set',
+				text: {value: mediaDraft.seerrUrl, placeholder: 'http://192.168.1.10:5055'}
+			},
+			{
+				id: OPTION.seerrKey,
+				group: 'media' as const,
+				label: 'Seerr API key',
+				description: 'In Seerr: Settings > General > API Key. Requests made from the TV are made with it.',
+				value: mediaDraft.seerrKey !== '',
+				valueText: mediaDraft.seerrKey ? '\u2022\u2022\u2022\u2022 ' + mediaDraft.seerrKey.slice(-4) : 'Not set',
+				text: {value: mediaDraft.seerrKey, placeholder: 'The key from Seerr'}
+			},
+			{
+				id: OPTION.seerrTest,
+				group: 'media' as const,
+				label: 'Test Seerr',
+				description: 'Checks the address and the key with your Seerr server. When it passes, Lumen keeps them.',
+				value: !!media.seerr,
+				valueText: mediaTest.seerr === 'testing' ? 'Testing' : mediaTest.seerr === 'failed' ? 'Failed' : media.seerr ? 'Connected' : 'Not connected'
+			},
+
+			{
+				id: OPTION.aiKey,
+				group: 'media' as const,
+				label: 'Claude API key',
+				description: 'For the For you row in Discover: Claude picks about ten titles a day from what Seerr offers, with a line on why. Your own key from console.anthropic.com; it is only sent to Anthropic.',
+				value: ai.key !== '',
+				valueText: ai.key ? '\u2022\u2022\u2022\u2022 ' + ai.key.slice(-4) : 'Not set',
+				text: {value: ai.key, placeholder: 'sk-ant-…'}
+			},
+			{
+				id: OPTION.aiProfile,
+				group: 'media' as const,
+				label: 'Taste profile',
+				description: 'What you like, in your own words: ratings, favourites, what you dropped, genres. Claude reads it with what you watched in Jellyfin.',
+				value: ai.profile !== '',
+				valueText: ai.profile ? ai.profile.length + ' ' + 'characters' : 'Not set',
+				text: {value: ai.profile, placeholder: 'A series you loved 10/10, one you dropped…'}
+			},
+			{
+				id: OPTION.playIn,
+				group: 'media' as const,
+				label: 'Play in',
+				description: 'Lumen: titles start at once in Lumen\'s own player. The Jellyfin app: Lumen opens it and asks it to play the title, as before.',
+				value: true,
+				...listed(OPTION.playIn)
+			},
+			{
+				id: OPTION.aiRow,
+				group: 'media' as const,
+				label: 'For you row',
+				description: 'Claude\'s picks at the top of Discover. Off: the row goes and Claude is not asked.',
+				value: config.aiRow
+			},
+			{
+				id: OPTION.autoSeasons,
+				group: 'media' as const,
+				label: 'Request new seasons',
+				description: 'When a series you follow gets a new season, request it in Seerr straight away. Off: it leads the Resume row with a New season badge and OK requests it.',
+				value: config.autoSeasons
+			},
+			...(ai.key ? [{
+				id: OPTION.aiRedo,
+				group: 'media' as const,
+				label: 'Pick again today',
+				description: 'Forgets today\'s picks: the next time Discover opens, Claude picks again (one more request on your key).',
+				value: false,
+				valueText: ''
+			}] : []),
+
 			// ----- Language and Region -----
 			{
 				id: OPTION.language,
@@ -724,7 +938,7 @@ export function App () {
 				value: config.liquidDock
 			}] : [])
 		];
-	}, [config, choices, immich.ready, immichDraft, immichTest]);
+	}, [config, choices, immich.ready, immichDraft, immichTest, media.jellyfin, media.seerr, mediaDraft, quick, mediaTest, ai]);
 
 	const wallpaper: WallpaperTab = useMemo(() => {
 		if (!inSettings) return {categories: [], entries: [], onPick: () => undefined};
@@ -804,8 +1018,31 @@ export function App () {
 
 	const onActivate = useCallback((_rowId: string, item: TileModel) => {
 		if (item.key === LIVE.guide) { setScreen('guide'); return; }
+		if (item.key.indexOf(MEDIA.item) === 0) {
+			const jf = media.jellyfin;
+			const it = media.resume.filter((x) => MEDIA.item + x.id === item.key)[0];
+			if (jf && it) startPlay(it);
+			return;
+		}
+		if (item.key.indexOf(MEDIA.season) === 0) {
+			const n = media.seasons.filter((x) => MEDIA.season + x.title.tmdbId === item.key)[0];
+			if (!n || !media.seerr || seasonSending.current === item.key) return;
+			seasonSending.current = item.key;
+			requestSeerr(media.seerr, n.title, [n.season]).then((r) => {
+				seasonSending.current = '';
+				if (r !== true) { showToast(r, 'error'); return; }
+				showToast(`${tr('Requested')} · ${n.title.title} · ${tr('Season')} ${n.season}`);
+				forgetNewSeason(n.title.tmdbId);
+				media.dropSeason(n.title.tmdbId);
+				media.refresh();
+			});
+			return;
+		}
+		if (item.key.indexOf(MEDIA.req) === 0) { showToast('Requested: it will be here once it is in your library'); return; }
+		if (item.key.indexOf(INPUT_PREFIX) === 0) { open(item.key.slice(INPUT_PREFIX.length), item.label); return; }
 		if (item.key.indexOf(LIVE.prefix) === 0) { openChannel(item.key.slice(LIVE.prefix.length)).catch(() => showToast(`Couldn't open ${item.label}`, 'error')); return; }
 		if (item.key === MISC.settings || item.key === BUILTIN.settings) { setScreen('settings'); return; }
+		if (item.key === BUILTIN.media) { setScreen('media'); return; }
 		if (item.key === 'screensaver') { startScreensaver().catch(() => showToast("Couldn't start the screensaver (it needs the Homebrew Channel)", 'error')); return; }
 		if (item.key === MISC.lgHome) { launchLgHome().catch(() => showToast("Couldn't open LG Home", 'error')); return; }
 		if (item.key === 'controls') { setControls(true); return; }
@@ -814,10 +1051,11 @@ export function App () {
 			updateConfig({...c, recentIds: [item.key].concat(c.recentIds.filter((x) => x !== item.key)).slice(0, RECENT_MAX)});
 		}
 		open(item.key, item.label);
-	}, [showToast]);
+	}, [showToast, media.jellyfin, media.resume, media.seasons, media.seerr, media.refresh, media.dropSeason, startPlay]);
 
 	/** hold OK on an app: move it one place along the home rows, or take it off the home screen */
 	const onEdit = useCallback((action: 'move' | 'remove' | 'uninstall' | 'folder-add' | 'folder-out', _rowId: string, key: string, arg: number | string = 0) => {
+		if (key.indexOf(INPUT_PREFIX) === 0) return;    // a plugged-in input's tile is not an app: it cannot be moved, removed or put in a folder
 		const c = configRef.current;
 		const strip = (folders: UserConfig['folders']) => folders.map((f) => ({...f, appIds: f.appIds.filter((id) => id !== key)}));
 		if (action === 'uninstall') {
@@ -880,8 +1118,83 @@ export function App () {
 		}).catch(() => { setImmichTest('failed'); showToast('Couldn\'t save the Immich settings on the TV', 'error'); });
 	}, [immichDraft, showToast]);
 
+	/** Jellyfin is signed in: keep it, read the Resume row, and put Films & series first on the home screen the first time */
+	const jellyfinSignedIn = useCallback((srv: Parameters<typeof saveJellyfin>[0]) => {
+		saveJellyfin(srv);
+		setQuick(null);
+		setMediaTest((m) => ({...m, jellyfin: ''}));
+		setMediaDraft((d) => ({...d, pass: ''}));
+		media.refresh();
+		const c = configRef.current;
+		if (c.appIds.indexOf(BUILTIN.media) === -1) updateConfig({...c, appIds: ([BUILTIN.media] as string[]).concat(c.appIds)});
+		showToast('Signed in to Jellyfin');
+	}, [media.refresh, showToast]);
+
+	// a Quick Connect code: checked until it is approved in Jellyfin or runs out
+	useEffect(() => {
+		if (!quick) return undefined;
+		let stop = false;
+		const check = () => {
+			if (stop) return;
+			if (Date.now() > quick.until) { setQuick(null); showToast('The Quick Connect code ran out', 'error'); return; }
+			quickConnectCheck(quick.url, quick.secret).then((srv) => {
+				if (stop) return;
+				if (srv) jellyfinSignedIn(srv); else window.setTimeout(check, QUICK_EVERY_MS);
+			}, () => { if (!stop) window.setTimeout(check, QUICK_EVERY_MS); });
+		};
+		const first = window.setTimeout(check, QUICK_EVERY_MS);
+		return () => { stop = true; window.clearTimeout(first); };
+	}, [quick, jellyfinSignedIn, showToast]);
+
+	const mediaAction = useCallback((optionId: string) => {
+		if (optionId === OPTION.jfQuick) {
+			if (media.jellyfin) return;
+			if (!cleanUrl(mediaDraft.jfUrl)) { showToast('Set the Jellyfin address first', 'error'); return; }
+			setMediaTest((m) => ({...m, jellyfin: 'testing'}));
+			quickConnectStart(mediaDraft.jfUrl).then((r) => {
+				if (typeof r === 'string') { setMediaTest((m) => ({...m, jellyfin: 'failed'})); showToast(r, 'error'); return; }
+				setMediaTest((m) => ({...m, jellyfin: ''}));
+				setMediaDraft((d) => ({...d, jfUrl: r.url}));
+				setQuick({...r, until: Date.now() + QUICK_FOR_MS});
+				showToast(`Quick Connect code ${r.code}: type it in Jellyfin, avatar > Quick Connect`);
+			});
+		} else if (optionId === OPTION.jfSignIn) {
+			setMediaTest((m) => ({...m, jellyfin: 'testing'}));
+			signIn(mediaDraft.jfUrl, mediaDraft.user, mediaDraft.pass).then((r) => {
+				if (typeof r === 'string') { setMediaTest((m) => ({...m, jellyfin: 'failed'})); showToast(r, 'error'); return; }
+				jellyfinSignedIn(r);
+			});
+		} else if (optionId === OPTION.jfOut) {
+			signOut();
+			media.refresh();
+			showToast('Signed out of Jellyfin');
+		} else if (optionId === OPTION.seerrTest) {
+			setMediaTest((m) => ({...m, seerr: 'testing'}));
+			testSeerr({url: mediaDraft.seerrUrl, key: mediaDraft.seerrKey}).then((r) => {
+				if (typeof r === 'string') { setMediaTest((m) => ({...m, seerr: 'failed'})); showToast(r, 'error'); return; }
+				saveSeerr(r);
+				setMediaDraft((d) => ({...d, seerrUrl: r.url}));
+				setMediaTest((m) => ({...m, seerr: ''}));
+				media.refresh();
+				showToast('Connected to Seerr');
+			});
+		}
+	}, [media.jellyfin, media.refresh, mediaDraft, jellyfinSignedIn, showToast]);
+
 	/** text typed on a Settings text page */
 	const onText = useCallback((optionId: string, value: string) => {
+		const v = value.trim();
+		if (optionId === OPTION.jfUrl) { setMediaDraft((d) => ({...d, jfUrl: v})); setQuick(null); }
+		else if (optionId === OPTION.jfUser) setMediaDraft((d) => ({...d, user: v}));
+		else if (optionId === OPTION.jfPass) setMediaDraft((d) => ({...d, pass: value}));
+		else if (optionId === OPTION.seerrUrl) setMediaDraft((d) => ({...d, seerrUrl: v}));
+		else if (optionId === OPTION.seerrKey) setMediaDraft((d) => ({...d, seerrKey: v}));
+		else if (optionId === OPTION.aiKey && v && !/^sk-ant-[\w-]{20,}$/.test(v)) showToast('That does not look like a Claude API key (sk-ant-…)', 'error');
+		else if (optionId === OPTION.aiKey || optionId === OPTION.aiProfile) {
+			const next = optionId === OPTION.aiKey ? {...recoSettings(), key: v} : {...recoSettings(), profile: value};
+			saveRecoSettings(next);
+			setAi(next);
+		}
 		if (optionId === OPTION.immichUrl) setImmichDraft((d) => ({...d, url: value.trim()}));
 		else if (optionId === OPTION.immichKey) setImmichDraft((d) => ({...d, key: value.trim()}));
 		setImmichTest('');
@@ -897,6 +1210,11 @@ export function App () {
 			return;
 		}
 		if (optionId === OPTION.immichTest) { testImmich(); return; }
+		if (optionId === OPTION.jfQuick || optionId === OPTION.jfSignIn || optionId === OPTION.jfOut || optionId === OPTION.seerrTest) { mediaAction(optionId); return; }
+		if (optionId === OPTION.aiRedo) { saveRecoSettings(recoSettings()); showToast('Claude picks again next time Discover opens'); return; }
+		if (optionId === OPTION.aiRow) { updateConfig({...config, aiRow: !config.aiRow}); return; }
+		if (optionId === OPTION.autoSeasons) { updateConfig({...config, autoSeasons: !config.autoSeasons}); lookAgain(); window.setTimeout(media.refresh, 300); return; }
+		if (optionId === OPTION.homeInputs) { updateConfig({...config, homeInputs: !config.homeInputs}); return; }
 		if (optionId === OPTION.liveTv) updateConfig({...config, liveTvRow: !config.liveTvRow});
 		else if (optionId === OPTION.showAmPm) updateConfig({...config, showAmPm: !config.showAmPm});
 		else if (optionId === OPTION.showAll) updateConfig({...config, showAllApps: !config.showAllApps});
@@ -911,7 +1229,7 @@ export function App () {
 		else if (optionId === OPTION.captions) updateConfig({...config, wallpaperCaptions: !config.wallpaperCaptions});
 		else if (optionId === OPTION.ambientPrint) updateConfig({...config, ambientPrint: !config.ambientPrint});
 		else if (optionId === OPTION.wpNew) updateConfig({...config, wpNewOnLaunch: !config.wpNewOnLaunch});
-	}, [config, immich.ready, testImmich]);
+	}, [config, immich.ready, testImmich, mediaAction]);
 
 	/** a value picked from an option's pop-up list */
 	const onChoose = useCallback((optionId: string, index: number) => {
@@ -931,6 +1249,7 @@ export function App () {
 		else if (optionId === OPTION.wpAuto) updateConfig({...c, wpAutoMinutes: Number(value)});
 		else if (optionId === OPTION.wpType) updateConfig({...c, wallpaperType: v});
 		else if (optionId === OPTION.dockHide) updateConfig({...c, dockHide: v});
+		else if (optionId === OPTION.playIn) updateConfig({...c, playIn: v});
 		else if (optionId === OPTION.ambientOn) {
 			if (v === 'photos' && !cachedServer()) { showToast('Set up Immich first, in Settings > Photos'); return; }
 			updateConfig({...c, ambientOn: v === 'photos', saverOff: v === 'off'});
@@ -965,9 +1284,18 @@ export function App () {
 	return (
 		<>
 			{/* Home stays mounted under Settings so it keeps its focus position. */}
-			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} weatherLine={config.showWeather && !(config.homeForecast && config.homeForecastSize === 'large')} forecast={config.homeForecast ? config.homeForecastSize as 'small' | 'large' : undefined} dockHide={config.dockHide} dockDim={config.dockDim} captions={config.wallpaperCaptions} focusRow={focusRow} />
+			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls && !toRateNow && !playing} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} weatherLine={config.showWeather && !(config.homeForecast && config.homeForecastSize === 'large')} forecast={config.homeForecast ? config.homeForecastSize as 'small' | 'large' : undefined} dockHide={config.dockHide} dockDim={config.dockDim} captions={config.wallpaperCaptions} focusRow={focusRow} />
 			{screen === 'ambient' && <Ambient source={config.ambient} seconds={config.ambientSeconds} backlight={AMBIENT_BACKLIGHT[config.ambientBrightness]} weather={weather} weatherLine={config.showWeather && !(config.saverForecast && config.saverForecastSize === 'large')} forecast={config.saverForecast ? config.saverForecastSize as 'small' | 'large' : undefined} showPeriod={config.showAmPm} print={config.ambientPrint} opening={ambientOpening.current} onExit={() => setScreen('home')} />}
-			{screen === 'guide' && <Guide channels={live.channels} listings={live.listings} logos={live.logos} now={live.now} schedule={live.schedule} pending={live.pending} full={config.guideFull} onMode={(full) => { if (configRef.current.guideFull !== full) updateConfig({...configRef.current, guideFull: full}); }} active={!controls} onOpen={watchChannel} onClose={() => setScreen('home')} />}
+			{screen === 'guide' && <Guide channels={live.channels} listings={live.listings} logos={live.logos} now={live.now} schedule={live.schedule} pending={live.pending} full={config.guideFull} onMode={(full) => { if (configRef.current.guideFull !== full) updateConfig({...configRef.current, guideFull: full}); }} active={!controls && !playing} onOpen={watchChannel} onClose={() => setScreen('home')} />}
+			{playing && media.jellyfin && <Player server={media.jellyfin} item={playing} active={!controls} onToast={showToast}
+				onClose={() => { setPlaying(null); window.setTimeout(() => { media.refresh(); lookForRating.current(); }, 1500); }}
+				onFallback={(it) => { setPlaying(null); const jf = media.jellyfin; if (jf) playAndOpen(jf, it, () => Promise.resolve()); }} />}
+			{toRateNow && screen === 'home' && !playing && <RatePanel title={toRateNow.title} active={!controls && !playing} onDone={(score) => {
+				if (!rate(toRateNow, score)) showToast('The TV could not keep the rating (storage full?)', 'error');
+				else if (score !== null) showToast(`${toRateNow.title} · ${score}/10`);
+				setToRateNow(null);
+			}} />}
+			{screen === 'media' && <Media state={media} forYou={config.aiRow} active={!controls && !playing} onPlay={startPlay} onClose={() => setScreen('home')} onToast={showToast} />}
 			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onChoose={onChoose} onText={onText} onClose={() => setScreen('home')} />}
 			{controls && <ControlCenter
 				darkMode={config.darkMode}

@@ -28,6 +28,14 @@ seen unless something looks wrong.
 
 Add new items here, with the branch and what to check. Delete an item once Sam has seen it work.
 
+- [ ] Films & séries (branch `feat/films-series`, the owner's TV, `docs/films-series.md`): seen working on 2026-10-29: Resume row → title
+      starts in Jellyfin where left; series → next episode; replacing a playing title; Library, Discover and Search screens. Still to see:
+      Jellyfin cold start (the app closed), the TV keyboard in Search, a real request (film, and a series' seasons), Quick Connect sign-in
+      from the Settings rows, a server switched off (home as fast, no row), frame rate on a long poster row.
+- [ ] Player (branch `feat/films-series`, the owner's TV, `docs/plans/player.md`): seen 2026-10-29 by camera: plays in Lumen with picture
+      (an episode; a 4K Dolby Vision TrueHD film earlier), English subtitles, bar, +20 s, fallback to Jellyfin on a broken stream, next-episode card and
+      autoplay. Still to see: the owner's feel (bar, pill, card), the remote's media keys, the subtitle menu, "Still there?", Play in = Jellyfin.
+
 ---
 
 ## Open on the TV

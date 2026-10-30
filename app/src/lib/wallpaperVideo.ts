@@ -123,3 +123,12 @@ export function setVideoPaused (hold: boolean): void {
 	else if (released || !video.getAttribute('src')) playCurrent();
 	else video.play().catch(() => { /* onerror moves on */ });
 }
+
+/** Lets go of the clip and its decoder (the player needs the TV's video hardware); setVideoPaused(false) starts it again. */
+export function releaseVideo (): void {
+	if (!video || !enabled) return;
+	video.pause();
+	video.removeAttribute('src');
+	video.load();
+	released = true;
+}

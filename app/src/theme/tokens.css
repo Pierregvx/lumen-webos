@@ -60,6 +60,20 @@
 	--chan-sweep: linear-gradient(160deg, rgba(255, 255, 255, 0.1) 0%, rgba(0, 0, 0, 0.28) 100%);
 	--chan-bg: #22263a;
 	--chan-info-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+	/* Films & séries (theme/media.css): a title's status badge (requested, downloading, available) */
+	--media-badge: rgba(99, 102, 241, 0.92);
+	--media-badge-ok: rgba(22, 163, 74, 0.92);
+	--media-badge-dl: rgba(217, 119, 6, 0.92);
+	/* the player's bar shade and jump pill */
+	--player-shade: linear-gradient(0deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.55) 60%, rgba(0, 0, 0, 0) 100%);
+	--player-pill: rgba(0, 0, 0, 0.6);
+	--player-card: rgba(20, 26, 40, 0.92);
+	/* the player's subtitles: an outline, so white text reads on any picture */
+	--player-subs-shadow: 0 0 4px #000, 0 0 4px #000, 0 2px 6px rgba(0, 0, 0, 0.8);
+	/* Discover's AI picks: the line saying why */
+	--media-why: #ffd27a;
+	/* the Films & series screen: the shade over the focused title's picture, darker at the left (the text) and at the bottom (the rows) */
+	--media-shade: linear-gradient(90deg, rgba(5, 7, 15, 0.92) 0%, rgba(5, 7, 15, 0.55) 45%, rgba(5, 7, 15, 0.1) 75%), linear-gradient(0deg, rgba(5, 7, 15, 0.95) 0%, rgba(5, 7, 15, 0.6) 42%, rgba(5, 7, 15, 0) 62%);
 	/* a meter: how far through its programme a channel is */
 	--meter: rgba(255, 255, 255, 0.3);
 	--meter-fill: #fff;
@@ -142,6 +156,8 @@
 	--ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
 	--dur-focus: 160ms;
 	--dur-scroll: 260ms;
+	/* the Films & series screen: a title's large picture fading in */
+	--dur-media-hero: 300ms;
 	--dur-fade: 220ms;
 	--dur-slide: 320ms;
 	/* Up takes 600ms and eases in and out, as a strong ease-out felt snappy; Down moves at once but eases over 675ms, so the glass pane is seen to slide up over the screen */

@@ -11,6 +11,8 @@ import './theme/panels.css';
 import './theme/settings.css';
 import './theme/guide.css';
 import './theme/live-tv.css';
+import './theme/media.css';
+import './theme/player.css';
 import './theme/forecast.css';
 import './theme/ambient.css';
 import './theme/themes.css';

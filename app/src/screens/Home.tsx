@@ -71,6 +71,8 @@ const GRID_TOP = 76;
 /** the lowest a focused grid row may sit before the grid scrolls on (its tiles 40px lower) */
 const GRID_BOTTOM = 780;   // 40px less than it looks: the grid rows sit 40px lower while the remote is in them (theme/home.css)
 const FOLDER_PRESETS = ['Games', 'Tools', 'Media'];
+/** the Resume row's picture follows the focus this long after it stops */
+const BACKDROP_AFTER_MS = 250;
 const FOLDER_PREFIX = 'folder:';
 /** the remote's 1 to 6 open the glass bar's apps at those places (keyCodes for the digit row and the number pad) */
 const dockDigit = (e: KeyboardEvent) => (e.keyCode >= 49 && e.keyCode <= 54 ? e.keyCode - 48 : e.keyCode >= 97 && e.keyCode <= 102 ? e.keyCode - 96 : 0);
@@ -477,10 +479,21 @@ export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, o
 	const overlay = n.zone === 'panel' || n.zone === 'ctx' || n.zone === 'folder';
 	const topPointer = (i: number) => () => { if (!overlay && realPointer.current) { n.mode = 'pointer'; n.engaged = true; n.zone = 'top'; n.topIndex = i; render(); } };
 	const focusedTop = (i: number) => n.engaged && n.zone === 'top' && i === n.topIndex;
+	// on the Resume row the focused title's picture takes the wallpaper's place, a moment after the focus stops (Films & séries)
+	const onRow = n.engaged && n.zone === 'rows' ? rows[clamp(n.rowIndex, 0, rows.length - 1)] : undefined;
+	const onTile = onRow && onRow.className === 'row--resume' ? onRow.items[columnOf(onRow)] : undefined;
+	const wantBackdrop = active && onTile && onTile.resume ? onTile.resume.backdrop || '' : '';
+	const [backdrop, setBackdrop] = useState('');
+	useEffect(() => {
+		const timer = window.setTimeout(() => setBackdrop(wantBackdrop), wantBackdrop ? BACKDROP_AFTER_MS : 0);
+		return () => window.clearTimeout(timer);
+	}, [wantBackdrop]);
 	return (
 		<div class={`screen${active ? '' : ' screen--inactive'}${lower ? ' screen--lower' : ''}${n.moving ? ' screen--moving' : ''}${n.dockHidden ? ' screen--dockhidden' : ''}${dockDim ? ' screen--dockdim' : ''}`}>
 			<div class="dockdim" />
 			<LowerVeil />
+			{/* over the lower view's veil (it covers the wallpaper there), under the rows */}
+			{backdrop && <div key={backdrop} class="home__backdrop"><img src={backdrop} alt="" decoding="async" /></div>}
 			<Status weather={weatherLine ? weather : null} showPeriod={showPeriod} />
 			{captions && <VideoCaption />}
 			{forecast && weather && <div class={`homecast homecast--${forecast}`}><Forecast weather={weather} size={forecast} /></div>}

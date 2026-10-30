@@ -652,6 +652,38 @@ const TABLE: Record<string, string[]> = {
 		"Oklar taşır · OK bırakır · Geri iptal eder",
 		"तीर खिसकाते हैं · OK छोड़ता है · Back रद्द करता है"
 	],
+	// ----- Films & séries (docs/films-series.md) -----
+	"Resume": ["Weiterschauen", "Seguir viendo", "Reprendre", "Riprendi", "Continuar", "Verder kijken", "Devam et", "जारी रखें"],
+	"Requested": ["Angefragt", "Solicitado", "Demandé", "Richiesto", "Pedido", "Aangevraagd", "İstendi", "अनुरोधित"],
+	"Films & series": ["Filme & Serien", "Películas y series", "Films & séries", "Film e serie", "Filmes e séries", "Films & series", "Filmler ve diziler", "फ़िल्में और सीरीज़"],
+	"Plugged-in inputs": ["Angeschlossene Eingänge", "Entradas conectadas", "Entrées branchées", "Ingressi collegati", "Entradas ligadas", "Aangesloten ingangen", "Bağlı girişler", "जुड़े इनपुट"],
+	"Jellyfin address": ["Jellyfin-Adresse", "Dirección de Jellyfin", "Adresse Jellyfin", "Indirizzo Jellyfin", "Endereço Jellyfin", "Jellyfin-adres", "Jellyfin adresi", "Jellyfin पता"],
+	"Sign in with Quick Connect": ["Mit Quick Connect anmelden", "Entrar con Quick Connect", "Se connecter avec Quick Connect", "Accedi con Quick Connect", "Entrar com Quick Connect", "Inloggen met Quick Connect", "Quick Connect ile giriş", "Quick Connect से साइन इन"],
+	"Sign out of Jellyfin": ["Von Jellyfin abmelden", "Cerrar sesión de Jellyfin", "Se déconnecter de Jellyfin", "Esci da Jellyfin", "Sair do Jellyfin", "Uitloggen bij Jellyfin", "Jellyfin'den çıkış", "Jellyfin से साइन आउट"],
+	"Or: user name": ["Oder: Benutzername", "O: usuario", "Ou : nom d'utilisateur", "Oppure: nome utente", "Ou: utilizador", "Of: gebruikersnaam", "Ya da: kullanıcı adı", "या: यूज़र नाम"],
+	"Address first": ["Erst die Adresse", "Primero la dirección", "Adresse d'abord", "Prima l'indirizzo", "Primeiro o endereço", "Eerst het adres", "Önce adres", "पहले पता"],
+	"Password": ["Passwort", "Contraseña", "Mot de passe", "Password", "Palavra-passe", "Wachtwoord", "Şifre", "पासवर्ड"],
+	"Sign in": ["Anmelden", "Entrar", "Se connecter", "Accedi", "Entrar", "Inloggen", "Giriş yap", "साइन इन"],
+	"Seerr address": ["Seerr-Adresse", "Dirección de Seerr", "Adresse Seerr", "Indirizzo Seerr", "Endereço Seerr", "Seerr-adres", "Seerr adresi", "Seerr पता"],
+	"Seerr API key": ["Seerr-API-Schlüssel", "Clave API de Seerr", "Clé API Seerr", "Chiave API Seerr", "Chave API Seerr", "Seerr API-sleutel", "Seerr API anahtarı", "Seerr API कुंजी"],
+	"Test Seerr": ["Seerr testen", "Probar Seerr", "Tester Seerr", "Prova Seerr", "Testar Seerr", "Seerr testen", "Seerr'i test et", "Seerr जांचें"],
+	"Signed in to Jellyfin": ["Bei Jellyfin angemeldet", "Sesión iniciada en Jellyfin", "Connecté à Jellyfin", "Accesso a Jellyfin eseguito", "Sessão iniciada no Jellyfin", "Ingelogd bij Jellyfin", "Jellyfin'e giriş yapıldı", "Jellyfin में साइन इन"],
+	"Signed out of Jellyfin": ["Von Jellyfin abgemeldet", "Sesión de Jellyfin cerrada", "Déconnecté de Jellyfin", "Uscito da Jellyfin", "Sessão do Jellyfin terminada", "Uitgelogd bij Jellyfin", "Jellyfin'den çıkıldı", "Jellyfin से साइन आउट"],
+	"Connected to Seerr": ["Mit Seerr verbunden", "Conectado a Seerr", "Connecté à Seerr", "Connesso a Seerr", "Ligado ao Seerr", "Verbonden met Seerr", "Seerr'e bağlandı", "Seerr से जुड़ा"],
+	"Opening Jellyfin: pick it there": ["Jellyfin wird geöffnet: dort auswählen", "Abriendo Jellyfin: elígelo allí", "Ouverture de Jellyfin : choisis-le là-bas", "Apertura di Jellyfin: sceglilo lì", "A abrir o Jellyfin: escolha-o lá", "Jellyfin wordt geopend: kies het daar", "Jellyfin açılıyor: oradan seçin", "Jellyfin खुल रहा है: वहां चुनें"],
+	"Requested: it will be here once it is in your library": ["Angefragt: Es erscheint hier, sobald es in deiner Mediathek ist", "Solicitado: aparecerá aquí cuando esté en tu biblioteca", "Demandé : il sera là dès qu'il sera dans ta bibliothèque", "Richiesto: sarà qui quando sarà nella tua libreria", "Pedido: aparece aqui quando estiver na sua biblioteca", "Aangevraagd: het staat hier zodra het in je bibliotheek is", "İstendi: kitaplığınıza eklenince burada olacak", "अनुरोधित: लाइब्रेरी में आते ही यहां दिखेगा"],
+	"The Quick Connect code ran out": ["Der Quick-Connect-Code ist abgelaufen", "El código de Quick Connect caducó", "Le code Quick Connect a expiré", "Il codice Quick Connect è scaduto", "O código Quick Connect expirou", "De Quick Connect-code is verlopen", "Quick Connect kodunun süresi doldu", "Quick Connect कोड समाप्त हो गया"],
+	"Set the Jellyfin address first": ["Zuerst die Jellyfin-Adresse eingeben", "Primero la dirección de Jellyfin", "Indique d'abord l'adresse Jellyfin", "Prima imposta l'indirizzo Jellyfin", "Defina primeiro o endereço Jellyfin", "Stel eerst het Jellyfin-adres in", "Önce Jellyfin adresini girin", "पहले Jellyfin पता डालें"],
+	"Lumen could not start it: pick it here": [
+		"Lumen konnte es nicht starten: hier auswählen",
+		"Lumen no pudo iniciarlo: elígelo aquí",
+		"Lumen n'a pas pu le lancer : choisis-le ici",
+		"Lumen non è riuscito ad avviarlo: sceglilo qui",
+		"O Lumen não conseguiu iniciá-lo: escolha-o aqui",
+		"Lumen kon het niet starten: kies het hier",
+		"Lumen başlatamadı: buradan seçin",
+		"Lumen इसे शुरू नहीं कर सका: यहां चुनें"
+	],
 };
 
 let current = 'en';

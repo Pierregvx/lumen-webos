@@ -7,7 +7,9 @@ export const APP_ID: string = __LUMEN_APP_ID__;
 export const SYSTEM_APP = {
 	lgHome: 'com.webos.app.home',
 	liveTv: 'com.webos.app.livetv',
-	homebrewChannel: 'org.webosbrew.hbchannel'
+	homebrewChannel: 'org.webosbrew.hbchannel',
+	jellyfin: 'org.jellyfin.webos',
+	youtube: 'youtube.leanback.v4'
 } as const;
 
 /** Luna service URIs. A sideloaded web app on webOS 6 may only call methods in the

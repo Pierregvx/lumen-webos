@@ -110,8 +110,8 @@ html.wp-video .rows { will-change: transform; }
 /* the grid rows line up with the bar's columns (left-aligned) instead of floating in the middle */
 .rows > .row:not(:first-child) .row__track--centered { justify-content: flex-start; margin: 0; padding-left: calc((1920px - 2 * var(--layout-rows-edge) - var(--first-w, 1670px)) / 2); }
 .row__empty { font-size: 18px; font-weight: 400; color: var(--ink-3); }
-/* the Live TV row reaches far enough down to show the focused channel's now/next block, and runs off both screen edges as tvOS rows do */
-.row--live .row__viewport {
+/* the Live TV and Resume rows reach far enough down to show the focused tile's block under it, and run off both screen edges as tvOS rows do */
+.row--live .row__viewport, .row--resume .row__viewport {
 	padding: 40px var(--layout-rows-edge) 250px; margin: -40px calc(-1 * var(--layout-rows-edge)) -250px;
 }
 
