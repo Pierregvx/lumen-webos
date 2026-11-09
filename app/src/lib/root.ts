@@ -192,19 +192,20 @@ export function startScreensaver (): Promise<void> {
 	return run(luna('luna://com.webos.service.tvpower/power/turnOnScreenSaver', {})).then(() => undefined);
 }
 
-/** Tells watch.sh the video wallpaper is on, so LG's screensaver is ended while Lumen is in front. */
-export function setVideoFlag (on: boolean): Promise<void> {
-	return run(on ? `mkdir -p ${HOMEHOOK} && touch ${HOMEHOOK}/video-wallpaper` : `rm -f ${HOMEHOOK}/video-wallpaper`).then(() => undefined);
+export interface HomehookFlags {
+	/** the video wallpaper is on: LG's screensaver is ended while Lumen is in front */
+	video: boolean;
+	/** LG's screensaver is replaced with Lumen's ambient screen (your photos) */
+	ambient: boolean;
+	/** Settings > Screensaver > Off: LG's screensaver is ended as soon as it starts, in every app */
+	saverOff: boolean;
 }
 
-/** Tells watch.sh to replace LG's screensaver with Lumen's ambient screen (your photos). */
-export function setAmbientFlag (on: boolean): Promise<void> {
-	return run(on ? `mkdir -p ${HOMEHOOK} && touch ${HOMEHOOK}/ambient-screensaver` : `rm -f ${HOMEHOOK}/ambient-screensaver`).then(() => undefined);
-}
-
-/** Tells watch.sh to end LG's screensaver as soon as it starts, in every app (Settings > Screensaver > Off). */
-export function setSaverOffFlag (on: boolean): Promise<void> {
-	return run(on ? `mkdir -p ${HOMEHOOK} && touch ${HOMEHOOK}/no-screensaver` : `rm -f ${HOMEHOOK}/no-screensaver`).then(() => undefined);
+/** Sets watch.sh's three flag files in one call. */
+export function setHomehookFlags (f: HomehookFlags): Promise<void> {
+	const flag = (on: boolean, name: string) => (on ? `touch ${HOMEHOOK}/${name}` : `rm -f ${HOMEHOOK}/${name}`);
+	return run(`mkdir -p ${HOMEHOOK} && ${flag(f.video, 'video-wallpaper')} && ${flag(f.ambient, 'ambient-screensaver')} && ${flag(f.saverOff, 'no-screensaver')}`)
+		.then(() => undefined);
 }
 
 /** While the ambient screen is up, watch.sh only ends LG's screensaver (which starts again after its timer, as nothing is pressed) instead of

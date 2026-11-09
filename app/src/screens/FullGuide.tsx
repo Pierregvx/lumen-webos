@@ -2,7 +2,7 @@ import {t as tr} from '../lib/i18n';
 import {useCallback, useState} from 'preact/hooks';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
-import {channelColor, clockText, progress, timeLeft, type Channel, type Listings, type Programme} from '../lib/livetv';
+import {channelColor, channelLogo, clockText, progress, timeLeft, type Channel, type Listings, type Programme} from '../lib/livetv';
 import {SCHEDULE_HOURS} from '../hooks/useLiveTv';
 import {rowWindow} from '../lib/windowedList';
 
@@ -24,6 +24,11 @@ interface Props {
 	onAt: (i: number) => void;
 	active: boolean;
 	onOpen: (channel: Channel) => void;
+	/** the channels on the Live TV row (a star), and OK held: onto the row or off it (screens/Guide.tsx) */
+	inRow: Record<string, true>;
+	onPin: (channel: Channel) => void;
+	/** the list is a search's: an empty one says nothing matches */
+	searched?: boolean;
 	/** Up on the first channel: focus moves to the switcher */
 	onTop: () => void;
 	onClose: () => void;
@@ -57,7 +62,7 @@ function pick (list: Programme[], a: number, winEnd: number): Programme | undefi
  *  between channels and keep the time the focus is at, so the focus stays on what is on now as it moves; Left/Right move between programmes
  *  and scroll the grid half an hour at a time, as far back as the half hour now is in and as far on as the schedule was read. OK opens Live TV
  *  on the channel. Only the rows near the view are drawn, and only the programmes inside the two hours. */
-export function FullGuide ({channels, listings, from, thin, loading, logos, now, at, onAt, active, onOpen, onTop, onClose}: Props) {
+export function FullGuide ({channels, listings, from, thin, loading, logos, now, at, onAt, active, onOpen, inRow, onPin, searched, onTop, onClose}: Props) {
 	const base = halfHour(now);
 	const lastWin = Math.max(base, from + SCHEDULE_HOURS * 3600000 - SPAN);
 	const [winState, setWin] = useState(base);
@@ -92,7 +97,7 @@ export function FullGuide ({channels, listings, from, thin, loading, logos, now,
 		return true;
 	}, [at, last, focused, anchor, win, base, lastWin, now, channels, listings, onAt, onTop, onClose]);
 	useKeys(handleKey, active);
-	useOkPress({onPress: () => { if (channels[at]) onOpen(channels[at]); }, onLongPress: () => undefined}, active);
+	useOkPress({onPress: () => { if (channels[at]) onOpen(channels[at]); }, onLongPress: () => { if (channels[at]) onPin(channels[at]); }}, active);
 
 	const {top, from: rowFrom, to: rowTo} = rowWindow(channels.length, at, IN_VIEW, FOCUS_AT, SPARE);
 	const t = Date.now();
@@ -121,18 +126,18 @@ export function FullGuide ({channels, listings, from, thin, loading, logos, now,
 				{[0, 1, 2, 3].map((k) => <span key={k} style={{left: `${k * GRID_W / 4}px`}}>{clockText(win + k * HALF_HOUR)}</span>)}
 			</div>
 			<div class="fg__view">
-				{channels.length === 0 && <div class="guide__empty">{tr('No channels yet. Open Live TV once, then come back.')}</div>}
+				{channels.length === 0 && <div class="guide__empty">{tr(searched ? 'No channel matches' : 'No channels yet. Open Live TV once, then come back.')}</div>}
 				<div class="guide__track" style={{transform: `translateY(${-top * ROW_STEP}px)`}}>
 					{channels.slice(rowFrom, rowTo).map((c, k) => {
 						const i = rowFrom + k;
-						const logo = c.logoPath && logos[c.logoPath];
+						const logo = channelLogo(c, logos);
 						const color = channelColor(c.name);
 						const shown = listOf(c).filter((p) => p.end > win && p.start < winEnd);
 						const isAt = i === at;
 						return (
 							<div key={c.id} class={`fg__row${isAt ? ' fg__row--at' : ''}`} style={{top: `${i * ROW_STEP}px`}} onMouseEnter={() => onAt(i)}>
 								<div class="fg__cell-chan">
-									<span class="fg__num">{c.number}</span>
+									<span class="fg__num">{c.number}{inRow[c.id] && <span class="guide__star">★</span>}</span>
 									<span class="fg__logo" style={color ? {backgroundColor: color} : undefined}>{logo ? <img src={logo} alt="" decoding="async" /> : <span>{c.name}</span>}</span>
 									<span class="fg__name">{c.name}</span>
 								</div>

@@ -66,6 +66,59 @@ is in `docs/research/live-tv.md`; this file only keeps what the build needs.
   service (`getEventList` replies carry `description`), with Freeview's trailing flags such as "[S]" taken off. The schedule-table fallback
   does not select it, since reading it for every row is heavy, so then no blurb shows. Blurbs are left out of the Live TV cache.
 
+## IPTV channels (from Jellyfin's Live TV)
+
+**2026-11-05, built** (seen in the browser with made-up channels and a stand-in Jellyfin, not yet on the TV):
+- Source: Jellyfin's Live TV, whatever is behind it (an M3U tuner, an Xtream account given as its M3U link, an HDHomeRun). Lumen never
+  sees the provider, the playlist or the account's password: they are set up in Jellyfin. Lumen reads `GET /LiveTv/Channels` (every
+  channel, up to 5,000, those marked as favourites in Jellyfin first) and `POST /LiveTv/Programs` (the guide, 8 hours, 60 channels a
+  call). Code: `lib/iptv.ts`.
+- The channels join the aerial ones after them, in Jellyfin's order: the Live TV row (picked in Settings > Channels like the others),
+  Now and Next and the Full guide. Their id and signal are `jf:<Jellyfin id>`, so they never meet an aerial channel's; the TV's guide
+  service and schedule table are only asked about aerial channels. The guide is not read for every channel at once (a list can hold
+  thousands): the row's channels and up to 120 favourites at start-up, and while the Guide is open the channels around its focus, once
+  it rests for 0.3 s (25 below, 5 above), 60 a call. Each channel's read lasts 30 minutes (5 after a failure). The channel list is read
+  again every 30 minutes. The cache keeps only the row's and the favourite IPTV channels (up to 150) and the next 4 hours of their guide,
+  so a cold start stays quick; the others come back with the first read. Settings > Channels offers the aerial channels, the favourites
+  and the row's; any other IPTV channel goes on the row from the Guide. Logos are Jellyfin's image addresses (`channelLogo` in `lib/livetv.ts`).
+- OK on an IPTV channel plays it in Lumen (`screens/LivePlayer.tsx`), since LG's Live TV knows nothing of it. Lumen asks Jellyfin for
+  HLS with the picture and sound copied when the TV reads them (h264/hevc, aac/ac3/eac3/mp3), so the NAS only repackages; anything else
+  is re-encoded. Direct play is off: an endless raw TS over HTTP is not known to play on the TV, HLS is **(verify)**.
+- The live player: a banner (logo, number and name, now with times and progress, next) on opening, on a zap and on OK, gone after 5 s.
+  Up/Down and CH+/CH- zap through the IPTV channels; the stream opens 0.7 s after the last press. Back returns to the row or the Guide.
+  Before another channel opens, and when the player closes or Lumen goes to the background, Lumen sends Stopped, ends the repackaging
+  and closes the tuner's stream, so a subscription with one connection is free for the next one.
+- Picking the row's channels from the Guide (2026-11-05, for any channel, aerial or IPTV): OK held on a channel, in Now and Next or the
+  Full guide, puts it at the end of the Live TV row or takes it off, with a toast; a star under the number marks the row's channels, and
+  a hint between the title and the switcher says so. It is the same list as Settings > Channels (`config.liveChannels`).
+- Finding a channel (2026-11-05): in the live player, Left opens the channel list down the left (`components/ChannelPanel.tsx`): every
+  IPTV channel with what is on, the one playing focused; Up/Down move, CH+/CH- jump ten, OK switches, Right or Back closes. The number
+  keys in the player type a channel number (shown at the top), and 1.5 s after the last digit it goes there. A search by name, with the
+  TV's keyboard, sits on top of the channel list and left of the Guide's switcher (Left from Now and Next): the list keeps the channels
+  whose words start with what is typed, accents and case aside, or whose number starts with it (`matchChannels` in `lib/livetv.ts`).
+  Left from the channels goes straight to the search with the keyboard up (in the channel list, and in Now and Next; the Full guide
+  keeps Left for its times). The magnifier is a line icon (`Glyph` 'search'): the TV's font has no ⌕ and drew a crossed box.
+  Back clears a search before it closes the list or the Guide. Lists tell `useLiveTv` the channels on screen (`browse`), so their IPTV
+  guide is read whatever the list.
+- A stream left open (2026-11-05, seen when an install killed Lumen mid-channel): Jellyfin kept it, the subscription's one connection was
+  taken, and every channel failed with "M3U simultaneous stream limit has been reached". Lumen now keeps the open stream in localStorage
+  (`lumen-iptv-open`) until it is closed, and the next player closes a leftover before it opens a channel. A channel that failed says
+  "OK to try again": OK (or picking it again in the channel list) tries it again.
+- Categories (2026-11-09): Jellyfin drops the M3U's `group-title`, so the picks server reads the list and answers `GET /live/categories` (`{groups, channels: {<Jellyfin id>: index}}`, no sign-in, like `/home`). `readIptvCategories` in `lib/iptv.ts` reads it with the channel list. In the Guide a pill left of the search (Up to the switcher, Left, Left, OK), and in the live player's channel list the line under the search, open `components/CategoryMenu.tsx`. The choice is kept (`lumen-livetv-category`), narrows the Guide and the channel list, and Up/Down in the player stay in it when the channel playing is in it. No menu with one category or none. **(verify)**
+- An empty guide (2026-11-09): the provider's XMLTV only runs about a day ahead, so one failed Refresh Guide in Jellyfin (03:30) leaves every channel on "No guide data" by the next night. Lumen's read is fine; see Jellyfin's Scheduled tasks and its log.
+- Without a Jellyfin sign-in there are no IPTV channels. In the browser (dev, no Jellyfin) four made-up IPTV channels show.
+- Setting up IPTV in Jellyfin: Dashboard > Live TV, an M3U tuner (an Xtream account's list is
+  `<server>/get.php?username=…&password=…&type=m3u_plus&output=ts`) and an XMLTV guide (`<server>/xmltv.php?username=…&password=…`).
+  An Xtream list often mixes in films and series episodes, which Jellyfin shows as channels: give the tuner a list of live channels only.
+
+**2026-11-05, on the TV** (a dev build with this branch; checked over DevTools, not yet by Sam): TF1 from Jellyfin plays, 1920 wide, picture
+in under 3 s. Down to M6: the banner moves at once, the picture follows in about 10 s, since the subscription allows one connection and
+Jellyfin closes the provider's stream before opening the next. Back returns to the row on the channel; Jellyfin has no session or
+ffmpeg left afterwards. Jellyfin repackages without re-encoding (source h264 1080p and AAC).
+
+**Still to verify on the TV:** an IPTV channel plays (HLS through Jellyfin), how long it takes to start, zapping with Up/Down and CH+/CH-, Back,
+and that Jellyfin's dashboard shows no stream left open after Back or Home.
+
 ## Mockups
 
 In `docs/mockups/live-tv/` (1920×1080):

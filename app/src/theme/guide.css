@@ -23,6 +23,10 @@
 	box-shadow: inset 0 2px 1px -1px rgba(255, 255, 255, 0.6), inset 2px 0 1px -1px rgba(255, 255, 255, 0.3), 0 12px 28px rgba(0, 0, 0, 0.3);
 }
 .guide__typed--miss { color: var(--guide-typed-miss); }
+/* between the title and the switcher: what a long press on OK does (screens/Guide.tsx onPin) */
+.guide__hint { flex: 0 1 auto; margin: 0 40px; font-size: 22px; font-weight: 500; opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* under a channel's number: it is on the Live TV row */
+.guide__star { display: block; margin-top: 2px; font-size: 20px; line-height: 1; color: var(--accent-on); }
 
 /* a meter: how far through its programme a channel is */
 .chan__bar span, .chan__meter span, .guide__meter span { display: block; height: 100%; background: #fff; transform-origin: 0 50%; }
@@ -103,3 +107,34 @@ html.reduce-motion .guide__track, html.reduce-motion .guide__row { transition: n
 .fg__ptime { margin-top: 2px; font-size: 18px; font-weight: 500; opacity: 0.75; white-space: nowrap; }
 .fg__nowline { position: absolute; left: 402px; width: 2px; height: 570px; z-index: 1; pointer-events: none; background: var(--ink-guide); }
 .fg__nowline::before { content: ''; position: absolute; left: -5px; top: 0; width: 12px; height: 12px; border-radius: 6px; background: var(--ink-guide); }
+/* the search field, left of the switcher (screens/Guide.tsx): a glass capsule; focused it fills like the switcher, and while the TV's
+   keyboard is up the field stays light so the text shows */
+.guide__cat {
+	flex: 0 0 auto; max-width: 320px; height: 68px; line-height: 68px; box-sizing: border-box; margin-right: 12px; padding: 0 26px; border-radius: 34px;
+	background: rgba(255, 255, 255, 0.14); font-size: 24px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+	transition: transform var(--dur-focus) ease-out;
+}
+.guide__cat--focused { transform: scale(var(--lift-pill)); background: var(--focus-fill); color: var(--focus-ink); }
+.catmenu { position: absolute; left: var(--layout-rows-edge); top: 60px; width: 640px; padding: 24px; border-radius: 28px; background: rgba(14, 16, 26, 0.97); z-index: 30; }
+.catmenu__view { position: relative; height: calc(12 * 72px); overflow: hidden; }
+.catmenu__track { position: absolute; left: 0; right: 0; top: 0; transition: transform var(--dur-focus) ease-out; }
+.catmenu__row { position: absolute; left: 0; right: 0; height: 64px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding: 0 24px; box-sizing: border-box; border-radius: 16px; font-size: 26px; font-weight: 500; }
+.catmenu__row--on { font-weight: 700; }
+.catmenu__row--focused { background: var(--focus-fill); color: var(--focus-ink); }
+.catmenu__name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.catmenu__count { flex: 0 0 auto; margin-left: 20px; opacity: 0.6; }
+.guide__search {
+	flex: 0 0 auto; display: flex; flex-direction: row; align-items: center; gap: 10px; width: 340px; height: 68px; box-sizing: border-box; margin-right: 20px;
+	padding: 0 24px; border-radius: 34px; background: rgba(255, 255, 255, 0.14);
+	box-shadow: inset 0 1.5px 1px -1px rgba(255, 255, 255, 0.45), inset 1.5px 0 1px -1px rgba(255, 255, 255, 0.2);
+	transition: transform var(--dur-focus) ease-out;
+}
+.guide__search--focused { transform: scale(var(--lift-pill)); background: var(--focus-fill); color: var(--focus-ink); box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3); }
+.guide__search-input {
+	flex: 1 1 auto; min-width: 0; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; font-size: 26px; font-weight: 500;
+}
+.guide__search-input::placeholder { color: inherit; opacity: 0.6; }
+.guide__head .guide__hint { margin-right: auto; }
+/* the magnifier in a search field (the Guide's and the live player's channel list): a line icon in the text's colour */
+.search-glass { position: relative; flex: 0 0 auto; width: 30px; height: 30px; opacity: 0.75; }
+.search-glass .tile__glyph { left: 0; top: 0; width: 100%; height: 100%; stroke: currentColor; stroke-width: 2.2; }

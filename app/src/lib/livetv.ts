@@ -18,6 +18,21 @@ export interface Channel {
 	name: string;
 	/** the logo's file on the TV (/tmp/gibbips/logo/...), when it has one */
 	logoPath?: string;
+	/** an IPTV channel from Jellyfin's Live TV (lib/iptv.ts): id and signal are "jf:<Jellyfin id>", it plays in Lumen, not in LG's Live TV */
+	iptv?: boolean;
+	/** an IPTV channel marked as a favourite in Jellyfin: it comes first, and is offered in Settings > Channels */
+	fav?: boolean;
+	/** an IPTV channel's category in the provider's list (lib/iptv.ts readIptvCategories) */
+	group?: string;
+	/** an IPTV channel's logo, served by Jellyfin */
+	logoUrl?: string;
+	/** dev preview only: a test stream to play instead of asking Jellyfin */
+	mockUrl?: string;
+}
+
+/** A channel's logo: the TV's file read into the cache, or Jellyfin's address for an IPTV channel. */
+export function channelLogo (c: Channel, logos: Record<string, string>): string | undefined {
+	return (c.logoPath && logos[c.logoPath]) || c.logoUrl || undefined;
 }
 
 /** One listing; times in ms since the epoch. */
@@ -117,6 +132,29 @@ export function rowChannels (channels: Channel[], ids: string[] | null): Channel
 	const byId: Record<string, Channel> = {};
 	channels.forEach((c) => { byId[c.id] = c; });
 	return ids.map((id) => byId[id]).filter((c): c is Channel => !!c);
+}
+
+/** lower case, without accents or punctuation: "Canal+ Ciné" and "canal cine" read the same */
+function fold (text: string): string {
+	return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+/** The channels a search finds, best first: each word typed has to start a word of the name ("fra 2" finds France 2), or the whole
+ *  search is the start of the number. Names that start with the search come first, then the rest in list order. */
+export function matchChannels (channels: Channel[], query: string): Channel[] {
+	const q = fold(query);
+	if (!q) return channels;
+	const words = q.split(' ');
+	const first: Channel[] = [];
+	const rest: Channel[] = [];
+	for (const c of channels) {
+		const name = fold(c.name);
+		const parts = name.split(' ');
+		const hit = (/^\d+$/.test(q) && c.number.indexOf(q) === 0) || words.every((w) => parts.some((p) => p.indexOf(w) === 0));
+		if (!hit) continue;
+		(name.indexOf(q) === 0 ? first : rest).push(c);
+	}
+	return first.concat(rest);
 }
 
 /** Where typing a number lands: the channel with that number, else the first one after it (the list is in number order), else -1. */

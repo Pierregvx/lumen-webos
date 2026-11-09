@@ -2,9 +2,9 @@
 //
 // The pointer is drawn by the TV's compositor, not the page, so CSS `cursor: none` has
 // no effect. webOS gives web apps `webOSSystem.setCursorHidden()` for this: it hides the
-// pointer the same way pressing an arrow key does, and the system shows it again when
-// the user shakes or moves the remote. So hiding on launch/foreground doesn't stop the
-// user switching back to pointer mode.
+// pointer, and the system shows it again when the user moves the remote. On webOS 25 it
+// takes a bigger move to bring back than after webOS's own hide on an arrow press, so
+// Lumen only hides it at launch (app.tsx).
 
 interface WebOSSystemCursor {
 	/** the JSON string a launch was started with (lib/launchParams.ts) */
@@ -25,18 +25,4 @@ export function hidePointer (): void {
 	if (!sys || typeof sys.setCursorHidden !== 'function') return;
 	try { sys.setCursorHidden(true); }
 	catch { /* best effort */ }
-}
-
-/** Hide the pointer on launch and every time the app comes back to the foreground
- *  (including relaunches while already running, e.g. from a remapped HOME button).
- *  Returns an unsubscribe function. */
-export function hidePointerOnForeground (): () => void {
-	const onVisible = () => { if (!document.hidden) hidePointer(); };
-	hidePointer();
-	document.addEventListener('visibilitychange', onVisible);
-	document.addEventListener('webOSRelaunch', onVisible);
-	return () => {
-		document.removeEventListener('visibilitychange', onVisible);
-		document.removeEventListener('webOSRelaunch', onVisible);
-	};
 }

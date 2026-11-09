@@ -5,7 +5,7 @@ description: Sam's TV over SSH from this Mac. Use to install a build on the TV, 
 
 # The TV over SSH
 
-The TV is `root@192.168.0.20` (also `LUMEN_TV_HOST` in the gitignored `.env`). Key auth works from this Mac, so every call uses `-o BatchMode=yes`. Add `-o LogLevel=ERROR` to hide the post-quantum warning the TV prints on each connection. If ssh fails inside the sandbox, rerun it with the sandbox off.
+The TV is `LUMEN_TV_HOST` in the gitignored `.env` (`root@<tv-ip>`); its address is never written in this public repository. Read it with `TV=$(grep ^LUMEN_TV_HOST= .env | cut -d= -f2)`. Key auth works from this Mac, so every call uses `-o BatchMode=yes`. Add `-o LogLevel=ERROR` to hide the post-quantum warning the TV prints on each connection. If ssh fails inside the sandbox, rerun it with the sandbox off.
 
 ## Consent
 
@@ -29,7 +29,7 @@ A push to `main` publishes a Channel release, and a Channel update replaces the 
 WebAppMgr serves Chrome DevTools on the TV's `127.0.0.1:9998`. Open the tunnel once a session:
 
 ```sh
-curl -s -m 3 http://127.0.0.1:19998/json >/dev/null || ssh -o BatchMode=yes -o LogLevel=ERROR -o ExitOnForwardFailure=yes -f -N -L 19998:127.0.0.1:9998 root@192.168.0.20
+curl -s -m 3 http://127.0.0.1:19998/json >/dev/null || ssh -o BatchMode=yes -o LogLevel=ERROR -o ExitOnForwardFailure=yes -f -N -L 19998:127.0.0.1:9998 $TV
 ```
 
 If the tunnel goes stale, run `pkill -f 19998:127.0.0.1:9998` and open it again. Then use `node tools/tv/cdp.mjs`:

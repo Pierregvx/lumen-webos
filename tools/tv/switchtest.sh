@@ -6,7 +6,7 @@
 set -e
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 . "$ROOT/tools/env.sh"
-HOST=${LUMEN_TV_HOST:-root@192.168.0.20}
+HOST=${LUMEN_TV_HOST:-root@192.0.2.10}
 DWELL=${1:-20}
 case "$DWELL" in ''|*[!0-9]*) echo "usage: switchtest.sh [dwell-seconds]" >&2; exit 1 ;; esac
 # Home, Plex, BBC iPlayer, YouTube, Channel 4, Channel 5: the apps in daily use, with Home between them as it is used. SWITCH_SEQ replaces it.

@@ -30,7 +30,7 @@ const SHOWN_MAX = 40;      // pictures remembered as recently shown, so a shuffl
 /** The server as last read from the TV (kept in localStorage so a cold start needs no root call to build the picture URL). */
 export function cachedServer (): ImmichServer | null { return readCache<ImmichServer>(SERVER_KEY); }
 
-/** Reads /var/lib/homehook/immich.json ({"url": "http://192.168.1.10:2283", "key": "..."}). Resolves null when it is missing or wrong. */
+/** Reads /var/lib/homehook/immich.json ({"url": "http://192.0.2.20:2283", "key": "..."}). Resolves null when it is missing or wrong. */
 export function loadServer (): Promise<ImmichServer | null> {
 	return readFile('immich.json').then((text) => {
 		if (!text.trim()) { writeCache(SERVER_KEY, null); return null; }
@@ -53,7 +53,7 @@ export function testServer (typed: ImmichServer): Promise<{server: ImmichServer;
 	const server = {url: tidyUrl(typed.url), key: typed.key.trim()};
 	const ok = immichServerOk(server.url, server.key);
 	if (!server.url) return Promise.resolve('Type the server address first');
-	if (!ok.base) return Promise.resolve('The address should look like http://192.168.1.10:2283, with no path');
+	if (!ok.base) return Promise.resolve('The address should look like http://192.0.2.20:2283, with no path');
 	if (!server.key) return Promise.resolve('Type the API key first');
 	if (!ok.key) return Promise.resolve('That API key has characters an Immich key never has');
 	return immichRequest(server.url, server.key, '/api/server/version').then(

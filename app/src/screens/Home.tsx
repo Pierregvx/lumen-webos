@@ -10,6 +10,7 @@ import {Row} from '../components/Row';
 import {Tile, type TileModel} from '../components/Tile';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
+import {useRealPointer} from '../hooks/useRealPointer';
 import {Status} from '../components/Status';
 import {Forecast} from '../components/Forecast';
 import {BUILTIN} from '../config/builtinApps';
@@ -71,6 +72,10 @@ const GRID_TOP = 76;
 /** the lowest a focused grid row may sit before the grid scrolls on (its tiles 40px lower) */
 const GRID_BOTTOM = 780;   // 40px less than it looks: the grid rows sit 40px lower while the remote is in them (theme/home.css)
 const FOLDER_PRESETS = ['Games', 'Tools', 'Media'];
+/** the Resume row's picture follows the focus this long after it stops */
+const BACKDROP_AFTER_MS = 250;
+/** the strip along the bottom and top edges where a resting pointer scrolls the rows (the glass bar's tiles end above it) */
+const EDGE_STRIP = 70;
 const FOLDER_PREFIX = 'folder:';
 /** the remote's 1 to 6 open the glass bar's apps at those places (keyCodes for the digit row and the number pad) */
 const dockDigit = (e: KeyboardEvent) => (e.keyCode >= 49 && e.keyCode <= 54 ? e.keyCode - 48 : e.keyCode >= 97 && e.keyCode <= 102 ? e.keyCode - 96 : 0);
@@ -138,24 +143,36 @@ const INPUTS_KEY = 'inputs';
  *  - Up from the first row reaches the top bar (Control Center, Settings, Inputs); Down goes back to the same app.
  *  - OK on Inputs opens the inputs panel; Back closes it.
  *  - The second row stays hidden until the remote goes down to it. */
+/** drawn: every row, whatever is added later */
+const ALL_ROWS = 1000;
+
 export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, onEdit, folders, weather, weatherLine, forecast, dockHide, dockDim, captions = true, focusRow, tiles, perRow = 6}: Props) {
 	const nav = useRef<Nav>({engaged: false, zone: 'rows', rowIndex: 0, columns: {}, topIndex: 0, panelIndex: 0, ctxIndex: 0, moving: null, swallowOk: false, suppressClick: false, folder: '', folderIndex: 0, ctxFrom: 'rows', ctxLevel: 'main', ctxConfirm: false, ctxAnchor: null, mode: 'key', dockHidden: false, panelFrom: 'top'});
 	// when Down was last pressed at the last input, with nowhere lower to go
 	const bottomDown = useRef(0);
 	const latest = useRef({rows, topItems, inputs, onActivate, onEdit, folders, dockHide, perRow});
 	latest.current = {rows, topItems, inputs, onActivate, onEdit, folders, dockHide, perRow};
-	// false while the browser only reports a mouse-enter because the rows slid under a resting pointer (webOS 25: Down bounced back to the bar)
-	const realPointer = useRef(true);
+	// false while the browser only reports a mouse-enter because the rows slid under a resting pointer
+	const realPointer = useRealPointer();
+	// The rows past the first two are drawn after launch, one at a time when the TV is idle, so no frame stalls on drawing them all at once
+	// (docs/research/startup-perf.md). A key press, the pointer or a launch that asks for a row draws them all at once.
+	const [drawn, setDrawn] = useState(1);
+	const drawAll = () => setDrawn(ALL_ROWS);
+	const gridMarked = useRef(false);
 	useEffect(() => {
-		let lastX = -1, lastY = -1;
-		const track = (e: MouseEvent) => { realPointer.current = e.clientX !== lastX || e.clientY !== lastY; lastX = e.clientX; lastY = e.clientY; };
-		window.addEventListener('mouseover', track, true);
-		window.addEventListener('mousemove', track, true);
-		return () => { window.removeEventListener('mouseover', track, true); window.removeEventListener('mousemove', track, true); };
-	}, []);
-	const [late, setLate] = useState(false);   // the rows below the first are drawn a moment after launch
-	useEffect(() => { if (late) bootMark('grid'); }, [late]);
-	useEffect(() => { const id = window.setTimeout(() => { bootMark('grid-start'); setLate(true); }, 3500); return () => window.clearTimeout(id); }, []);
+		if (drawn >= rows.length - 1) {
+			if (!gridMarked.current && rows.length > 2) { gridMarked.current = true; bootMark('grid'); }
+			return undefined;
+		}
+		let idle = 0;
+		const id = window.setTimeout(() => {
+			idle = window.requestIdleCallback(() => {
+				if (drawn === 1) bootMark('grid-start');
+				setDrawn((d) => Math.max(d, drawn + 1));
+			}, {timeout: TIMING.lateRowIdleMs});
+		}, drawn === 1 ? Math.max(0, TIMING.lateRowsMs - performance.now()) : 0);
+		return () => { window.clearTimeout(id); if (idle) window.cancelIdleCallback(idle); };
+	}, [drawn, rows.length]);
 	const [, redraw] = useState(0);
 	const render = () => redraw((n) => n + 1);
 
@@ -168,7 +185,7 @@ export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, o
 		if (r < 0) return false;
 		const n = nav.current;
 		n.engaged = true; n.mode = 'key'; n.zone = 'rows'; n.rowIndex = r; n.columns[w.id] = 0; n.dockHidden = false;
-		setLate(true);
+		drawAll();
 		render();
 		return true;
 	};
@@ -239,7 +256,7 @@ export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, o
 	};
 	const activateCtx = (i: number) => {
 		const n = nav.current;
-		setLate(true);
+		drawAll();
 		const {rows: allRows, folders: fl, onEdit: edit} = latest.current;
 		if (n.ctxFrom === 'folder') {
 			const inside = ((fl || {})[n.folder] || [])[n.folderIndex];
@@ -313,7 +330,7 @@ export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, o
 		const row = allRows[clamp(n.rowIndex, 0, allRows.length - 1)];
 		const held = row && row.items[columnOf(row)];
 		if (!row || !editable(row.id) || !held || held.key.indexOf(FOLDER_PREFIX) === 0) return;
-		n.moving = held.key; setLate(true); render();
+		n.moving = held.key; drawAll(); render();
 	};
 	useOkPress({onPress: press, onLongPress: longPress}, active);
 
@@ -343,7 +360,7 @@ export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, o
 
 	const handleKey = useCallback((key: NavKey): boolean => {
 		const n = nav.current;
-		setLate(true);
+		drawAll();
 		const {rows: allRows, topItems: tops, inputs: ins, onEdit: edit, folders: fl} = latest.current;
 		n.mode = 'key';
 		const hideMode = latest.current.dockHide;
@@ -435,6 +452,42 @@ export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, o
 
 	useKeys(handleKey, active);
 
+	// The lower rows are below the screen, out of the pointer's reach: resting it in the strip along the bottom edge scrolls down a row, and
+	// along the top edge back up, as LG's home screen does. It stops when the pointer leaves the strip, hides, or a key is pressed.
+	useEffect(() => {
+		if (!active) return;
+		let zone: 'up' | 'down' | null = null;
+		let timer = 0;
+		const stop = () => { window.clearTimeout(timer); zone = null; };
+		const fire = () => {
+			const n = nav.current;
+			const last = latest.current.rows.length - 1;
+			if (n.zone === 'rows' && (zone === 'down' ? n.rowIndex < last : n.rowIndex > 0)) { handleKey(zone === 'down' ? 'down' : 'up'); n.mode = 'pointer'; }
+			timer = window.setTimeout(fire, TIMING.edgeRepeatMs);
+		};
+		const move = (e: MouseEvent) => {
+			const z = e.clientY > window.innerHeight - EDGE_STRIP ? 'down' : e.clientY < EDGE_STRIP ? 'up' : null;
+			if (z === zone) return;
+			stop();
+			zone = z;
+			if (z) timer = window.setTimeout(fire, TIMING.edgeDwellMs);
+		};
+		const keyStop = (e: KeyboardEvent) => { if (e.isTrusted) stop(); };
+		const outStop = (e: MouseEvent) => { if (!e.relatedTarget) stop(); };
+		const cursorStop = (e: Event) => { const d = (e as CustomEvent<{visibility?: boolean}>).detail; if (d && d.visibility === false) stop(); };
+		window.addEventListener('mousemove', move, true);
+		window.addEventListener('keydown', keyStop, true);
+		document.addEventListener('mouseout', outStop);
+		document.addEventListener('cursorStateChange', cursorStop);
+		return () => {
+			stop();
+			window.removeEventListener('mousemove', move, true);
+			window.removeEventListener('keydown', keyStop, true);
+			document.removeEventListener('mouseout', outStop);
+			document.removeEventListener('cursorStateChange', cursorStop);
+		};
+	}, [active]);
+
 	// number keys open the glass bar's apps; 7 to 9 are left alone, since the grid's places cannot be seen from the bar
 	useEffect(() => {
 		if (!active) return;
@@ -477,10 +530,21 @@ export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, o
 	const overlay = n.zone === 'panel' || n.zone === 'ctx' || n.zone === 'folder';
 	const topPointer = (i: number) => () => { if (!overlay && realPointer.current) { n.mode = 'pointer'; n.engaged = true; n.zone = 'top'; n.topIndex = i; render(); } };
 	const focusedTop = (i: number) => n.engaged && n.zone === 'top' && i === n.topIndex;
+	// on the Resume row the focused title's picture takes the wallpaper's place, a moment after the focus stops (Films & séries)
+	const onRow = n.engaged && n.zone === 'rows' ? rows[clamp(n.rowIndex, 0, rows.length - 1)] : undefined;
+	const onTile = onRow && onRow.className === 'row--resume' ? onRow.items[columnOf(onRow)] : undefined;
+	const wantBackdrop = active && onTile && onTile.resume ? onTile.resume.backdrop || '' : '';
+	const [backdrop, setBackdrop] = useState('');
+	useEffect(() => {
+		const timer = window.setTimeout(() => setBackdrop(wantBackdrop), wantBackdrop ? BACKDROP_AFTER_MS : 0);
+		return () => window.clearTimeout(timer);
+	}, [wantBackdrop]);
 	return (
 		<div class={`screen${active ? '' : ' screen--inactive'}${lower ? ' screen--lower' : ''}${n.moving ? ' screen--moving' : ''}${n.dockHidden ? ' screen--dockhidden' : ''}${dockDim ? ' screen--dockdim' : ''}`}>
 			<div class="dockdim" />
 			<LowerVeil />
+			{/* over the lower view's veil (it covers the wallpaper there), under the rows */}
+			{backdrop && <div key={backdrop} class="home__backdrop"><img src={backdrop} alt="" decoding="async" /></div>}
 			<Status weather={weatherLine ? weather : null} showPeriod={showPeriod} />
 			{captions && <VideoCaption />}
 			{forecast && weather && <div class={`homecast homecast--${forecast}`}><Forecast weather={weather} size={forecast} /></div>}
@@ -510,7 +574,7 @@ export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, o
 						slot={row.slot}
 						tileSize={tiles && tiles.size}
 						tileGap={tiles && tiles.gap}
-						items={i > 1 && !late ? [] : row.items}
+						items={i > drawn ? [] : row.items}
 						emptyText={row.emptyText && tr(row.emptyText)}
 						focused={n.engaged && n.zone === 'rows' && i === rowIndex}
 						rest={!n.engaged}

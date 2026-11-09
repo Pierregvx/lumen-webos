@@ -1,11 +1,11 @@
 #!/bin/sh
 # Prints the TV's memory once every N seconds while apps are opened and closed: sh tools/tv/memwatch.sh [seconds] [count]. Read only.
 # Each line: time, app in front, the memory manager's level and usable MB, MemAvailable, swap used, then every running app as id=RSS+swap MB.
-# Ctrl-C stops it. Uses LUMEN_TV_HOST from .env, or root@192.168.0.20.
+# Ctrl-C stops it. Uses LUMEN_TV_HOST from .env, or root@192.0.2.10.
 set -e
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 . "$ROOT/tools/env.sh"
-HOST=${LUMEN_TV_HOST:-root@192.168.0.20}
+HOST=${LUMEN_TV_HOST:-root@192.0.2.10}
 SECS=${1:-1}
 COUNT=${2:-0}
 case "$SECS$COUNT" in *[!0-9]*) echo "usage: memwatch.sh [seconds] [count]" >&2; exit 1 ;; esac

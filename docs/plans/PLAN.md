@@ -28,6 +28,37 @@ seen unless something looks wrong.
 
 Add new items here, with the branch and what to check. Delete an item once Sam has seen it work.
 
+- [ ] Sur la TV (`nas-split`, Ciné Pierro's player) **(verify)**: `luna-send -n 1 luna://com.webos.applicationManager/launch
+      '{"id":"com.samrenfrew.lumen","params":{"play":{"id":"<an episode's id>","ticks":6000000000}}}'` opens the episode at 10 min, with
+      Lumen closed or already open; it replaces a title already playing; the position sent wins over Jellyfin's; an unknown id says so.
+- [ ] IPTV channels from Jellyfin's Live TV (`nas-split`, `docs/plans/live-tv-build.md` > IPTV): seen on the TV over DevTools on
+      2026-11-05: TF1 plays, Down zaps to M6, Back returns to the row and Jellyfin keeps no stream open. Still to see: the channels after
+      the aerial ones in the Guide and in Settings > Channels, CH+/CH- on the remote, and how a zap of about 10 s feels.
+- [ ] The player's episode list (`main`, `docs/films-series.md` > The player): Episodes on the bar of a series opens on the season
+      and episode playing; Up to the seasons, Left/Right changes the season; OK on another episode plays it where it was left and Jellyfin
+      keeps the place of the one left; Back closes the list; the next-episode card shows the episode's own picture. And a poster with no
+      picture has its title in the middle.
+- [ ] The player with the pointer (`main`, `docs/films-series.md` > The player > Pointer): moving it shows the bar; hover and click on
+      Pause, Subtitles, Episodes, Next episode, the card's buttons, the subtitle rows and ‹ ›, the seasons and episodes; a click on the
+      progress line jumps there; a click on the picture pauses; the wheel scrolls the episodes; one press of OK on a button acts once,
+      not twice (pause toggling back would show it); pressing Down after using the pointer still reaches the buttons.
+- [ ] Platforms, categories and actors in Films & series (branch `feat/platforms-tv`, `docs/films-series.md`): seen working on
+      2026-11-02: the Platforms row, the category rows, Netflix's page with its logo above the title, Cast on every title (Discover and the
+      library), an actor's page, OK on a poster in any row reaching its buttons, and Back out of each. Still to see: switching All / Films /
+      Series on a page, and Discover scrolling smoothly down all 19 rows.
+- [ ] Home Assistant in Control Center (branch `films-series`, `server/README.md` > Home Assistant in cine-pierro): the Home row shows under the
+      backlight bar; the lamp turns the four living-room plugs on and off; Left/Right on the speaker bar changes the Sonos volume; play and
+      pause; the air line reads right; with the server off, Control Center opens as before with no Home row.
+- [ ] Films & séries (branch `feat/films-series`, the owner's TV, `docs/films-series.md`): seen working on 2026-10-29: Resume row → title
+      starts in Jellyfin where left; series → next episode; replacing a playing title; Library, Discover and Search screens. Still to see:
+      Jellyfin cold start (the app closed), the TV keyboard in Search, a real request (film, and a series' seasons), Quick Connect sign-in
+      from the Settings rows, a server switched off (home as fast, no row), frame rate on a long poster row.
+- [ ] Player (branch `feat/films-series`, the owner's TV, `docs/plans/player.md`): seen 2026-10-29 by camera: plays in Lumen with picture
+      (an episode; a 4K Dolby Vision TrueHD film earlier), English subtitles, bar, +20 s, fallback to Jellyfin on a broken stream, next-episode card and
+      autoplay. Still to see: the owner's feel (bar, pill, card), the remote's media keys, the subtitle menu, "Still there?", Play in = Jellyfin.
+      Fixed 2026-10-30: in the light look the track and focused button were near-black on the shade (seen on the TV, fixed and installed);
+      subtitles ran under the next-episode card (now centred to its left; seen with a test card, not yet on a real one).
+
 ---
 
 ## Open on the TV

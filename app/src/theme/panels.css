@@ -17,8 +17,10 @@
 
 /* ---------- Control Center, laid out like tvOS: each control its own glass on a grid four squares wide (circles one, tiles two, the backlight bar three) ---------- */
 
+.panel-backdrop--cc { z-index: 51; }
 .panel.panel--cc {
-	top: 150px; width: calc(4 * var(--cc-u) + 3 * var(--cc-gap)); padding: 0; border-radius: 0;
+	/* above the player (z-index 50), as the settings button opens it over a film */
+	top: 150px; width: calc(4 * var(--cc-u) + 3 * var(--cc-gap)); padding: 0; border-radius: 0; z-index: 52;
 	background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none;
 	--cc-u: 90px; --cc-gap: 18px;
 	/* Control Center blurs a little more than the glass bar and the top buttons */
@@ -65,11 +67,17 @@
 .cc__opt--warn .cc__name, .cc__opt--warn svg { color: var(--warn); }
 
 /* the backlight bar: the fill is a second sheet of frost on the bar's glass, a brighter tint with its own rim and no second blur */
-.cc__slider { width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); overflow: hidden; }
+/* the speaker's volume (.cc__slider--short, in the Home row) is the same bar, two squares wide */
+.cc__slider { --cc-slider-w: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); width: var(--cc-slider-w); overflow: hidden; }
+.cc__slider--short { --cc-slider-w: calc(2 * var(--cc-u) + var(--cc-gap)); }
+/* too short for the icon: the speaker's name and level only */
+.cc__slider--short .cc__slidertext { padding: 0 22px; }
+.cc__slider--short .cc__slidertext svg { display: none; }
+.cc__slider--short .cc__num { padding-left: 12px; }
 .cc__fill { position: absolute; left: 0; top: 0; bottom: 0; overflow: hidden; background: var(--cc-fill); box-shadow: var(--cc-fill-rim); }
 .cc__mod--focused .cc__fill { background: var(--cc-fill-focus); }
 .cc__slidertext {
-	position: absolute; left: 0; top: 0; bottom: 0; width: calc(3 * var(--cc-u) + 2 * var(--cc-gap)); box-sizing: border-box; padding: 0 26px 0 22px;
+	position: absolute; left: 0; top: 0; bottom: 0; width: var(--cc-slider-w); box-sizing: border-box; padding: 0 26px 0 22px;
 	display: flex; flex-direction: row; align-items: center; font-size: 22px; font-weight: 600; white-space: nowrap;
 }
 .cc__slidertext svg { width: 34px; height: 34px; margin-right: 12px; }
@@ -77,6 +85,8 @@
 .cc__fill .cc__slidertext svg { stroke: var(--cc-fill-glyph); }
 .cc__num { margin-left: auto; font-weight: 500; }
 
+/* the living-room air from Home Assistant, under the Home row */
+.cc__air { margin: calc(var(--cc-gap) * -0.4) 0 var(--cc-gap); text-align: center; font-size: 20px; font-weight: 500; color: #fff; opacity: 0.85; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); white-space: nowrap; }
 .cc__caption { height: 30px; line-height: 30px; text-align: center; font-size: 22px; font-weight: 600; color: #fff; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6); }
 
 /* ---------- a tile's list of choices (Sound, Picture, Theme, Clock): ControlCenter.tsx animates the layers, and these classes hold the states between ---------- */
@@ -84,7 +94,7 @@
 /* the fade sits on each control, never the grid or the list: a parent below full opacity cuts its children's live blur off from the wallpaper */
 
 .cc__grid--leaving { pointer-events: none; }
-.cc__grid--leaving .cc__mod, .cc__grid--leaving .cc__caption, .cc__mod--gone { opacity: 0; }
+.cc__grid--leaving .cc__mod, .cc__grid--leaving .cc__air, .cc__grid--leaving .cc__caption, .cc__mod--gone { opacity: 0; }
 .cc__list { position: absolute; left: 0; top: 0; width: 100%; transform-origin: 0 0; }
 .cc__list:not(.cc__list--shown) { pointer-events: none; }
 .cc__list:not(.cc__list--shown) .cc__opt { opacity: 0; }

@@ -163,9 +163,25 @@ Sam: after an app opened from the lower rows, Home brings Lumen back at once, bu
 - Done 2026-10-26: Lumen comes back where it left (Home.tsx no longer resets on return; a launch that asks for a row still goes there),
   and `html.settled` is gone, so the veil and rows are always drawn. Sam tried both live.
 
+## Lower rows and root flags at launch (2026-10-30)
+
+Two changes, measured on the new TV (webOS 25) with three warm relaunches and one first launch after install, against the runs of the
+same day before them.
+
+- **Lower rows:** a fixed 3.5 s timer drew every row past the first two at once (`grid` 3.7-4.6 s). They now start at 1.5 s and come one
+  per `requestIdleCallback` (at most 400 ms apart; `TIMING.lateRowsMs`, `lateRowIdleMs`). `grid` 1.72-1.78 s warm, 2.68 s on the first
+  launch. A key press still draws them all at once.
+- **Root flags:** the three watch.sh flags (`video-wallpaper`, `ambient-screensaver`, `no-screensaver`) were three root calls at launch,
+  each a second or two on a first launch, alongside `listLaunchPoints` (done at 3.1 s). They are now one call (`setHomehookFlags`), made
+  5 s after launch; a change in Settings is still written at once. That call takes 60-80 ms. On the first launch after install,
+  `listLaunchPoints` was done at 2.2 s instead of 3.1 s, still slowed by the 1.4 s first-run freeze.
+- Seen in 2 of 3 warm runs: a 400-460 ms frozen stretch starting near 2.0 s, just after the Resume row is drawn. It looks like the stretch
+  the old grid had after it, moved earlier. Four traced reloads did not show it.
+
 ## Still open
 
-- **Grid:** the lower rows are drawn 3.5 s after launch in one go, followed by a 0.4-1 s frozen stretch. Draw them one row at a time.
+- **Grid:** the lower rows now come from 1.5 s, one per idle moment (2026-10-30, below). The frozen stretch after them is still there in
+  2 runs out of 3, now near 2 s; with only the Resume row late on this TV, there is nothing left to split. Not reproduced under a trace.
 - **Logos:** store each logo under its own localStorage key (or keep the row's logos with the Live TV cache), so drawing the row never
   parses the whole logo cache (now 45-85 ms, so low priority). Also remember logo paths that failed to read.
 - Not timed on these builds: the Immich wallpaper with Live TV on.

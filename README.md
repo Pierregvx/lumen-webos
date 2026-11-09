@@ -94,6 +94,7 @@ To remove the scripts, run `rm /var/lib/webosbrew/init.d/60-homehook` on the TV,
 ### Open Lumen with the Home button
 
 Use LG Input Hook to map the Home button to the app `com.samrenfrew.lumen`.
+To open Control Center from any app with the remote's settings button, map that button (code 139 on an LG 43UT91006LA) to the same app with the parameters `{"view":"controls"}`. LG's quick settings menu then no longer opens from the remote.
 
 If you do not use Input Hook, `watch.sh` can do this instead. Create the file `/var/lib/homehook/home-takeover` on the TV. When LG Home opens, the script then opens Lumen. This is slower than Input Hook, because LG Home shows for a moment first.
 

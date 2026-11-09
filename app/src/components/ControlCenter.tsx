@@ -2,6 +2,7 @@ import {t as tr} from '../lib/i18n';
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'preact/hooks';
 import {Glyph, type GlyphName} from './Glyph';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
+import {airLine, lastHome, playSpeaker, readHome, setPlugs, setSpeakerVolume, type Home} from '../lib/home';
 import {PICTURE_LABEL, PICTURE_MODES, SOUND_LABEL, SOUND_MODES, setSoundMode, readBacklight, readControls, setBacklight, setEyeComfort, restartTv, screenOff, setPictureMode, type Controls} from '../lib/tvcontrols';
 
 export type CenterAction = 'lg-home' | 'art';
@@ -19,30 +20,38 @@ interface Props {
 	onClockFormat: (format: string) => void;
 }
 
-type CellId = 'sound' | 'picture' | 'art' | 'home' | 'screenoff' | 'restart' | 'backlight' | 'eye' | 'dark' | 'clock';
+type CellId = 'sound' | 'picture' | 'art' | 'home' | 'screenoff' | 'restart' | 'backlight' | 'eye' | 'dark' | 'clock' | 'lights' | 'speaker' | 'play';
 /** the tiles that open a list of choices in place of the grid, as tvOS does for Sleep Timer */
 type MenuCell = 'sound' | 'picture' | 'dark' | 'clock';
 const MENU_CELLS: CellId[] = ['sound', 'picture', 'dark', 'clock'];
 const MENU_GLYPH: Record<MenuCell, GlyphName> = {sound: 'speaker', picture: 'picture', dark: 'screensaver', clock: 'timer'};
 
+type Grid = {id: CellId; span: number}[][];
 /** The layout, like the tvOS Control Center: a grid four squares wide, where a tile spans two squares and the backlight bar three. */
-const GRID: {id: CellId; span: number}[][] = [
+const GRID: Grid = [
 	[{id: 'sound', span: 2}, {id: 'picture', span: 2}],
 	[{id: 'dark', span: 2}, {id: 'clock', span: 2}],
 	[{id: 'art', span: 1}, {id: 'home', span: 1}, {id: 'screenoff', span: 1}, {id: 'restart', span: 1}],
 	[{id: 'backlight', span: 3}, {id: 'eye', span: 1}]
 ];
+/** the Home Assistant row, shown when the picks server has Home Assistant (lib/home.ts): the living-room plugs, the speaker's volume, play */
+const HOME_ROW = [{id: 'lights' as CellId, span: 1}, {id: 'speaker' as CellId, span: 2}, {id: 'play' as CellId, span: 1}];
+const gridFor = (h: Home | null): Grid => (h ? GRID.concat([HOME_ROW.filter((c) => h.speaker || c.id === 'lights')]) : GRID);
 
 /** The cell in a row that covers grid column x (0 to 3), and the column it starts at. */
-const cellAt = (row: number, x: number) => {
+const cellAt = (grid: Grid, row: number, x: number) => {
+	const cells = grid[Math.min(row, grid.length - 1)];
 	let start = 0;
-	for (const c of GRID[row]) { if (x < start + c.span) return {cell: c.id, start}; start += c.span; }
-	return {cell: GRID[row][GRID[row].length - 1].id, start: 4 - GRID[row][GRID[row].length - 1].span};
+	for (const c of cells) { if (x < start + c.span) return {cell: c.id, start}; start += c.span; }
+	return {cell: cells[cells.length - 1].id, start: start - cells[cells.length - 1].span};
 };
-const startOf = (row: number, i: number) => GRID[row].slice(0, i).reduce((n, c) => n + c.span, 0);
+const startOf = (grid: Grid, row: number, i: number) => grid[row].slice(0, i).reduce((n, c) => n + c.span, 0);
 
 /** how soon a second Down at the bottom row must follow the first to close the panel */
 export const DOUBLE_DOWN_MS = 1000;
+
+/** the speaker's volume is sent the same way, as each change is a call to Home Assistant */
+const SPEAKER_DELAY_MS = 300;
 
 /** Each backlight change is a root command (a luna-send process on the TV), so a run of presses sends only the last level, this long after. */
 const BACKLIGHT_DELAY_MS = 300;
@@ -86,7 +95,7 @@ const listHeight = (count: number) => count * OPT_H + (count - 1) * OPT_GAP;
 /** the TV's values as last read or set, so the panel opens on them rather than on defaults that jump when the read lands */
 let lastValues: Controls = {volume: 0, muted: false, picture: 'normal', sound: 'standard', backlight: 100, eyeComfort: false};
 /** Read the TV's values ahead of the first open (app.tsx calls it 4 s after each return). */
-export function prefetchControls (): void { readControls().then((v) => { lastValues = v; }).catch(() => undefined); }
+export function prefetchControls (): void { readControls().then((v) => { lastValues = v; }).catch(() => undefined); readHome().catch(() => undefined); }
 
 type Phase = 'grid' | 'opening' | 'list' | 'closing';
 interface Morph {kind: 'open' | 'close'; cell: MenuCell; geo: {x: number; y: number; w: number; h: number; fw: number; fh: number; tile: End; list: End}}
@@ -101,16 +110,18 @@ export function growFrom (panel: HTMLElement | null, key: string): void {
 	const opts = {duration: 260, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)'};
 	panel.animate([{transform: 'scale(0.6)'}, {transform: 'none'}], opts);
 	// each control fades on its own: fading the panel would cut their live blur off from the wallpaper
-	Array.from(panel.querySelectorAll<HTMLElement>('.cc__mod, .cc__caption')).forEach((el) => el.animate([{opacity: 0}, {opacity: 1}], opts));
+	Array.from(panel.querySelectorAll<HTMLElement>('.cc__mod, .cc__air, .cc__caption')).forEach((el) => el.animate([{opacity: 0}, {opacity: 1}], opts));
 }
 
 /** Control Center (opened from the round button top right): sound, picture mode, appearance, clock, the screensaver (your photos), LG Home, screen off,
- *  restart, backlight and Eye Comfort. Volume is left to the remote's own buttons. Arrows move between controls, OK presses one, Left/Right on
+ *  restart, backlight and Eye Comfort, then Home Assistant when it is set up: the living-room lights, the speaker's volume and play, the air. Volume is left to the remote's own buttons. Arrows move between controls, OK presses one, Left/Right on
  *  the backlight bar change it, Back closes, and Down twice on the bottom row closes and goes to the glass bar. */
 export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMode, clockFormat, onDarkMode, onClockFormat}: Props) {
 	const outer = useRef({darkMode, clockFormat, onDarkMode, onClockFormat});
 	outer.current = {darkMode, clockFormat, onDarkMode, onClockFormat};
 	const [values, setValues] = useState<Controls>(lastValues);
+	const [home, setHome] = useState<Home | null>(lastHome);
+	const grid = gridFor(home);
 	useEffect(() => { lastValues = values; }, [values]);
 	// x is the grid column the remote is on, kept when moving up and down, so Down from Restart lands on Eye Comfort
 	const [pos, setPos] = useState({row: 0, x: 0});
@@ -120,8 +131,8 @@ export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMod
 	const [phase, setPhase] = useState<Phase>('grid');
 	// the pill that stands in for the tile while the list opens or closes; the tile itself is hidden meanwhile
 	const [morph, setMorph] = useState<Morph | null>(null);
-	const state = useRef({values, pos, confirm, menu, phase});
-	state.current = {values, pos, confirm, menu, phase};
+	const state = useRef({values, pos, confirm, menu, phase, home, grid});
+	state.current = {values, pos, confirm, menu, phase, home, grid};
 	// when Down was last pressed with nowhere lower to go
 	const bottomDown = useRef(0);
 	const tiles = useRef<Partial<Record<CellId, HTMLElement | null>>>({});
@@ -135,7 +146,7 @@ export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMod
 
 	// read the TV's values a moment after the panel is on screen, so opening it is never held up by the TV answering
 	useEffect(() => {
-		const id = window.setTimeout(() => { readControls().then(setValues); }, 250);
+		const id = window.setTimeout(() => { readControls().then(setValues); readHome().then(setHome, () => setHome(lastHome())); }, 250);
 		return () => window.clearTimeout(id);
 	}, []);
 
@@ -159,6 +170,27 @@ export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMod
 		pendingBacklight.current = {id: window.setTimeout(sendBacklight, BACKLIGHT_DELAY_MS), level};
 	};
 
+	// Home Assistant: each change shows at once, then the state the server sends back once done
+	const homeFail = (e: Error) => { setHome(lastHome()); onError(`Couldn't reach Home Assistant (${e.message})`); };
+	const patchHome = (p: Partial<Home>) => setHome((h) => (h ? {...h, ...p} : h));
+	const pendingVolume = useRef<{id: number; level: number} | null>(null);
+	const sendVolume = () => {
+		const p = pendingVolume.current;
+		if (!p) return;
+		window.clearTimeout(p.id);
+		pendingVolume.current = null;
+		setSpeakerVolume(p.level).then(setHome, homeFail);
+	};
+	useEffect(() => sendVolume, []);
+	const speakerVolume = (next: number) => {
+		const h = state.current.home;
+		if (!h || !h.speaker) return;
+		const level = clamp(next, 0, 100);
+		patchHome({speaker: {...h.speaker, volume: level}});
+		if (pendingVolume.current) window.clearTimeout(pendingVolume.current.id);
+		pendingVolume.current = {id: window.setTimeout(sendVolume, SPEAKER_DELAY_MS), level};
+	};
+
 	const press = (cell: CellId) => {
 		if (state.current.phase !== 'grid') return;
 		const v = state.current.values;
@@ -167,6 +199,19 @@ export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMod
 			patch({eyeComfort: on}); setEyeComfort(on).catch(() => { patch({eyeComfort: !on}); onError("Couldn't change Eye Comfort"); });
 		}
 		else if (MENU_CELLS.indexOf(cell) >= 0) openMenu(cell as MenuCell);
+		else if (cell === 'lights' || cell === 'play') {
+			const h = state.current.home;
+			if (!h) return;
+			if (cell === 'lights') {
+				// as the remote's buttons: any plug on turns them all off, else all on
+				const on = h.plugs.on === 0;
+				patchHome({plugs: {count: h.plugs.count, on: on ? h.plugs.count : 0}}); setPlugs(on).then(setHome, homeFail);
+			}
+			else if (h.speaker) {
+				const play = h.speaker.state !== 'playing';
+				patchHome({speaker: {...h.speaker, state: play ? 'playing' : 'paused'}}); playSpeaker(play).then(setHome, homeFail);
+			}
+		}
 		else if (cell === 'art') onAction('art');
 		else if (cell === 'home') onAction('lg-home');
 		else if (cell === 'screenoff') { onClose(); screenOff().catch(() => onError("Couldn't turn the screen off (it needs the Homebrew Channel)")); }
@@ -288,7 +333,7 @@ export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMod
 		const opts: KeyframeAnimationOptions = {duration: ms, easing: 'linear', fill: 'both'};
 		const each = (root: HTMLElement | null, sel: string, frames: Keyframe[]) => (root ? Array.from(root.querySelectorAll<HTMLElement>(sel)) : []).map((el): [HTMLElement, Keyframe[]] => [el, frames]);
 		const pairs: [HTMLElement | null, Keyframe[]][] = [[pillEl.current, k.pill], [glassEl.current, k.glass], [rimEl.current, k.rim], [textEl.current, k.text], [listEl.current, k.list], [gridEl.current, k.grid],
-			...each(listEl.current, '.cc__opt', k.listFade), ...each(gridEl.current, '.cc__mod:not(.cc__mod--gone), .cc__caption', k.gridFade)];
+			...each(listEl.current, '.cc__opt', k.listFade), ...each(gridEl.current, '.cc__mod:not(.cc__mod--gone), .cc__air, .cc__caption', k.gridFade)];
 		running.current = pairs.filter(([el]) => el && el.animate).map(([el, frames]) => (el as HTMLElement).animate(frames, opts));
 		const grid = gridEl.current;
 		if (grid) grid.style.transformOrigin = `${morph.geo.x + morph.geo.w / 2}px ${morph.geo.y + morph.geo.h / 2}px`;
@@ -321,7 +366,7 @@ export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMod
 	const move = (row: number, x: number) => { setPos({row, x}); setConfirm(false); bottomDown.current = 0; };
 
 	const handleKey = useCallback((key: NavKey): boolean => {
-		const {pos: p, values: v, menu: m, phase: ph} = state.current;
+		const {pos: p, values: v, menu: m, phase: ph, home: h, grid: g} = state.current;
 		if (ph === 'opening' || ph === 'closing') return true;
 		if (m) {
 			if (key === 'back') closeMenu(false);
@@ -329,30 +374,32 @@ export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMod
 			else if (key === 'up' || key === 'down') setMenu({cell: m.cell, idx: clamp(m.idx + (key === 'up' ? -1 : 1), 0, options(m.cell).length - 1)});
 			return true;
 		}
-		const {cell, start} = cellAt(p.row, p.x);
+		const {cell, start} = cellAt(g, p.row, p.x);
 		if (key === 'back') { onClose(); return true; }
 		if (key === 'enter') { press(cell); return true; }
 		if (cell === 'backlight' && (key === 'left' || key === 'right')) { backlight(v.backlight + (key === 'left' ? -5 : 5)); return true; }
+		if (cell === 'speaker' && h && h.speaker && (key === 'left' || key === 'right')) { speakerVolume(h.speaker.volume + (key === 'left' ? -2 : 2)); return true; }
+		const row = Math.min(p.row, g.length - 1);
 		if (key === 'left' || key === 'right') {
-			const i = GRID[p.row].map((c) => c.id).indexOf(cell);
-			const j = clamp(i + (key === 'left' ? -1 : 1), 0, GRID[p.row].length - 1);
-			if (j !== i) move(p.row, startOf(p.row, j));
+			const i = g[row].map((c) => c.id).indexOf(cell);
+			const j = clamp(i + (key === 'left' ? -1 : 1), 0, g[row].length - 1);
+			if (j !== i) move(row, startOf(g, row, j));
 		}
 		else if (key === 'up' && p.row === 0) onClose();   // Up past the top row closes, back to the top buttons
-		else if (key === 'down' && p.row === GRID.length - 1) {
+		else if (key === 'down' && row === g.length - 1) {
 			// someone heading for the glass bar may not see the panel is open, so a second Down here soon after the first takes them there
 			const now = Date.now();
 			if (now - bottomDown.current < DOUBLE_DOWN_MS) onCloseDown();
 			else bottomDown.current = now;
 		}
-		else if (key === 'up' || key === 'down') move(clamp(p.row + (key === 'up' ? -1 : 1), 0, GRID.length - 1), start);
+		else if (key === 'up' || key === 'down') move(clamp(row + (key === 'up' ? -1 : 1), 0, g.length - 1), start);
 		return true;
 	}, []);
 	useKeys(handleKey, true);
 
-	const current = cellAt(pos.row, pos.x).cell;
+	const current = cellAt(grid, pos.row, pos.x).cell;
 	const focus = (cell: CellId) => () => {
-		for (let r = 0; r < GRID.length; r++) { const i = GRID[r].map((c) => c.id).indexOf(cell); if (i >= 0) { setPos({row: r, x: startOf(r, i)}); return; } }
+		for (let r = 0; r < grid.length; r++) { const i = grid[r].map((c) => c.id).indexOf(cell); if (i >= 0) { setPos({row: r, x: startOf(grid, r, i)}); return; } }
 	};
 
 	/** What a list tile shows: icon, name, current choice, and whether it shows as on. */
@@ -383,20 +430,26 @@ export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMod
 	const CIRCLES: {cell: CellId; glyph: GlyphName; label: string}[] = [
 		{cell: 'home', glyph: 'house', label: 'LG Home'}, {cell: 'art', glyph: 'image', label: 'Screensaver'},
 		{cell: 'screenoff', glyph: 'power', label: 'Screen off'}, {cell: 'restart', glyph: 'restart', label: 'Restart'},
-		{cell: 'eye', glyph: 'eye', label: 'Eye Comfort'}
+		{cell: 'eye', glyph: 'eye', label: 'Eye Comfort'}, {cell: 'lights', glyph: 'lamp', label: 'Living room lights'}, {cell: 'play', glyph: 'play', label: ''}
 	];
+	const playing = !!(home && home.speaker && home.speaker.state === 'playing');
 	const circle = (cell: CellId, on = false) => {
 		const c = CIRCLES.filter((q) => q.cell === cell)[0];
-		return <div key={cell} class={`cc__mod cc__circle${current === cell ? ' cc__mod--focused' : ''}${on ? ' cc__mod--on' : ''}`} onMouseEnter={focus(cell)} onClick={() => press(cell)}><Glyph name={c.glyph} /></div>;
+		const glyph = cell === 'play' && playing ? 'pause' : c.glyph;
+		return <div key={cell} class={`cc__mod cc__circle${current === cell ? ' cc__mod--focused' : ''}${on ? ' cc__mod--on' : ''}`} onMouseEnter={focus(cell)} onClick={() => press(cell)}><Glyph name={glyph} /></div>;
 	};
 	const named = CIRCLES.filter((q) => q.cell === current)[0];
-	const caption = !named || menu ? '' : named.cell === 'restart' && confirm ? tr('Press OK again') : named.cell === 'eye' ? `${tr(named.label)}: ${tr(values.eyeComfort ? 'On' : 'Off')}` : tr(named.label);
+	const sp = home && home.speaker;
+	const caption = !named || menu ? '' : named.cell === 'restart' && confirm ? tr('Press OK again') : named.cell === 'eye' ? `${tr(named.label)}: ${tr(values.eyeComfort ? 'On' : 'Off')}`
+		: named.cell === 'lights' && home ? `${tr(named.label)}: ${home.plugs.on ? `${tr('On')} (${home.plugs.on}/${home.plugs.count})` : tr('Off')}`
+			: named.cell === 'play' && sp ? `${sp.name}: ${playing ? [sp.title, sp.artist].filter(Boolean).join(' – ') || tr('Playing') : tr('Paused')}`
+				: tr(named.label);
 	// the backlight label, drawn twice: light over the glass, dark over the filled part, so it reads at any level
 	const sliderText = <div class="cc__slidertext"><Glyph name="sun" /><span>{tr('Backlight')}</span><span class="cc__num">{values.backlight}</span></div>;
 
 	return (
 		<>
-			<div class="panel-backdrop panel-backdrop--clear" onClick={onClose} />
+			<div class="panel-backdrop panel-backdrop--clear panel-backdrop--cc" onClick={onClose} />
 			<div class="panel panel--cc" ref={panel}>
 				<div ref={gridEl} class={`cc__grid${phase === 'grid' || phase === 'closing' ? '' : ' cc__grid--leaving'}`}>
 				<div class="cc__row">
@@ -419,6 +472,26 @@ export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMod
 					</div>
 					{circle('eye', values.eyeComfort)}
 				</div>
+				{home && (
+					<div class="cc__row">
+						{circle('lights', home.plugs.on > 0)}
+						{sp && (() => {
+							const text = <div class="cc__slidertext"><Glyph name="speaker" /><span>{sp.name}</span><span class="cc__num">{sp.volume}</span></div>;
+							return (
+								<div
+									class={`cc__mod cc__slider cc__slider--short${current === 'speaker' ? ' cc__mod--focused' : ''}`}
+									onMouseEnter={focus('speaker')}
+									onClick={(e: MouseEvent) => { const box = (e.currentTarget as HTMLElement).getBoundingClientRect(); speakerVolume(Math.round(((e.clientX - box.left) / box.width) * 100)); }}
+								>
+									{text}
+									<div class="cc__fill" style={`width:${sp.volume}%`}>{text}</div>
+								</div>
+							);
+						})()}
+						{sp && circle('play', playing)}
+					</div>
+				)}
+				{home && home.air.length > 0 && <div class="cc__air">{airLine(home.air)}</div>}
 				<div class="cc__caption">{caption}</div>
 				</div>
 				{morph && morph.kind === 'open' && (() => {

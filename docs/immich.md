@@ -17,7 +17,7 @@ Over ssh instead (the same file):
 
 ```sh
 cat > /var/lib/homehook/immich.json <<'JSON'
-{"url": "http://192.168.1.10:2283", "key": "PASTE-THE-KEY-HERE"}
+{"url": "http://192.0.2.20:2283", "key": "PASTE-THE-KEY-HERE"}
 JSON
 chmod 600 /var/lib/homehook/immich.json
 ```

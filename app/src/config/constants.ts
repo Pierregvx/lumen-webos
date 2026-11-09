@@ -7,7 +7,9 @@ export const APP_ID: string = __LUMEN_APP_ID__;
 export const SYSTEM_APP = {
 	lgHome: 'com.webos.app.home',
 	liveTv: 'com.webos.app.livetv',
-	homebrewChannel: 'org.webosbrew.hbchannel'
+	homebrewChannel: 'org.webosbrew.hbchannel',
+	jellyfin: 'org.jellyfin.webos',
+	youtube: 'youtube.leanback.v4'
 } as const;
 
 /** Luna service URIs. A sideloaded web app on webOS 6 may only call methods in the
@@ -33,6 +35,10 @@ export const TIMING = {
 	lunaTimeoutMs: 4000,
 	toastMs: 2200,
 	longPressMs: 600,       // OK held this long enters/leaves re-order mode
+	lateRowsMs: 1500,       // from page start: the rows past the first two begin to be drawn, one per idle moment
+	lateRowIdleMs: 400,     // each of those rows waits at most this long for an idle moment
+	edgeDwellMs: 400,       // the pointer resting at the bottom (or top) edge of the home screen this long scrolls a row
+	edgeRepeatMs: 650,      // then one more row each this long while it stays there
 	wallpaperGridMs: 250    // the wallpaper grid swaps this long after the last category change, so the bar's pill slides without a stall
 } as const;
 

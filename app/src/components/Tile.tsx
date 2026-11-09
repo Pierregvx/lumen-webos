@@ -1,6 +1,7 @@
 import {useRef} from 'preact/hooks';
 import {CheckMark, Glyph, type GlyphName} from './Glyph';
 import {ChannelTile, type LiveTile} from './ChannelTile';
+import {ResumeTile, type ResumeInfo} from './ResumeTile';
 
 /** Everything a tile needs to draw itself; rows and grids build these from app/input data. */
 export interface TileModel {
@@ -22,6 +23,8 @@ export interface TileModel {
 	wordmark?: string;
 	/** a channel on the Live TV row: drawn by ChannelTile */
 	live?: LiveTile;
+	/** a title on the Resume row: drawn by ResumeTile */
+	resume?: ResumeInfo;
 	/** the app is open in the background, so it comes back where it was: a dot above the tile */
 	running?: boolean;
 }
@@ -43,6 +46,7 @@ export function Tile ({model, focused, lifted, checked, dimmed, onHover, onActiv
 	const pointer = useRef({x: 0, y: 0, frame: 0});
 	const classes = ['tile', focused && 'tile--focused', lifted && 'tile--lifted', dimmed && 'tile--dimmed'].filter(Boolean).join(' ');
 	if (model.live) return <ChannelTile live={model.live} classes={classes} onHover={onHover} onActivate={onActivate} />;
+	if (model.resume) return <ResumeTile info={model.resume} classes={classes} onHover={onHover} onActivate={onActivate} />;
 	// pointer: the focused tile tilts a little towards the cursor, like the Apple TV parallax (transform only, set straight on the element)
 	// at most once a frame: mousemove fires faster than the TV draws, and each update is a style pass
 	const tilt = (e: MouseEvent) => {

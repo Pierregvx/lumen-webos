@@ -2,11 +2,11 @@
 # One keep-alive run (docs/keep-alive.md): reboots the TV, waits until it has been up 150 s, saves the memory configs and the running apps,
 # then runs memwatch.sh 2 beside switchtest.sh: sh tools/tv/measure.sh <out-dir> <name>. Writes <name>-config-after-boot.txt,
 # <name>-mem.txt and <name>-switch.txt to <out-dir>, and prints the switch result. It reboots the TV and opens apps on screen.
-# SWITCH_SEQ passes through to switchtest.sh. Uses LUMEN_TV_HOST from .env, or root@192.168.0.20.
+# SWITCH_SEQ passes through to switchtest.sh. Uses LUMEN_TV_HOST from .env, or root@192.0.2.10.
 set -e
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 . "$ROOT/tools/env.sh"
-HOST=${LUMEN_TV_HOST:-root@192.168.0.20}
+HOST=${LUMEN_TV_HOST:-root@192.0.2.10}
 OUT=$1; NAME=$2
 [ -n "$OUT" ] && [ -n "$NAME" ] || { echo "usage: measure.sh <out-dir> <name>" >&2; exit 1; }
 mkdir -p "$OUT"

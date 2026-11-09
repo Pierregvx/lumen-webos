@@ -4,7 +4,7 @@ import {execFileSync} from 'node:child_process';
 const PORT = 19998;
 const PAIRS = +(process.argv[3] || 8);
 const GAPMS = +(process.env.GAPMS || 1300);
-const relaunch = () => execFileSync('ssh', ['-o', 'BatchMode=yes', '-o', 'LogLevel=ERROR', 'root@192.168.0.20', `luna-send -n 1 luna://com.webos.applicationManager/launch '{"id":"com.samrenfrew.lumen"}'`]);
+const relaunch = () => execFileSync('ssh', ['-o', 'BatchMode=yes', '-o', 'LogLevel=ERROR', process.env.LUMEN_TV_HOST || 'root@192.0.2.10', `luna-send -n 1 luna://com.webos.applicationManager/launch '{"id":"com.samrenfrew.lumen"}'`]);
 const LIVECSS = process.env.LIVECSS || '';
 const LIVEJS = process.env.LIVEJS || '';
 const NORELAUNCH = !!process.env.NORELAUNCH;

@@ -2,6 +2,9 @@
 
 A tvOS-style launcher for a rooted LG webOS TV. `app/` is the Preact app (a fork of partridgeworks/webos-launcher, never sent upstream). `tools/` holds the build scripts and the TV-side scripts. `README.md` covers build and install.
 
+The NAS side (the picks server lumen-recos, the Home Assistant relay, the Telegram bot, the Ciné Pierro web page and the request runner)
+is in the private repository `cine-pierro`, not here. The TV talks to it over HTTP only. Never copy its code or docs into this public fork.
+
 ## The TV
 
 The target TV is an LG 43UT91006LA on webOS 25 (Chromium 120). The repo was first written for a webOS 22 TV, so any rule tuned for that TV is an assumption until it is seen working on this one. `docs/plans/PLAN.md` holds the roadmap and the **Verify on the TV** list; read its "Where things stand" section before starting work.

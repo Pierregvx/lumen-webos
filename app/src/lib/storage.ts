@@ -111,6 +111,14 @@ export interface UserConfig {
 	builtinTiles: boolean;
 	/** a row of aerial channels under the apps, with what is on now (needs the Homebrew Channel) */
 	liveTvRow: boolean;
+	/** a tile on the home screen for each input with something plugged in (Films & séries, docs/plans/films-series.md) */
+	homeInputs: boolean;
+	/** Discover's For you row (Claude's picks); off hides it and asks Claude nothing */
+	aiRow: boolean;
+	/** a new season of a followed series is requested in Seerr by itself (off: only shown on the Resume row) */
+	autoSeasons: boolean;
+	/** where a title plays: Lumen's own player, or the Jellyfin app (docs/plans/player.md) */
+	playIn: string;
 	/** the Live TV row's channels (channel ids), in order, picked in Settings > Channels; null = the first five by number */
 	liveChannels: string[] | null;
 	/** the Guide opens on the Full guide (the time grid) rather than Now and Next; the switcher at its top right sets it */
@@ -169,6 +177,10 @@ export const DEFAULT_CONFIG: UserConfig = {
 	seeded: false,
 	builtinTiles: false,
 	liveTvRow: true,
+	homeInputs: true,
+	aiRow: true,
+	autoSeasons: false,
+	playIn: 'lumen',
 	liveChannels: null,
 	guideFull: false
 };
@@ -243,6 +255,10 @@ export function parseConfig (raw: string): UserConfig {
 		seeded: parsed.seeded !== false,
 		builtinTiles: parsed.builtinTiles === true,
 		liveTvRow: parsed.liveTvRow !== false,
+		homeInputs: parsed.homeInputs !== false,
+		aiRow: parsed.aiRow !== false,
+		autoSeasons: parsed.autoSeasons === true,
+		playIn: parsed.playIn === 'jellyfin' ? 'jellyfin' : 'lumen',
 		liveChannels: Array.isArray(parsed.liveChannels) ? parsed.liveChannels.filter((x) => typeof x === 'string') : null,
 		guideFull: parsed.guideFull === true
 	});

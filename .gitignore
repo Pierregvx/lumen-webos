@@ -1,4 +1,5 @@
-node_modules/
+# no slash: the feedback runner links node_modules into its worktrees, and node_modules/ does not match a link
+node_modules
 tools/node_modules/
 tools/logs/
 .DS_Store

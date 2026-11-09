@@ -6,7 +6,7 @@ import {execFileSync} from 'node:child_process';
 const [OUT, SCENARIO = 'row2', RUNS = '3'] = process.argv.slice(2);
 const TARGET = process.env.TARGET || 'com.limelight.webos';
 const AWAY = +(process.env.AWAY || 8000);
-const ssh = (cmd) => execFileSync('ssh', ['-tt', '-o', 'BatchMode=yes', '-o', 'LogLevel=ERROR', 'root@192.168.0.20', cmd]).toString();
+const ssh = (cmd) => execFileSync('ssh', ['-tt', '-o', 'BatchMode=yes', '-o', 'LogLevel=ERROR', process.env.LUMEN_TV_HOST || 'root@192.0.2.10', cmd]).toString();
 const launch = (id) => ssh(`luna-send -n 1 luna://com.webos.applicationManager/launch '{"id":"${id}"}'`);
 const front = () => (ssh(`luna-send -n 1 luna://com.webos.applicationManager/getForegroundAppInfo '{}'`).match(/"appId":"([^"]*)"/) || [])[1];
 const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));

@@ -1,0 +1,127 @@
+/* The player (screens/Player.tsx, docs/plans/player.md). The picture is on the TV's video plane behind the page, so while it plays the
+   page is transparent and everything but the player is hidden (the screen underneath stays mounted, keeping its place). */
+html.playing, html.playing body { background: transparent; }
+/* Control Center stays: the remote's settings button opens it over the film */
+html.playing #wpimage, html.playing #root > *:not(.player):not(.panel--cc):not(.panel-backdrop--cc) { visibility: hidden; }
+.player { position: fixed; left: 0; top: 0; width: 100%; height: 100%; z-index: 50; color: #fff; }
+.player__video { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+/* the subtitle line: drawn by Lumen over the picture, white with a dark outline so it reads on any frame */
+.player__subs {
+	position: absolute; left: 10%; right: 10%; bottom: 8%; display: flex; flex-direction: column; align-items: center;
+	font-size: 44px; font-weight: 600; line-height: 1.25; text-align: center; color: #fff; text-shadow: var(--player-subs-shadow);
+}
+.player__subs--raised { transform: translateY(-260px); }
+/* beside the next-episode card, the line is centred in the space to its left so it never runs under the card */
+.player__subs--card { right: calc(var(--player-card-width) + var(--layout-rows-edge) + 48px); }
+.player__subs, .player__loading, .player__jump { pointer-events: none; }
+/* the subtitle timing's ‹ and ›, a wider target for the pointer */
+.player__nudge { display: inline-block; padding: 0 12px; }
+.player__loading { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-size: 40px; font-weight: 600; opacity: 0.8; }
+/* the jump pill: how far a run of Left/Right presses goes */
+.player__jump { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); padding: 16px 36px; border-radius: var(--radius-capsule); background: var(--player-pill); font-size: 44px; font-weight: 700; }
+/* the bar: at the bottom over a shade, faded in on a key and out 4 s later */
+.player__bar {
+	position: absolute; left: 0; right: 0; bottom: 0; padding: 120px var(--layout-rows-edge) 64px; background: var(--player-shade);
+	opacity: 0; transition: opacity var(--dur-media-hero) ease-out; pointer-events: none;
+}
+.player__bar--shown { opacity: 1; pointer-events: auto; }
+.player__title { font-size: 48px; font-weight: 700; letter-spacing: -0.015em; }
+.player__sub { margin-top: 6px; font-size: 26px; opacity: 0.8; }
+/* the progress line's pointer target: taller than the line, so the pointer need not land on its 8 px */
+.player__seek { margin-top: 8px; padding: 18px 0; }
+.player__track { position: relative; height: 8px; border-radius: 4px; background: var(--player-meter); overflow: hidden; }
+.player__track span { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: var(--player-meter-fill); transform-origin: 0 50%; }
+.player__times { display: flex; flex-direction: row; justify-content: space-between; margin-top: 10px; font-size: 22px; opacity: 0.85; }
+.player__buttons { display: flex; flex-direction: row; gap: 18px; margin-top: 22px; }
+.player__btn { padding: 12px 30px; border-radius: var(--radius-capsule); background: rgba(255, 255, 255, 0.18); font-size: 24px; font-weight: 600; transition: transform var(--dur-focus) ease-out; }
+.player__btn--focused { background: var(--player-focus-fill); color: var(--player-focus-ink); transform: scale(var(--lift-pill)); }
+.player__next { position: absolute; right: var(--layout-rows-edge); bottom: 80px; width: var(--player-card-width); padding: 28px; border-radius: var(--radius-card); background: var(--player-card); }
+.player__next-when { font-size: 22px; opacity: 0.8; }
+.player__next-title { margin-top: 6px; font-size: 32px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player__next-image { display: block; width: 100%; aspect-ratio: 16 / 9; margin-top: 16px; border-radius: 16px; object-fit: cover; }
+/* the episode list (Episodes on the bar): the seasons as pills, then the season's episodes as cards along one row, over a veil.
+   A card's width and gap match EP_STEP in Player.tsx. */
+.player-eps { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 2; background: var(--player-eps-veil); }
+.player-eps__top { position: absolute; left: var(--layout-rows-edge); right: var(--layout-rows-edge); top: 400px; display: flex; flex-direction: row; align-items: center; gap: 14px; }
+.player-eps__title { margin: 0 22px 0 0; font-size: 40px; font-weight: 700; letter-spacing: -0.015em; }
+.player-eps__season { padding: 10px 26px; border-radius: var(--radius-capsule); font-size: 24px; font-weight: 600; opacity: 0.75; white-space: nowrap; transition: transform var(--dur-focus) ease-out; }
+.player-eps__season--on { background: rgba(255, 255, 255, 0.22); opacity: 1; }
+.player-eps__season--focused { background: var(--player-focus-fill); color: var(--player-focus-ink); transform: scale(var(--lift-pill)); }
+.player-eps__strip { position: absolute; left: 0; top: 500px; display: flex; flex-direction: row; gap: 32px; padding: 0 var(--layout-rows-edge); transition: transform var(--dur-scroll) var(--ease-out); }
+.player-ep { flex: none; width: 400px; }
+.player-ep__thumb {
+	position: relative; width: 400px; height: 225px; border-radius: 18px; overflow: hidden; background: var(--chan-sweep) var(--chan-bg);
+	transform-origin: 50% 100%; transition: transform var(--dur-focus) ease-out;
+}
+.player-ep--focused .player-ep__thumb { transform: scale(1.06); box-shadow: 0 0 0 4px var(--player-focus-fill), 0 18px 36px rgba(0, 0, 0, 0.45); }
+.player-ep__thumb img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; }
+.player-ep__bar { position: absolute; left: 0; bottom: 0; width: 100%; height: 6px; background: var(--player-meter-fill); transform-origin: 0 50%; }
+.player-ep__name { margin-top: 20px; font-size: 26px; font-weight: 600; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.player-ep__meta { margin-top: 6px; font-size: 22px; opacity: 0.8; }
+.player-ep__now { color: var(--player-eps-now); font-weight: 700; }
+.player-ep__overview { margin-top: 10px; font-size: 20px; line-height: 1.4; opacity: 0.7; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+html.playing #bgvideo { visibility: hidden; }
+
+/* The live player for IPTV channels (screens/LivePlayer.tsx): the picture alone, and a banner at the bottom on opening, on a zap and on OK,
+   gone 5 s later. The logo sits on the channel's brand colour, as on the Live TV row. */
+.live__banner {
+	position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: row; align-items: center; gap: 36px;
+	padding: 140px var(--layout-rows-edge) 64px; background: var(--player-shade);
+	opacity: 0; transition: opacity var(--dur-media-hero) ease-out; pointer-events: none;
+}
+.live__banner--shown { opacity: 1; }
+.live__logo {
+	flex: 0 0 auto; display: flex; align-items: center; justify-content: center; width: 220px; height: 132px; border-radius: var(--radius-card);
+	background: var(--chan-sweep) var(--chan-bg); overflow: hidden;
+}
+.live__logo img { width: 80%; height: 72%; object-fit: contain; }
+.live__logo span { padding: 0 12px; text-align: center; font-size: 26px; font-weight: 700; line-height: 1.1; }
+.live__info { flex: 1 1 auto; min-width: 0; }
+.live__chan { font-size: 22px; font-weight: 500; opacity: 0.78; white-space: nowrap; }
+.live__title { margin-top: 4px; font-size: 48px; font-weight: 700; letter-spacing: -0.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live__times { display: flex; flex-direction: row; align-items: center; margin-top: 10px; font-size: 22px; font-weight: 500; opacity: 0.9; white-space: nowrap; }
+.live__meter { position: relative; flex: 0 1 260px; min-width: 60px; height: 6px; margin: 0 18px; border-radius: 3px; background: var(--player-meter); overflow: hidden; }
+.live__meter span { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: var(--player-meter-fill); transform-origin: 0 50%; }
+.live__next { margin-top: 10px; font-size: 22px; font-weight: 500; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live__hint { flex: 0 0 auto; font-size: 22px; opacity: 0.6; }
+
+/* a channel number being typed in the live player: the Guide's pill (theme/guide.css .guide__typed), up near the top */
+.live__typed { top: 14%; }
+
+/* The live player's channel list (components/ChannelPanel.tsx): a dark panel down the left of the picture, the search on top, then the
+   channels; the focused row is white, the one playing has a mark on its left. Only the panel's own rows move. */
+.chpanel {
+	position: absolute; left: 0; top: 0; bottom: 0; width: 760px; box-sizing: border-box; padding: 56px 40px 40px var(--layout-rows-edge);
+	background: linear-gradient(90deg, rgba(8, 10, 18, 0.94) 0%, rgba(8, 10, 18, 0.88) 80%, rgba(8, 10, 18, 0) 100%);
+}
+.chpanel__search {
+	display: flex; flex-direction: row; align-items: center; gap: 10px; height: 64px; box-sizing: border-box; padding: 0 24px;
+	border-radius: var(--radius-capsule); background: rgba(255, 255, 255, 0.14); transition: transform var(--dur-focus) ease-out;
+}
+.chpanel__search--focused { transform: scale(var(--lift-pill)); background: var(--player-focus-fill); color: var(--player-focus-ink); }
+.chpanel__input { flex: 1 1 auto; min-width: 0; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; font-size: 24px; font-weight: 500; }
+.chpanel__input::placeholder { color: inherit; opacity: 0.6; }
+.chpanel__count { margin: 14px 0 8px -6px; padding: 4px 12px; border-radius: var(--radius-capsule); font-size: 20px; opacity: 0.6; }
+.chpanel__count--focused { opacity: 1; background: var(--player-focus-fill); color: var(--player-focus-ink); }
+.chpanel__view { position: relative; height: calc(8 * 104px); overflow: hidden; }
+.chpanel__track { position: absolute; left: 0; right: 0; top: 0; transition: transform var(--dur-focus) ease-out; }
+.chpanel__empty { padding: 24px 6px; font-size: 24px; opacity: 0.7; }
+.chpanel__row {
+	position: absolute; left: 0; right: 0; height: 92px; box-sizing: border-box; display: flex; flex-direction: row; align-items: center; gap: 18px;
+	padding: 0 18px; border-radius: 18px; transition: transform var(--dur-focus) ease-out;
+}
+.chpanel__row--playing { box-shadow: inset 5px 0 0 var(--accent-on); }
+.chpanel__row--focused { background: var(--player-focus-fill); color: var(--player-focus-ink); transform: scale(1.02); }
+.chpanel__num { flex: 0 0 64px; font-size: 24px; font-weight: 600; text-align: center; }
+.chpanel__logo {
+	flex: 0 0 auto; display: flex; align-items: center; justify-content: center; width: 108px; height: 64px; border-radius: 12px;
+	background: var(--chan-sweep) var(--chan-bg); overflow: hidden; color: #fff;
+}
+.chpanel__logo img { width: 80%; height: 72%; object-fit: contain; }
+.chpanel__logo span { padding: 0 6px; text-align: center; font-size: 15px; font-weight: 700; line-height: 1.1; }
+.chpanel__info { flex: 1 1 auto; min-width: 0; }
+.chpanel__name { font-size: 24px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chpanel__prog { margin-top: 2px; font-size: 20px; opacity: 0.72; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chpanel__meter { position: relative; width: 180px; height: 4px; margin-top: 6px; border-radius: 2px; background: var(--player-meter); overflow: hidden; }
+.chpanel__meter span { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: currentColor; transform-origin: 0 50%; }
+.live__retry { margin-top: 14px; font-size: 26px; font-weight: 500; opacity: 0.7; }

@@ -3,14 +3,16 @@
 //   node tools/tv/cdp.mjs css '<css>'                 replaces the live <style id="live"> block; css '' clears it
 //   node tools/tv/cdp.mjs shot <out.png> [x,y,w,h]    screenshot of the page, or of a clip
 //   node tools/tv/cdp.mjs key down down enter 500 back   presses keys in order; a number waits that many ms
-// The tunnel must be open: ssh -o BatchMode=yes -o ExitOnForwardFailure=yes -f -N -L 19998:127.0.0.1:9998 root@192.168.0.20
+// The tunnel must be open: ssh -o BatchMode=yes -o ExitOnForwardFailure=yes -f -N -L 19998:127.0.0.1:9998 $LUMEN_TV_HOST (root@<tv-ip>, in .env)
+// A TV in Developer Mode serves DevTools on the network, so no tunnel: LUMEN_CDP_HOST=<tv-ip> LUMEN_CDP_PORT=9998
 import {writeFileSync} from 'node:fs';
 
+const HOST = process.env.LUMEN_CDP_HOST || '127.0.0.1';
 const PORT = process.env.LUMEN_CDP_PORT || 19998;
 const KEYS = {left: [37, 'ArrowLeft'], up: [38, 'ArrowUp'], right: [39, 'ArrowRight'], down: [40, 'ArrowDown'], enter: [13, 'Enter'], back: [461, 'GoBack'], esc: [27, 'Escape']};
 
-const pages = await fetch(`http://127.0.0.1:${PORT}/json`).then((r) => r.json()).catch(() => {
-	console.error(`No DevTools on 127.0.0.1:${PORT}. Open the tunnel first (see the top of this file).`);
+const pages = await fetch(`http://${HOST}:${PORT}/json`).then((r) => r.json()).catch(() => {
+	console.error(`No DevTools on ${HOST}:${PORT}. Open the tunnel first (see the top of this file).`);
 	process.exit(2);
 });
 // the page id changes on every relaunch, so it is looked up each time

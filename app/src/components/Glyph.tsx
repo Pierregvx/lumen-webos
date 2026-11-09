@@ -1,6 +1,6 @@
 // Inline SVG line icons used by the Misc row and the settings badge.
 
-export type GlyphName = 'house' | 'gear' | 'inputs' | 'screensaver' | 'sliders' | 'wifi' | 'ethernet' | 'muted' | 'timer' | 'folder' | 'speaker' | 'picture' | 'power' | 'restart' | 'sun' | 'eye' | 'guide' | 'grid' | 'image' | 'cloud' | 'contrast' | 'globe' | 'trash' | 'minus';
+export type GlyphName = 'house' | 'gear' | 'inputs' | 'screensaver' | 'sliders' | 'wifi' | 'ethernet' | 'muted' | 'timer' | 'folder' | 'speaker' | 'picture' | 'power' | 'restart' | 'sun' | 'eye' | 'guide' | 'grid' | 'image' | 'cloud' | 'contrast' | 'globe' | 'trash' | 'minus' | 'film' | 'lamp' | 'play' | 'pause' | 'search';
 
 export function Glyph ({name}: {name: GlyphName}) {
 	return (
@@ -41,6 +41,10 @@ export function Glyph ({name}: {name: GlyphName}) {
 				? <path d="M3.5 5.5h17v13h-17zM3.5 9.5h17M9 9.5v9" />
 				: name === 'grid'
 				? <path d="M4 4h6.5v6.5H4zM13.5 4H20v6.5h-6.5zM4 13.5h6.5V20H4zM13.5 13.5H20V20h-6.5z" />
+				: name === 'search'
+				? <path d="M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM15.3 15.3 20.5 20.5" />
+				: name === 'film'
+				? <path d="M4 9.5h16V19H4zM4 9.5l-.6-3.4 15.8-2.8.6 3.4zM7.8 5.6l2.6 3M12.7 4.7l2.6 3" />
 				: name === 'image'
 				? <path d="M3.5 5h17v14h-17zM3.5 15.5l5-5 4 4 3-3 5 5M15.5 9.3a.8.8 0 1 0 0-.1" />
 				: name === 'cloud'
@@ -49,6 +53,12 @@ export function Glyph ({name}: {name: GlyphName}) {
 				? <path d="M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17zM12 3.5v17M12 7.5h4.5M12 11.5h6.5M12 15.5h5" />
 				: name === 'globe'
 				? <path d="M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17zM3.5 12h17M12 3.5c-2.6 2.4-3.8 5.2-3.8 8.5s1.2 6.1 3.8 8.5c2.6-2.4 3.8-5.2 3.8-8.5S14.6 5.9 12 3.5z" />
+				: name === 'lamp'
+				? <path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z" />
+				: name === 'play'
+				? <path d="M8 5.5v13l10.5-6.5z" />
+				: name === 'pause'
+				? <path d="M8.5 5.5v13M15.5 5.5v13" />
 				: name === 'inputs'
 				? <path d="M3.5 7.5h17v7.2a2 2 0 0 1-2 2h-3.2l-1 2.3H9.7l-1-2.3H5.5a2 2 0 0 1-2-2zM8 10.5v2.4M12 10.5v2.4M16 10.5v2.4" />
 				: <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />}
