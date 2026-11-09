@@ -8,7 +8,7 @@ import {loggedFetch} from './log';
 import {recoServer} from './recos';
 
 export type PrepState = 'waiting' | 'copying' | 'scanning' | 'ready' | 'failed';
-export interface Prep { state: PrepState; progress?: number }
+export interface Prep { state: PrepState; progress?: number; /** a ready copy's Jellyfin id, played in place of the original */ id?: string }
 interface Answer { on: boolean; map: [string, string][]; copies: string; items: Record<string, Prep> }
 
 const CACHE_KEY = 'lumen-prepared-v1';
@@ -72,6 +72,12 @@ export function isCopy (path: string | undefined): boolean {
 export function prepOf (path: string | undefined): Prep | null {
 	const rel = relOf(path);
 	return rel && last ? last.items[rel] || null : null;
+}
+
+/** The Jellyfin id of a film's or an episode's copy ready to play, or null: the player plays it in place of the original. */
+export function copyOf (path: string | undefined): string | null {
+	const p = prepOf(path);
+	return p && p.state === 'ready' && p.id ? p.id : null;
 }
 
 /** How many episodes of a series (its folder's path) are ready. */

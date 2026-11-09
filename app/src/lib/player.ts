@@ -3,6 +3,7 @@
 // plane behind the page, so the page goes transparent while it plays (html.playing, theme/player.css).
 import {loggedFetch} from './log';
 import {type JellyfinServer, type MediaItem} from './jellyfin';
+import {copyOf} from './prepared';
 
 export interface SubTrack { index: number; lang?: string; title?: string; isDefault: boolean; vttUrl: string }
 export interface Stream {
@@ -16,6 +17,9 @@ export interface Stream {
 	audioLang?: string;
 	/** where the end credits start, when Jellyfin knows (an Outro media segment) */
 	outroStartTicks?: number;
+	/** a copy on the NAS's quiet disk plays (lib/prepared.ts): the original's id, which gets the resume point and the played mark */
+	origId?: string;
+	runtimeTicks?: number;
 }
 
 const TIMEOUT_MS = 8000;
@@ -38,12 +42,19 @@ function call<T> (s: JellyfinServer, path: string, body?: object): Promise<T> {
 }
 
 interface RawStream { Type?: string; Index: number; Language?: string; Title?: string; DisplayTitle?: string; IsDefault?: boolean; IsTextSubtitleStream?: boolean }
-interface RawSource { Id: string; MediaStreams?: RawStream[]; DefaultAudioStreamIndex?: number }
+interface RawSource { Id: string; MediaStreams?: RawStream[]; DefaultAudioStreamIndex?: number; RunTimeTicks?: number }
 
-/** What to play for an item: its stream, subtitle tracks, audio language and where the end credits start. */
+/** What to play for an item: its stream, subtitle tracks, audio language and where the end credits start. A film or an episode copied to
+ *  the NAS's quiet disk plays from the copy, from where the original was left (the original, if the copy cannot be opened). */
 export function openStream (s: JellyfinServer, item: MediaItem): Promise<Stream> {
+	const copy = copyOf(item.path);
+	if (!copy) return openFrom(s, item, item.id);
+	return openFrom(s, item, copy).catch(() => openFrom(s, item, item.id));
+}
+
+function openFrom (s: JellyfinServer, item: MediaItem, id: string): Promise<Stream> {
 	return Promise.all([
-		call<{MediaSources?: RawSource[]; PlaySessionId?: string}>(s, `/Items/${item.id}/PlaybackInfo?userId=${s.userId}`),
+		call<{MediaSources?: RawSource[]; PlaySessionId?: string}>(s, `/Items/${id}/PlaybackInfo?userId=${s.userId}`),
 		call<{Items?: {Type?: string; StartTicks?: number}[]}>(s, `/MediaSegments/${item.id}`).catch(() => ({Items: []})),
 		// where it was left, as the server has it now: the Resume row Lumen drew may be older than the last time it was stopped
 		call<{PlaybackPositionTicks?: number}>(s, `/UserItems/${item.id}/UserData?userId=${s.userId}`).catch(() => null)
@@ -55,8 +66,10 @@ export function openStream (s: JellyfinServer, item: MediaItem): Promise<Stream>
 		const audio = audios.filter((x) => x.Index === src.DefaultAudioStreamIndex)[0] || audios.filter((x) => x.IsDefault)[0] || audios[0];
 		const outro = (segments.Items || []).filter((x) => x.Type === 'Outro' && x.StartTicks)[0];
 		return {
-			url: `${s.url}/Videos/${item.id}/stream?static=true&mediaSourceId=${src.Id}&api_key=${s.token}`,
-			itemId: item.id,
+			url: `${s.url}/Videos/${id}/stream?static=true&mediaSourceId=${src.Id}&api_key=${s.token}`,
+			itemId: id,
+			origId: id !== item.id ? item.id : undefined,
+			runtimeTicks: src.RunTimeTicks,
 			mediaSourceId: src.Id,
 			playSessionId: info.PlaySessionId || '',
 			startTicks: item.startAt !== undefined ? item.startAt : userData ? userData.PlaybackPositionTicks || 0 : item.resumeTicks || 0,
@@ -67,7 +80,7 @@ export function openStream (s: JellyfinServer, item: MediaItem): Promise<Stream>
 				lang: x.Language,
 				title: x.DisplayTitle || x.Title,
 				isDefault: !!x.IsDefault,
-				vttUrl: `${s.url}/Videos/${item.id}/${src.Id}/Subtitles/${x.Index}/0/Stream.vtt?api_key=${s.token}`
+				vttUrl: `${s.url}/Videos/${id}/${src.Id}/Subtitles/${x.Index}/0/Stream.vtt?api_key=${s.token}`
 			}))
 		};
 	});
@@ -86,6 +99,20 @@ function report (s: JellyfinServer, path: string, st: Stream, positionTicks: num
 	}).catch(() => undefined);
 }
 
+/** a copy is played past this much of it at the stop: the original is marked watched */
+const PLAYED_AT = 0.9;
+
+/** A copy plays: the original gets its resume point, and its played mark once past 90 % at the stop, so Resume and the episodes' marks
+ *  follow the original as if it had played (as Ciné Pierro's player does). */
+function mirror (s: JellyfinServer, st: Stream, positionTicks: number, ending: boolean): Promise<void> {
+	if (!st.origId) return Promise.resolve();
+	const done = ending && !!st.runtimeTicks && positionTicks >= st.runtimeTicks * PLAYED_AT;
+	return (done
+		? call<void>(s, `/UserPlayedItems/${st.origId}?userId=${s.userId}`, {})
+		: call<void>(s, `/UserItems/${st.origId}/UserData?userId=${s.userId}`, {PlaybackPositionTicks: Math.round(positionTicks), LastPlayedDate: new Date().toISOString()})
+	).catch(() => undefined);
+}
+
 export function reportStart (s: JellyfinServer, st: Stream, positionTicks: number): Promise<void> { return report(s, '/Sessions/Playing', st, positionTicks, false); }
-export function reportProgress (s: JellyfinServer, st: Stream, positionTicks: number, paused: boolean): Promise<void> { return report(s, '/Sessions/Playing/Progress', st, positionTicks, paused); }
-export function reportStopped (s: JellyfinServer, st: Stream, positionTicks: number): Promise<void> { return report(s, '/Sessions/Playing/Stopped', st, positionTicks, false); }
+export function reportProgress (s: JellyfinServer, st: Stream, positionTicks: number, paused: boolean): Promise<void> { return Promise.all([report(s, '/Sessions/Playing/Progress', st, positionTicks, paused), mirror(s, st, positionTicks, false)]).then(() => undefined); }
+export function reportStopped (s: JellyfinServer, st: Stream, positionTicks: number): Promise<void> { return Promise.all([report(s, '/Sessions/Playing/Stopped', st, positionTicks, false), mirror(s, st, positionTicks, true)]).then(() => undefined); }
