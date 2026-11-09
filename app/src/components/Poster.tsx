@@ -13,6 +13,12 @@ export interface PosterModel {
 	percent?: number;
 	/** the picture is a platform's logo: drawn whole on the poster's colour, not cropped */
 	logo?: boolean;
+	/** 0..1, how far through a title in progress: a bar at its foot */
+	progress?: number;
+	/** on the NAS's fast disk (lib/prepared.ts): a banner at its foot */
+	quiet?: string;
+	/** the banner says a copy is under way, not ready */
+	quietBusy?: boolean;
 }
 
 interface Props {
@@ -44,6 +50,8 @@ export function Poster ({model, focused, load, onHover, onActivate}: Props) {
 				? <img class="poster__image" src={model.imageUrl} alt="" decoding="async" onLoad={model.logo ? sized : undefined} onError={() => setBroken(model.imageUrl || '')} />
 				: <div class="poster__name">{model.title}</div>}
 			{badge && <div class={`poster__badge poster__badge--${a}`}>{badge}</div>}
+			{model.quiet && <div class={`poster__quiet${model.quietBusy ? ' poster__quiet--busy' : ''}`}>{model.quiet}</div>}
+			{model.progress ? <div class="poster__bar"><span style={{transform: `scaleX(${model.progress})`}} /></div> : null}
 		</div>
 	);
 }

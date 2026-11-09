@@ -66,6 +66,14 @@
 .poster__badge { position: absolute; right: 10px; top: 10px; padding: 3px 10px; border-radius: var(--radius-capsule); background: var(--media-badge); font-size: 16px; font-weight: 700; }
 .poster__badge--available { background: var(--media-badge-ok); }
 .poster__badge--downloading { background: var(--media-badge-dl); }
+/* on the NAS's fast disk: a banner across the poster's foot; a title in progress has its bar above it */
+.poster__quiet { position: absolute; left: 0; right: 0; bottom: 0; padding: 7px 8px 8px; background: var(--media-quiet); font-size: 16px; font-weight: 700; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.poster__quiet--busy { background: var(--media-quiet-busy); }
+.poster__bar { position: absolute; left: 12px; right: 12px; bottom: 12px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.3); overflow: hidden; }
+.poster__quiet ~ .poster__bar { bottom: 44px; }
+.poster__bar span { display: block; height: 100%; background: #fff; transform-origin: left; }
+.resume__quiet { position: absolute; left: 0; right: 0; top: 0; padding: 6px 12px; background: var(--media-quiet); font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.resume__quiet--busy { background: var(--media-quiet-busy); }
 
 /* Search: one field under the tabs; the focused result's text sits under it */
 .media-field {

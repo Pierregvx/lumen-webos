@@ -13,6 +13,7 @@ import {t as tr} from '../lib/i18n';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useRealPointer} from '../hooks/useRealPointer';
 import {useOkPress} from '../hooks/useOkPress';
+import {prepLabel, prepOf, readyIn, usePrepared} from '../lib/prepared';
 import {Poster} from '../components/Poster';
 import {RequestPanel} from '../components/RequestPanel';
 import {byGenre, byType, findByTmdb, genres, imageUrl, latest, search as searchJellyfin, type JellyfinServer, type MediaItem} from '../lib/jellyfin';
@@ -70,6 +71,19 @@ const fromJellyfin = (s: JellyfinServer, it: MediaItem): Entry => ({
 	key: 'jf:' + it.id, title: it.title, posterUrl: imageUrl(s, it, 'Primary', 300) || undefined, backdropUrl: imageUrl(s, it, 'Backdrop', 1280) || undefined,
 	year: it.year, minutes: it.minutes, genres: it.genres, rating: it.rating, overview: it.overview, jf: it
 });
+/** A library title's banner and bar: a film or an episode prepared (or being copied), a series with episodes ready, and how far through. */
+function quietOf (e: Entry): {quiet?: string; quietBusy?: boolean; progress?: number} {
+	const it = e.jf;
+	if (!it) return {};
+	const progress = it.progress && !it.played ? it.progress : undefined;
+	if (it.type === 'Series') {
+		const n = readyIn(it.path);
+		return {progress, quiet: n ? tr('Ready, quiet') + (n > 1 ? ` · ${n}` : '') : undefined};
+	}
+	const p = prepOf(it.path);
+	return {progress, quiet: prepLabel(p, tr) || undefined, quietBusy: !!p && p.state !== 'ready'};
+}
+
 const fromSeerr = (t: SeerrTitle): Entry => ({
 	key: 'sr:' + t.type + t.tmdbId, title: t.title, posterUrl: t.posterUrl, backdropUrl: t.backdropUrl, year: t.year, genres: [], rating: t.rating, overview: t.overview, sr: t
 });
@@ -124,6 +138,8 @@ const statusText = (a: Availability, percent?: number) => a === 'downloading' ? 
 
 export function Media ({state, forYou: showForYou, onPlay, active, onClose, onToast}: Props) {
 	const s = state.jellyfin;
+	// the banners follow what is prepared on the NAS's fast disk
+	usePrepared(active);
 	const sr = state.seerr;
 	const tabs = useMemo((): MediaTab[] => (sr ? ['library', 'discover', 'search'] : ['library', 'search']), [!!sr]);
 	const [tab, setTab] = useState<MediaTab>('library');
@@ -221,10 +237,11 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 			const all = place.shelves ? place.shelves.concat(place.more || []) : [];
 			return kind === 'all' ? all : all.map((sh) => ({...sh, items: sh.items.filter((e) => e.sr && e.sr.type === kind)})).filter((sh) => sh.items.length > 0);
 		}
+		if (tab === 'library' && state.resume.length && s) return [{id: 'resume', label: 'Resume', items: state.resume.map((it) => fromJellyfin(s, it))}].concat(shelves.library || []);
 		if (tab !== 'discover') return shelves[tab] || [];
 		const lists = shelves.discover || [];
 		return (forYou && showForYou ? [forYou] : []).concat(lists.slice(0, 1), [BRANDS], lists.slice(1));
-	}, [place, kind, tab, shelves, forYou, showForYou]);
+	}, [place, kind, tab, shelves, forYou, showForYou, state.resume]);
 	/** the page has films and series both: All, Films and Series are offered */
 	const both = useMemo(() => {
 		const all = place && place.shelves ? place.shelves.concat(place.more || []) : [];
@@ -483,7 +500,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 								<h2 class="media__label">{tr(sh.label)}</h2>
 								<div class="media__strip" style={{transform: `translateX(${-offset}px)`}}>
 									{sh.items.map((e, k) => (
-										<Poster key={e.key} model={{key: e.key, title: e.title, imageUrl: e.posterUrl, availability: e.sr ? e.sr.availability : undefined, percent: e.sr && e.sr.percent, logo: !!e.brand}}
+										<Poster key={e.key} model={{key: e.key, title: e.title, imageUrl: e.posterUrl, availability: e.sr ? e.sr.availability : undefined, percent: e.sr && e.sr.percent, logo: !!e.brand, ...quietOf(e)}}
 											focused={zone === 'rows' && i === r && k === at} load={near && k >= at - FOCUS_COL - 1 && k <= at + 8}
 											onHover={() => { if (!realPointer.current) return; setZone('rows'); setRows((all) => ({...all, [view]: i})); setCols((all) => ({...all, [colKey(sh)]: k})); }}
 											onActivate={() => press(e.jf ? 'play' : undefined, e)} />

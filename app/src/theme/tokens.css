@@ -64,6 +64,9 @@
 	--media-badge: rgba(99, 102, 241, 0.92);
 	--media-badge-ok: rgba(22, 163, 74, 0.92);
 	--media-badge-dl: rgba(217, 119, 6, 0.92);
+	/* a title on the NAS's fast disk (lib/prepared.ts): the banner, and its colour while the copy is still on its way */
+	--media-quiet: rgba(13, 148, 136, 0.94);
+	--media-quiet-busy: rgba(71, 85, 105, 0.94);
 	/* the player's bar shade and jump pill */
 	--player-shade: linear-gradient(0deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.55) 60%, rgba(0, 0, 0, 0) 100%);
 	--player-pill: rgba(0, 0, 0, 0.6);

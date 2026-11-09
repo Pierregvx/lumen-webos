@@ -37,6 +37,14 @@ import {ControlCenter, prefetchControls, type CenterAction} from './components/C
 import {CITIES, COUNTRIES} from './config/cities';
 import {AUTO_PLACE, peekWeather, readWeather, type Weather} from './lib/weather';
 import {useLiveTv} from './hooks/useLiveTv';
+import {prepLabel, prepOf, usePrepared} from './lib/prepared';
+
+/** a Resume tile's banner: its film or episode on the NAS's fast disk, ready or on its way */
+function quietTile (it: {path?: string}): {quiet?: string; quietBusy?: boolean} {
+	const p = prepOf(it.path);
+	const quiet = prepLabel(p, tr);
+	return quiet ? {quiet, quietBusy: !!p && p.state !== 'ready'} : {};
+}
 import {channelColor, channelLogo, nowNextAt, rowChannels, type Channel} from './lib/livetv';
 import {openChannel, runningApps, uninstallApp} from './lib/root';
 import {bootMark, navMark} from './lib/log';
@@ -129,6 +137,8 @@ export function App () {
 	const [restoring, setRestoring] = useState(() => !hasSavedConfig());
 	const [focusRow, setFocusRow] = useState<{id: string; seq: number} | undefined>(undefined);
 	const media = useMedia(config.autoSeasons);
+	/** what is prepared on the NAS's fast disk: the Resume tiles' banners (lib/prepared.ts) */
+	const prepared = usePrepared(!!media.jellyfin);
 	// IPTV channels come from Jellyfin's Live TV (lib/iptv.ts), so Live TV is given the signed-in server
 	const live = useLiveTv(config.liveTvRow, screen === 'guide', config.liveChannels, media.jellyfin);
 	// a rating asked for what was just finished (lib/ratings.ts)
@@ -443,7 +453,7 @@ export function App () {
 		const watching = media.resume.map((it): TileModel => ({
 			key: MEDIA.item + it.id,
 			label: it.title,
-			resume: {title: it.title, subtitle: it.subtitle || (it.year ? String(it.year) : undefined), imageUrl: imageUrl(jf, it, 'Thumb', 640) || undefined, backdrop: imageUrl(jf, it, 'Backdrop', 1280) || undefined, progress: it.progress}
+			resume: {title: it.title, subtitle: it.subtitle || (it.year ? String(it.year) : undefined), imageUrl: imageUrl(jf, it, 'Thumb', 640) || undefined, backdrop: imageUrl(jf, it, 'Backdrop', 1280) || undefined, progress: it.progress, ...quietTile(it)}
 		}));
 		const asked = media.pending.map((t): TileModel => ({
 			key: MEDIA.req + t.tmdbId,
@@ -457,7 +467,7 @@ export function App () {
 			resume: {title: n.title.title, subtitle: `${tr('Season')} ${n.season}`, imageUrl: n.title.backdropUrl, backdrop: n.title.backdropUrl, badge: tr('New season')}
 		}));
 		return fresh.concat(watching, asked);
-	}, [media.jellyfin, media.resume, media.pending, media.seasons, config.language]);
+	}, [media.jellyfin, media.resume, media.pending, media.seasons, config.language, prepared]);
 
 	// the first row (in the glass bar) holds config.firstRow apps; the rest make a grid of rows as wide below it, like the tvOS home screen
 	// (the grid rows are 'dock', 'dock:1', 'dock:2'...)

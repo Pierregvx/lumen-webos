@@ -4,6 +4,7 @@
 import {APP_ID} from '../config/constants';
 import {readCache, writeCache} from './boot';
 import {loggedFetch} from './log';
+import {isCopy} from './prepared';
 
 export interface JellyfinServer { url: string; userId: string; token: string; deviceId: string }
 
@@ -34,6 +35,8 @@ export interface MediaItem {
 	/** where to start whatever Jellyfin has as this user's place (set only by a {"play"} launch: Ciné Pierro's "Sur la TV") */
 	startAt?: number;
 	seriesId?: string;
+	/** the file's (or a series' folder's) path on the server: what lib/prepared.ts matches */
+	path?: string;
 	tmdbId?: string;
 	trailerYoutubeId?: string;
 	/** the item whose Backdrop, Thumb and Primary images stand for this one (an episode borrows its series'), when it has any */
@@ -47,7 +50,7 @@ export interface MediaItem {
 const SERVER_KEY = 'jellyfin-server';
 const TIMEOUT_MS = 8000;
 const CLIENT_VERSION = '2.0';
-const FIELDS = 'Overview,Genres,ProviderIds,RemoteTrailers,UserData';
+const FIELDS = 'Overview,Genres,ProviderIds,RemoteTrailers,UserData,Path';
 /** an address as typed: scheme, host and port, no path */
 const BASE = /^https?:\/\/[A-Za-z0-9.-]+(:\d{1,5})?$/;
 
@@ -137,7 +140,7 @@ export function quickConnectCheck (url: string, secret: string): Promise<Jellyfi
 interface RawItem {
 	Id: string; Type: string; Name: string; ProductionYear?: number; RunTimeTicks?: number; Genres?: string[]; CommunityRating?: number;
 	Overview?: string; SeriesId?: string; SeriesName?: string; ParentIndexNumber?: number; IndexNumber?: number;
-	ProviderIds?: Record<string, string>; RemoteTrailers?: {Url?: string}[];
+	ProviderIds?: Record<string, string>; RemoteTrailers?: {Url?: string}[]; Path?: string;
 	UserData?: {PlayedPercentage?: number; PlaybackPositionTicks?: number; LastPlayedDate?: string; Played?: boolean; UnplayedItemCount?: number};
 	ImageTags?: Record<string, string>; BackdropImageTags?: string[]; ParentBackdropItemId?: string; ParentBackdropImageTags?: string[];
 	ParentThumbItemId?: string; SeriesPrimaryImageTag?: string;
@@ -174,6 +177,7 @@ function toItem (r: RawItem): MediaItem {
 		unplayed: ud.UnplayedItemCount,
 		resumeTicks: ud.PlaybackPositionTicks || undefined,
 		seriesId: r.SeriesId,
+		path: r.Path,
 		tmdbId: (r.ProviderIds || {}).Tmdb,
 		trailerYoutubeId: youtubeId(r.RemoteTrailers),
 		backdropOf: (r.BackdropImageTags || []).length ? r.Id : (r.ParentBackdropImageTags || []).length ? r.ParentBackdropItemId : undefined,
@@ -185,7 +189,7 @@ function toItem (r: RawItem): MediaItem {
 
 function items (s: JellyfinServer, path: string): Promise<MediaItem[]> {
 	return call<{Items?: RawItem[]} | RawItem[]>(s.url, path, {token: s.token, device: s.deviceId})
-		.then((r) => (Array.isArray(r) ? r : r.Items || []).map(toItem));
+		.then((r) => (Array.isArray(r) ? r : r.Items || []).map(toItem).filter((it) => !isCopy(it.path)));
 }
 
 const q = (s: JellyfinServer, more: string) => `userId=${s.userId}&fields=${FIELDS}&enableImageTypes=Primary,Backdrop,Thumb&imageTypeLimit=1&${more}`;
@@ -262,7 +266,7 @@ export function item (s: JellyfinServer, id: string): Promise<MediaItem | null> 
 /** A series' episodes in order, every season (specials left out). */
 export function episodesOf (s: JellyfinServer, seriesId: string): Promise<MediaItem[]> {
 	return call<{Items?: RawItem[]}>(s.url, `/Shows/${seriesId}/Episodes?${q(s, 'isMissing=false')}`, {token: s.token, device: s.deviceId})
-		.then((r) => (r.Items || []).filter((x) => (x.ParentIndexNumber || 0) > 0).map(toItem));
+		.then((r) => (r.Items || []).filter((x) => (x.ParentIndexNumber || 0) > 0 && !isCopy(x.Path)).map(toItem));
 }
 
 /** Genre names, the best-filled first. */

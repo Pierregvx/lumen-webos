@@ -17,6 +17,7 @@ import {episodeAfter, openStream, reportProgress, reportStart, reportStopped, ty
 import {countdownStart, cueAt, parseVtt, pickSubtitle, savedSubtitle, saveSubtitle, saveSubOffset, STILL_THERE_AFTER, subOffset, type Cue} from '../lib/playerLogic';
 import {loggedFetch} from '../lib/log';
 import {episodesOf, nextEpisode, type JellyfinServer, type MediaItem} from '../lib/jellyfin';
+import {prepLabel, prepOf, usePrepared} from '../lib/prepared';
 
 interface Props {
 	server: JellyfinServer;
@@ -285,6 +286,9 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 	};
 
 	// ----- the episode list: opened on the season and the episode playing -----
+	usePrepared(!!picker);
+	/** a season whose every episode is on the NAS's fast disk: its tab is marked */
+	const quietSeason = (n: number) => { const eps = episodes.filter((e) => (e.season || 0) === n); return eps.length > 0 && eps.every((e) => { const p = prepOf(e.path); return !!p && p.state === 'ready'; }); };
 	const seasons = episodes.reduce<number[]>((out, e) => (out.indexOf(e.season || 0) === -1 ? out.concat(e.season || 0) : out), []);
 	const inSeason = picker ? episodes.filter((e) => (e.season || 0) === picker.season) : [];
 	const openPicker = () => {
@@ -493,7 +497,7 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 					<div class="player-eps__top">
 						<h2 class="player-eps__title">{tr('Episodes')}</h2>
 						{seasons.length > 1 && seasons.map((n) => (
-							<span key={n} class={`player-eps__season${n === picker.season ? ' player-eps__season--on' : ''}${picker.row === 'seasons' && n === picker.season ? ' player-eps__season--focused' : ''}`}
+							<span key={n} class={`player-eps__season${n === picker.season ? ' player-eps__season--on' : ''}${picker.row === 'seasons' && n === picker.season ? ' player-eps__season--focused' : ''}${quietSeason(n) ? ' player-eps__season--quiet' : ''}`}
 								onMouseEnter={hover(() => setPicker({...picker, row: 'seasons'}))}
 								onClick={click(() => setPicker({row: 'episodes', season: n, at: 0, first: 0}))}>
 								{n === 0 ? tr('Specials') : tr('Season') + ' ' + n}
@@ -506,11 +510,14 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 							// the length and how far it was watched; "Playing" goes in front of them, with the separator only if there is something after it
 							const facts = [ep.minutes ? ep.minutes + ' min' : '', ep.played ? tr('Watched') : ep.progress ? tr('In progress') : ''].filter(Boolean).join(' · ');
 							const still = imageUrl(server, ep, 'Still', 400);
+							const prep = prepOf(ep.path);
+							const quiet = prepLabel(prep, tr);
 							return (
 								<div key={ep.id} class={`player-ep${picker.row === 'episodes' && i === picker.at ? ' player-ep--focused' : ''}`}
 									onMouseEnter={hover(() => setPicker({...picker, row: 'episodes', at: i}))} onClick={click(() => pick(ep))}>
 									<div class="player-ep__thumb">
 										{still && <img src={still} alt="" decoding="async" />}
+										{quiet && <span class={`player-ep__quiet${prep && prep.state !== 'ready' ? ' player-ep__quiet--busy' : ''}`}>{quiet}</span>}
 										{ep.progress && !ep.played ? <span class="player-ep__bar" style={{transform: `scaleX(${ep.progress})`}} /> : null}
 									</div>
 									<div class="player-ep__name">{ep.episode ? ep.episode + '. ' : ''}{ep.name || ep.subtitle}</div>

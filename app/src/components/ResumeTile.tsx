@@ -18,6 +18,9 @@ export interface ResumeInfo {
 	backdrop?: string;
 	/** a badge of its own (New season) */
 	badge?: string;
+	/** on the NAS's fast disk (lib/prepared.ts): a banner along the top */
+	quiet?: string;
+	quietBusy?: boolean;
 }
 
 interface Props {
@@ -38,6 +41,7 @@ export function ResumeTile ({info, classes, onHover, onActivate}: Props) {
 				{info.imageUrl && broken !== info.imageUrl
 					? <img class="resume__image" src={info.imageUrl} alt="" decoding="async" loading="lazy" onError={() => setBroken(info.imageUrl || '')} />
 					: <div class="resume__name">{info.title}</div>}
+				{info.quiet && <div class={`resume__quiet${info.quietBusy ? ' resume__quiet--busy' : ''}`}>{info.quiet}</div>}
 				{badge
 					? <div class="resume__badge">{badge}</div>
 					: <div class="chan__bar"><span style={{transform: `scaleX(${info.progress || 0})`}} /></div>}

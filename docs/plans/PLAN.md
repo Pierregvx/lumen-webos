@@ -106,6 +106,11 @@ From `docs/research/prior-art.md` and upstream (ammar027/lumen-webos). Build wit
 
 ## Later
 
+- **Releases from this fork (2026-11-09).** A push to `main` of `Pierregvx/lumen-webos` publishes nothing: its release workflow has
+  never run there (0 runs, no release), and the Homebrew Channel's builds come from `samrenfrew/lumen-webos`, which this account cannot push
+  to. For now the TV runs dev builds (`npm run deploy:home`), and work is merged into `dev`; `main` waits for a real release. To decide: turn
+  on the workflow in this fork (and give the Homebrew Channel its repository), or keep to dev builds.
+
 In rough order of value:
 
 1. Plex Continue Watching row from the Plex server's On Deck. Tiles open PlxNative. Opening a specific episode needs a launch parameter that
