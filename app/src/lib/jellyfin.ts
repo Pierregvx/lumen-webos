@@ -194,6 +194,15 @@ const q = (s: JellyfinServer, more: string) => `userId=${s.userId}&fields=${FIEL
  *  An episode goes when Jellyfin already counts it watched (it can keep a stop point after that), or once a later episode of its series was
  *  watched to the end after it: a series watched to the end leaves the row, instead of an old stop (S5 E2) coming back once there is no next
  *  episode to hide it. */
+/** The same title wherever Jellyfin keeps it: a series or a film can sit in two libraries (the prepared copies on the SSD and the HDD's),
+ *  each with its own id, so the Resume row matches them by name (and a film's year). */
+function sameTitle (it: MediaItem): string {
+	const name = (it.title || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+	if (it.type === 'Episode' && name) return `series:${name}`;
+	if (it.type === 'Movie' && name) return `movie:${name}:${it.year || ''}`;
+	return it.seriesId || it.id;
+}
+
 export function resume (s: JellyfinServer): Promise<MediaItem[]> {
 	const when = (it: MediaItem) => it.lastPlayed || '';
 	return Promise.all([
@@ -203,11 +212,11 @@ export function resume (s: JellyfinServer): Promise<MediaItem[]> {
 	]).then(([inProgress, next, done]) => {
 		/** each series' last episode watched to the end */
 		const lastDone: Record<string, string> = {};
-		done.forEach((ep) => { if (ep.seriesId && when(ep) > (lastDone[ep.seriesId] || '')) lastDone[ep.seriesId] = when(ep); });
-		const left = (it: MediaItem) => it.type === 'Episode' && (!!it.played || (!!it.seriesId && (lastDone[it.seriesId] || '') > when(it)));
+		done.forEach((ep) => { const k = sameTitle(ep); if (when(ep) > (lastDone[k] || '')) lastDone[k] = when(ep); });
+		const left = (it: MediaItem) => it.type === 'Episode' && (!!it.played || (lastDone[sameTitle(it)] || '') > when(it));
 		const seen: Record<string, true> = {};
 		return inProgress.filter((it) => !left(it)).concat(next).sort((a, b) => (when(a) < when(b) ? 1 : when(a) > when(b) ? -1 : 0)).filter((it) => {
-			const k = it.seriesId || it.id;
+			const k = sameTitle(it);
 			if (seen[k]) return false;
 			seen[k] = true;
 			return true;
