@@ -65,7 +65,8 @@ Add new items here, with the branch and what to check. Delete an item once Sam h
 - [ ] Player (branch `feat/films-series`, the owner's TV, `docs/plans/player.md`): seen 2026-10-29 by camera: plays in Lumen with picture
       (an episode; a 4K Dolby Vision TrueHD film earlier), English subtitles, bar, +20 s, fallback to Jellyfin on a broken stream, next-episode card and
       autoplay. Still to see: the owner's feel (bar, pill, card), the remote's media keys, "Still there?", Play in = Jellyfin. The media
-      keys sent by Home Assistant (`webostv.button` PAUSE and PLAY, 2026-11-10) did nothing in the player: try the real remote. The subtitle
+      keys sent by Home Assistant (`webostv.button` PAUSE and PLAY, 2026-11-10) did nothing in the player, but the real remote's Pause and
+      Play do work (seen the same evening: paused, then playing again). So the media keys are seen; only Home Assistant's do not reach Lumen. The subtitle
       menu was seen on 2026-11-10 (Timing ‹ › In sync, Off, English - SUBRIP - External ✓); it mixes English and French labels.
       Fixed 2026-10-30: in the light look the track and focused button were near-black on the shade (seen on the TV, fixed and installed);
       subtitles ran under the next-episode card (now centred to its left; seen with a test card, not yet on a real one).
