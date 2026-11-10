@@ -56,23 +56,27 @@ Add new items here, with the branch and what to check. Delete an item once Sam h
       DevTools, the owner at home: the Home row under the backlight bar; the air line matches Home Assistant (20.4° · 59 %); the lamp turns
       the plugs off, then all on (three plugs now, the fourth is unavailable in Home Assistant); Left/Right moves the Sonos by 2, and since
       the fix of 2026-11-10 (`d304163`) the number shown and the next press no longer lag one press behind. Still to see: play and pause
-      (sound in the room), the server off.
+      (sound in the room; from the speaker bar, Right changes the volume, so the play button is hard to reach with the arrows), the server
+      off.
 - [ ] Films & séries (branch `feat/films-series`, the owner's TV, `docs/films-series.md`): seen working on 2026-10-29: Resume row → title
       starts in Jellyfin where left; series → next episode; replacing a playing title; Library, Discover and Search screens. Still to see:
       Jellyfin cold start (the app closed), the TV keyboard in Search, a real request (film, and a series' seasons), Quick Connect sign-in
       from the Settings rows, a server switched off (home as fast, no row), frame rate on a long poster row.
 - [ ] Player (branch `feat/films-series`, the owner's TV, `docs/plans/player.md`): seen 2026-10-29 by camera: plays in Lumen with picture
       (an episode; a 4K Dolby Vision TrueHD film earlier), English subtitles, bar, +20 s, fallback to Jellyfin on a broken stream, next-episode card and
-      autoplay. Still to see: the owner's feel (bar, pill, card), the remote's media keys, "Still there?", Play in = Jellyfin. The subtitle
+      autoplay. Still to see: the owner's feel (bar, pill, card), the remote's media keys, "Still there?", Play in = Jellyfin. The media
+      keys sent by Home Assistant (`webostv.button` PAUSE and PLAY, 2026-11-10) did nothing in the player: try the real remote. The subtitle
       menu was seen on 2026-11-10 (Timing ‹ › In sync, Off, English - SUBRIP - External ✓); it mixes English and French labels.
       Fixed 2026-10-30: in the light look the track and focused button were near-black on the shade (seen on the TV, fixed and installed);
       subtitles ran under the next-episode card (now centred to its left; seen with a test card, not yet on a real one).
 
 - [ ] The Live TV row with the sport channels (2026-11-10, the `liveChannels` setting, set over DevTools): the row shows Ligue+ 1,
       Canal+, Canal+ Sport, Canal+ Foot, beIN Sports 1 to 3, RMC Sport Live 1, Eurosport 1 and L'Équipe with their programmes. Still to see:
-      one of them playing from the row.
+      one of them playing from the row. Tried 2026-11-10: Canal+ plays; **Ligue+ 1 does not** (« Cette chaîne ne passe pas », media error 4:
+      the TV refuses its stream's format). Swap it for another sport channel, or find which of Ligue+'s streams the TV plays.
 - [ ] Prepared copies (`dev`, `1b8fbe7` and `4cd3f74`): the « Prêt, sans bruit » mark seen again on The Last of Us in Resume on
-      2026-11-10. Still to see: a copy playing from the TV and its resume point copied back on the original.
+      2026-11-10. Seen the same evening: a copy (Parks and Recreation S6E16, opened with the `play` launch parameter) plays from the NVMe,
+      and its resume point is copied back on the original.
 
 ---
 
