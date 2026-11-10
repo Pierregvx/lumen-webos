@@ -179,7 +179,12 @@ export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMod
 		if (!p) return;
 		window.clearTimeout(p.id);
 		pendingVolume.current = null;
-		setSpeakerVolume(p.level).then(setHome, homeFail);
+		// the server reads Home Assistant right after setting the volume, often before the speaker reports it, so its answer can carry
+		// the old level: keep the level shown here (the latest press), or the bar and the next press lag one step behind
+		setSpeakerVolume(p.level).then((h) => {
+			const shown = state.current.home?.speaker?.volume ?? p.level;
+			setHome(h && h.speaker ? {...h, speaker: {...h.speaker, volume: shown}} : h);
+		}, homeFail);
 	};
 	useEffect(() => sendVolume, []);
 	const speakerVolume = (next: number) => {
