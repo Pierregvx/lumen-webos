@@ -28,6 +28,9 @@ seen unless something looks wrong.
 
 Add new items here, with the branch and what to check. Delete an item once Sam has seen it work.
 
+- [ ] Films & series (`nas-split`, `docs/films-series.md` > The Films & series screen) **(verify)**: Library opens on Resume; Rate on a
+      title's buttons (library and Seerr titles), the score shown on it after; the season list of a long series (South Park) scrolls in
+      the request panel. Installed 2026-11-08; not yet tried with the remote.
 - [ ] Sur la TV (`nas-split`, Ciné Pierro's player) **(verify)**: `luna-send -n 1 luna://com.webos.applicationManager/launch
       '{"id":"com.samrenfrew.lumen","params":{"play":{"id":"<an episode's id>","ticks":6000000000}}}'` opens the episode at 10 min, with
       Lumen closed or already open; it replaces a title already playing; the position sent wins over Jellyfin's; an unknown id says so.

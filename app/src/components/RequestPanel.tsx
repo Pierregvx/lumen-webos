@@ -1,4 +1,4 @@
-import {useCallback, useState} from 'preact/hooks';
+import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {t as tr} from '../lib/i18n';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
@@ -12,13 +12,20 @@ interface Props {
 	onClose: () => void;
 }
 
-/** Requesting a series: All seasons first, then each season not in the library yet (ticked with OK), then Request. Back cancels. */
+/** Requesting a series: All seasons first, then each season not in the library yet (ticked with OK), then Request. Back cancels. A long
+ *  list (South Park has 30 seasons) scrolls inside the box so the focused row stays in view. */
 export function RequestPanel ({title, active, onRequest, onClose}: Props) {
 	const open = (title.seasons || []).filter((x) => x.availability === 'none');
 	const [picked, setPicked] = useState<number[]>([]);
 	const [at, setAt] = useState(0);
 	/** rows: 0 = All seasons, 1..n = a season, n + 1 = Request */
 	const last = open.length + 1;
+	const list = useRef<HTMLDivElement>(null);
+	// the focused row in view: the box clips the rest, so without this the focus went on below its edge
+	useEffect(() => {
+		const el = list.current && list.current.children[at] as HTMLElement | undefined;
+		if (el) el.scrollIntoView({block: 'nearest'});
+	}, [at]);
 
 	const handleKey = useCallback((key: NavKey): boolean => {
 		if (key === 'back') onClose();
@@ -45,9 +52,11 @@ export function RequestPanel ({title, active, onRequest, onClose}: Props) {
 		<div class="media-ask">
 			<div class="media-ask__box">
 				<h2 class="media-ask__title">{title.title}</h2>
-				{row(0, tr('All seasons'))}
-				{open.map((x, k) => row(k + 1, `${tr('Season')} ${x.number}`, picked.indexOf(x.number) >= 0))}
-				{row(last, picked.length ? `${tr('Request')} (${picked.length})` : tr('Request all'))}
+				<div class="media-ask__list" ref={list}>
+					{row(0, tr('All seasons'))}
+					{open.map((x, k) => row(k + 1, `${tr('Season')} ${x.number}`, picked.indexOf(x.number) >= 0))}
+					{row(last, picked.length ? `${tr('Request')} (${picked.length})` : tr('Request all'))}
+				</div>
 			</div>
 		</div>
 	);

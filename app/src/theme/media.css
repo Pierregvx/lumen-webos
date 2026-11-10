@@ -97,6 +97,8 @@
 }
 .media-ask__row--focused { background: var(--focus-fill); color: var(--focus-ink); transform: scale(1.02); }
 .media-ask__tick { font-weight: 700; }
+/* the rows under the title: a long list of seasons scrolls here (RequestPanel), the focused row kept in view; the padding leaves room for its lift */
+.media-ask__list { max-height: 700px; overflow: hidden; padding: 6px 14px; margin: -6px -14px; }
 
 /* Discover's AI picks: why this title, under its details; and how the picking is going */
 .media__why { margin-top: 12px; font-size: 24px; font-weight: 600; color: var(--media-why); }

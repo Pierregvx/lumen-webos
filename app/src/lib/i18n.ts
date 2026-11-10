@@ -672,6 +672,9 @@ const TABLE: Record<string, string[]> = {
 	],
 	// ----- Films & séries (docs/films-series.md) -----
 	"Resume": ["Weiterschauen", "Seguir viendo", "Reprendre", "Riprendi", "Continuar", "Verder kijken", "Devam et", "जारी रखें"],
+	"Rate": ["Bewerten", "Valorar", "Noter", "Valuta", "Avaliar", "Beoordelen", "Puanla", "रेट करें"],
+	"Your rating": ["Deine Bewertung", "Tu valoración", "Ta note", "Il tuo voto", "A tua avaliação", "Jouw beoordeling", "Puanın", "आपकी रेटिंग"],
+	"OK keeps it for your picks · Back cancels": ["OK speichert sie für deine Empfehlungen · Zurück bricht ab", "OK la guarda para tus recomendaciones · Atrás cancela", "OK la garde pour tes suggestions · Retour annule", "OK lo salva per i tuoi consigli · Indietro annulla", "OK guarda-a para as tuas sugestões · Voltar cancela", "OK bewaart het voor je tips · Terug annuleert", "OK önerilerin için kaydeder · Geri iptal eder", "OK आपके सुझावों के लिए सहेजता है · वापस रद्द करता है"],
 	"Requested": ["Angefragt", "Solicitado", "Demandé", "Richiesto", "Pedido", "Aangevraagd", "İstendi", "अनुरोधित"],
 	"Films & series": ["Filme & Serien", "Películas y series", "Films & séries", "Film e serie", "Filmes e séries", "Films & series", "Filmler ve diziler", "फ़िल्में और सीरीज़"],
 	"Plugged-in inputs": ["Angeschlossene Eingänge", "Entradas conectadas", "Entrées branchées", "Ingressi collegati", "Entradas ligadas", "Aangesloten ingangen", "Bağlı girişler", "जुड़े इनपुट"],

@@ -38,6 +38,12 @@ signs Lumen out and the row goes.
 Three tabs (Library, Discover, Search; Discover only with Seerr set up). The focused title fills the screen behind the rows a moment after
 the focus stops, with its year, length, genres, rating and summary, and its buttons.
 
+Library opens on **Resume**: the home screen's Resume row, Jellyfin's titles only (an episode shows its series, with "S2 E4 · Its title"
+first in the facts). Every title has a **Rate** button among its buttons, as Ciné Pierro's title sheet: ☆ Rate, or ★ 8/10 once rated. It
+opens the same 1 to 10 panel ("Your rating", starting at the score given); OK keeps it and sends the list to the picks server, Back
+cancels. A library title is kept by its Jellyfin id (an episode rates its series), a Seerr title seen elsewhere by its TMDB id
+(`tmdb:tv:2190`), as Ciné Pierro does. Requesting a series with many seasons (South Park, 30) scrolls the list of seasons with the focus.
+
 - **Library**: Recently added, Films, Series, then the six best-filled genres. OK twice plays (see the buttons below).
 - **Discover**: Seerr's trending, popular and upcoming films. Badges: Available (in the library: Play plays it), Requested, a percentage
   while it downloads. Request on a title that is not in the library asks for it; a series opens a panel: All seasons, or tick seasons and

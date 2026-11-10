@@ -1,5 +1,5 @@
 // Films & series (docs/plans/films-series.md): three tabs over rows of posters, with the focused title large behind them.
-//  - Library: Jellyfin's Recently added, Films, Series and genre rows.
+//  - Library: what is in progress (the home screen's Resume, Jellyfin titles only), then Jellyfin's Recently added, Films, Series and genre rows.
 //  - Discover (with Seerr set up): trending, popular and upcoming films, each with its status (available, requested, downloading). Request
 //    on one that is not in the library asks Seerr for it (a series asks which seasons).
 //  - Search: one field for both. The library's copy wins when Seerr has the same title.
@@ -8,6 +8,8 @@
 // OK on a poster in any row, or Up from the first row, reaches the title's buttons (Play first, so OK twice plays); Back from them returns to
 // the row. Up from the buttons reaches the tabs (Left/Right switch). Back from the rows returns home. Only the rows near the view
 // load their pictures, and the large picture changes a moment after the focus stops moving.
+// Rate, among a title's buttons (as on Ciné Pierro's title sheet): the score out of 10 for the picks, given or changed at any time, for a
+// library title (an episode rates its series) or a Seerr title seen elsewhere. It shows the score once there is one (★ 8/10).
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {t as tr} from '../lib/i18n';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
@@ -16,13 +18,15 @@ import {useOkPress} from '../hooks/useOkPress';
 import {prepLabel, prepOf, readyIn, usePrepared} from '../lib/prepared';
 import {Poster} from '../components/Poster';
 import {RequestPanel} from '../components/RequestPanel';
+import {RatePanel} from '../components/RatePanel';
+import {rate, ratings} from '../lib/ratings';
 import {byGenre, byType, findByTmdb, genres, imageUrl, latest, search as searchJellyfin, type JellyfinServer, type MediaItem} from '../lib/jellyfin';
 import {categories, details, discover, personTitles, platformTitles, PLATFORMS, request, searchSeerr, type Availability, type Platform, type SeerrPerson, type SeerrServer, type SeerrTitle} from '../lib/seerr';
 import {openTrailer} from '../lib/play';
 import {launchApp} from '../lib/launch';
 import {SYSTEM_APP} from '../config/constants';
 import type {MediaState} from '../hooks/useMedia';
-import {cachedPicks, markPickRequested, picks as aiPicks, recoServer} from '../lib/recos';
+import {cachedPicks, markPickRequested, picks as aiPicks, recoServer, sendRatings} from '../lib/recos';
 
 export type MediaTab = 'library' | 'discover' | 'search';
 
@@ -45,7 +49,7 @@ interface Place {
 /** All, Films or Series: what a platform's or an actor's page keeps in its rows */
 type Kind = 'all' | 'movie' | 'tv';
 const KINDS: {id: Kind; label: string}[] = [{id: 'all', label: 'All'}, {id: 'movie', label: 'Films'}, {id: 'tv', label: 'Series'}];
-type Button = 'play' | 'trailer' | 'request' | 'status' | 'cast';
+type Button = 'play' | 'trailer' | 'request' | 'status' | 'cast' | 'rate';
 
 interface Props {
 	state: MediaState;
@@ -96,6 +100,18 @@ function tmdbOf (e: Entry | null | undefined): Pick<SeerrTitle, 'tmdbId' | 'type
 	if (!e) return null;
 	if (e.sr) return e.sr;
 	return e.jf && e.jf.tmdbId && e.jf.type !== 'Episode' ? {tmdbId: e.jf.tmdbId, type: e.jf.type === 'Movie' ? 'movie' : 'tv'} : null;
+}
+
+/** What a title's rating is kept as (lib/ratings.ts): a film or a series of the library by its Jellyfin id (an episode rates its series), a
+ *  Seerr title seen elsewhere by its TMDB id, as Ciné Pierro keeps it (tmdb:<movie|tv>:<id>). */
+function rateTarget (e: Entry | null | undefined): MediaItem | null {
+	if (!e || e.brand || e.person) return null;
+	if (e.jf) {
+		const it = e.jf;
+		if (it.type !== 'Episode') return it;
+		return it.seriesId ? {id: it.seriesId, type: 'Series', title: it.title, genres: []} : null;
+	}
+	return e.sr ? {id: `tmdb:${e.sr.type}:${e.sr.tmdbId}`, type: e.sr.type === 'tv' ? 'Series' : 'Movie', title: e.sr.title, year: e.sr.year, genres: []} : null;
 }
 
 /** what each tab read last, kept while Lumen runs so the screen opens at once the second time; for one sign-in only */
@@ -158,6 +174,10 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	const [query, setQuery] = useState('');
 	const [typing, setTyping] = useState(false);
 	const [asking, setAsking] = useState<SeerrTitle | null>(null);
+	/** the Rate button's panel is up, for this title */
+	const [rating, setRating] = useState<MediaItem | null>(null);
+	/** bumped when a rating is kept, so the Rate button shows the new score */
+	const [rated, setRated] = useState(0);
 	const [failed, setFailed] = useState(false);
 	const field = useRef<HTMLInputElement>(null);
 	/** the latest search sent: an older one that answers later is dropped */
@@ -230,6 +250,8 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		return () => window.clearTimeout(timer);
 	}, [query]);
 
+	const resumeShelf = useMemo((): Shelf | null => (s && state.resume.length ? {id: 'resume', label: 'Resume', items: state.resume.map((it) => fromJellyfin(s, it))} : null), [s && s.token, state.resume]);
+
 	// Discover: For you, Seerr's first list, the platforms, then its other lists. The platforms are not first: only the first row reaches the
 	// title's buttons. For you arriving moves every row down one, as the focus does.
 	const list = useMemo(() => {
@@ -237,11 +259,12 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 			const all = place.shelves ? place.shelves.concat(place.more || []) : [];
 			return kind === 'all' ? all : all.map((sh) => ({...sh, items: sh.items.filter((e) => e.sr && e.sr.type === kind)})).filter((sh) => sh.items.length > 0);
 		}
-		if (tab === 'library' && state.resume.length && s) return [{id: 'resume', label: 'Resume', items: state.resume.map((it) => fromJellyfin(s, it))}].concat(shelves.library || []);
+		// Library: what is in progress first, as the home screen's Resume row has it (Jellyfin's titles only: the requests stay on home)
+		if (tab === 'library') return resumeShelf ? [resumeShelf].concat(shelves.library || []) : shelves.library || [];
 		if (tab !== 'discover') return shelves[tab] || [];
 		const lists = shelves.discover || [];
 		return (forYou && showForYou ? [forYou] : []).concat(lists.slice(0, 1), [BRANDS], lists.slice(1));
-	}, [place, kind, tab, shelves, forYou, showForYou, state.resume]);
+	}, [place, kind, tab, shelves, forYou, showForYou, resumeShelf]);
 	/** the page has films and series both: All, Films and Series are offered */
 	const both = useMemo(() => {
 		const all = place && place.shelves ? place.shelves.concat(place.more || []) : [];
@@ -275,8 +298,15 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		const first: Button = hero.jf || (t && t.availability === 'available') ? 'play' : t && t.availability === 'none' ? 'request' : 'status';
 		const list: Button[] = trailer ? [first, 'trailer'] : [first];
 		// Cast sits with the other buttons on every title Seerr knows; a title with no actors says so on press
-		return tmdbOf(hero) ? list.concat('cast') : list;
+		const withCast = tmdbOf(hero) ? list.concat('cast') : list;
+		return rateTarget(hero) ? withCast.concat('rate') : withCast;
 	}, [hero, t, trailer]);
+	/** the score already given to the hero (null: skipped, undefined: none) */
+	const heroTarget = rateTarget(hero);
+	const heroScore = useMemo(() => {
+		const r = heroTarget ? ratings().filter((x) => x.id === heroTarget.id)[0] : undefined;
+		return r ? r.score : undefined;
+	}, [heroTarget && heroTarget.id, rated]);
 
 	const play = useCallback((e: Entry) => {
 		if (!s) return;
@@ -367,13 +397,25 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		else if (b === 'play') play(e);
 		else if (b === 'request' && t) { if (t.type === 'tv') askSeasons(t); else ask(t); }
 		else if (b === 'status' && t) onToast(statusText(t.availability, t.percent));
+		else if (b === 'rate') setRating(rateTarget(e));
+	};
+
+	/** the Rate panel's answer: a score is kept and sent to the picks server; Back only closes it */
+	const doneRating = (score: number | null) => {
+		const it = rating;
+		setRating(null);
+		if (!it || score === null) return;
+		if (!rate(it, score)) { onToast(tr('The TV could not keep the rating (storage full?)'), 'error'); return; }
+		setRated((n) => n + 1);
+		sendRatings();
+		onToast(`${it.title} · ${score}/10`);
 	};
 
 	const startTyping = () => { setZone('field'); setTyping(true); if (field.current) field.current.focus(); };
 	const stopTyping = () => { setTyping(false); if (field.current) field.current.blur(); };
 
 	const handleKey = useCallback((key: NavKey): boolean => {
-		if (asking) return true;    // the request panel has the keys
+		if (asking || rating) return true;    // the request or rating panel has the keys
 		if (typing) {
 			if (key === 'back') { stopTyping(); return true; }
 			if (key === 'down') { stopTyping(); setZone(list.length ? 'rows' : 'field'); return true; }
@@ -418,11 +460,11 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		else if (key === 'down') setRows((all) => ({...all, [view]: clamp(r + 1, 0, list.length - 1)}));
 		else if (key === 'left' || key === 'right') setCols((all) => ({...all, [colKey(shelf)]: clamp(c + (key === 'right' ? 1 : -1), 0, shelf.items.length - 1)}));
 		return true;
-	}, [asking, typing, zone, tab, tabs, hero, buttons, list.length, shelf, r, c, onClose, place, view, inSearch, both, kind]);
+	}, [asking, rating, typing, zone, tab, tabs, hero, buttons, list.length, shelf, r, c, onClose, place, view, inSearch, both, kind]);
 	useKeys(handleKey, active);
 
 	useOkPress({onPress: () => {
-		if (asking || typing) return;
+		if (asking || rating || typing) return;
 		if (zone === 'field') startTyping();
 		else if (zone === 'buttons') press(buttons[button], hero);
 		else if (zone === 'rows' && item && (item.brand || item.person)) openEntry(item);
@@ -432,7 +474,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 			setButton(0);
 			setZone('buttons');
 		}
-	}, onLongPress: () => undefined}, active && !asking && !typing);
+	}, onLongPress: () => undefined}, active && !asking && !rating && !typing);
 
 	// the hero picture: the new one fades in over the last one
 	const heroUrl = hero && hero.backdropUrl || '';
@@ -440,10 +482,11 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	if (pictures.now !== heroUrl) setPictures({now: heroUrl, under: pictures.now});
 	const under = pictures.under;
 
-	const meta = hero ? [hero.year, hero.minutes ? `${Math.floor(hero.minutes / 60) ? Math.floor(hero.minutes / 60) + ' h ' : ''}${hero.minutes % 60} min` : '',
+	const meta = hero ? [hero.jf && hero.jf.type === 'Episode' ? hero.jf.subtitle : '', hero.year, hero.minutes ? `${Math.floor(hero.minutes / 60) ? Math.floor(hero.minutes / 60) + ' h ' : ''}${hero.minutes % 60} min` : '',
 		hero.genres.slice(0, 2).join(', '), hero.rating ? `★ ${hero.rating.toFixed(1)}` : '', hero.sr ? tr(hero.sr.type === 'tv' ? 'Series' : 'Film') : ''].filter(Boolean).join(' · ') : '';
 	const label = (b: Button) => b === 'play' ? '▶ ' + tr(hero && hero.jf && hero.jf.progress ? 'Resume' : 'Play')
-		: b === 'trailer' ? tr('Trailer') : b === 'cast' ? tr('Cast') : b === 'request' ? '+ ' + tr('Request') : t ? statusText(t.availability, t.percent) : '';
+		: b === 'trailer' ? tr('Trailer') : b === 'cast' ? tr('Cast') : b === 'rate' ? (typeof heroScore === 'number' ? `★ ${heroScore}/10` : '☆ ' + tr('Rate'))
+		: b === 'request' ? '+ ' + tr('Request') : t ? statusText(t.availability, t.percent) : '';
 	const empty = place ? (place.shelves ? 'Nothing found' : 'Loading…') : tab === 'library' ? (!s ? 'Sign in to Jellyfin in Settings > Films & series' : failed ? 'Jellyfin is not answering' : 'Loading…')
 		: tab === 'discover' ? (seerrDown ? 'Seerr is not answering' : 'Loading…') : query.trim().length < 2 ? 'Type a title' : 'Nothing found';
 
@@ -511,6 +554,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 					})}
 				</div>
 			</div>
+			{rating && <RatePanel title={rating.title} active={active} change start={typeof heroScore === 'number' ? heroScore : undefined} onDone={doneRating} />}
 			{asking && <RequestPanel title={asking} active={active} onRequest={(seasons) => { ask(asking, seasons); setAsking(null); }} onClose={() => setAsking(null)} />}
 		</div>
 	);
