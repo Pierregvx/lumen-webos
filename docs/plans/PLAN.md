@@ -106,6 +106,12 @@ From `docs/research/prior-art.md` and upstream (ammar027/lumen-webos). Build wit
 
 ## Later
 
+- **Ciné Pierro as the TV's back end (2026-11-10, planned in cine-pierro's `docs/roadmap.md`).** The TV would talk only to the cine-pierro
+  server for everything but the video bytes: pairing with a code instead of keeping the Jellyfin, Seerr and Immich keys, the subtitle choice
+  and timing shared with the web player, one play logic (`/api/tv/v1/play`), and the Films & series side gathered into a plugin
+  (`app/src/plugins/cinepierro/`, built in, turned on by one setting). Adding subtitles from the TV comes with it; tracks added from the
+  web page show on the TV by themselves.
+
 In rough order of value:
 
 1. Plex Continue Watching row from the Plex server's On Deck. Tiles open PlxNative. Opening a specific episode needs a launch parameter that
