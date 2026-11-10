@@ -30,7 +30,8 @@ Add new items here, with the branch and what to check. Delete an item once Sam h
 
 - [ ] Films & series (`nas-split`, `docs/films-series.md` > The Films & series screen) **(verify)**: Library opens on Resume; Rate on a
       title's buttons (library and Seerr titles), the score shown on it after; the season list of a long series (South Park) scrolls in
-      the request panel. Installed 2026-11-08; not yet tried with the remote.
+      the request panel. Installed 2026-11-08; not yet tried with the remote. Installed again on 2026-11-10 (branch `tv/dev-speaker`,
+      after a build from `main` had left it out).
 - [ ] Sur la TV (`nas-split`, Ciné Pierro's player) **(verify)**: `luna-send -n 1 luna://com.webos.applicationManager/launch
       '{"id":"com.samrenfrew.lumen","params":{"play":{"id":"<an episode's id>","ticks":6000000000}}}'` opens the episode at 10 min, with
       Lumen closed or already open; it replaces a title already playing; the position sent wins over Jellyfin's; an unknown id says so.
@@ -51,16 +52,27 @@ Add new items here, with the branch and what to check. Delete an item once Sam h
       Series on a page, and Discover scrolling smoothly down all 19 rows.
 - [ ] Home Assistant in Control Center (branch `films-series`, `server/README.md` > Home Assistant in cine-pierro): the Home row shows under the
       backlight bar; the lamp turns the four living-room plugs on and off; Left/Right on the speaker bar changes the Sonos volume; play and
-      pause; the air line reads right; with the server off, Control Center opens as before with no Home row.
+      pause; the air line reads right; with the server off, Control Center opens as before with no Home row. Seen 2026-11-10 over
+      DevTools, the owner at home: the Home row under the backlight bar; the air line matches Home Assistant (20.4° · 59 %); the lamp turns
+      the plugs off, then all on (three plugs now, the fourth is unavailable in Home Assistant); Left/Right moves the Sonos by 2, and since
+      the fix of 2026-11-10 (`d304163`) the number shown and the next press no longer lag one press behind. Still to see: play and pause
+      (sound in the room), the server off.
 - [ ] Films & séries (branch `feat/films-series`, the owner's TV, `docs/films-series.md`): seen working on 2026-10-29: Resume row → title
       starts in Jellyfin where left; series → next episode; replacing a playing title; Library, Discover and Search screens. Still to see:
       Jellyfin cold start (the app closed), the TV keyboard in Search, a real request (film, and a series' seasons), Quick Connect sign-in
       from the Settings rows, a server switched off (home as fast, no row), frame rate on a long poster row.
 - [ ] Player (branch `feat/films-series`, the owner's TV, `docs/plans/player.md`): seen 2026-10-29 by camera: plays in Lumen with picture
       (an episode; a 4K Dolby Vision TrueHD film earlier), English subtitles, bar, +20 s, fallback to Jellyfin on a broken stream, next-episode card and
-      autoplay. Still to see: the owner's feel (bar, pill, card), the remote's media keys, the subtitle menu, "Still there?", Play in = Jellyfin.
+      autoplay. Still to see: the owner's feel (bar, pill, card), the remote's media keys, "Still there?", Play in = Jellyfin. The subtitle
+      menu was seen on 2026-11-10 (Timing ‹ › In sync, Off, English - SUBRIP - External ✓); it mixes English and French labels.
       Fixed 2026-10-30: in the light look the track and focused button were near-black on the shade (seen on the TV, fixed and installed);
       subtitles ran under the next-episode card (now centred to its left; seen with a test card, not yet on a real one).
+
+- [ ] The Live TV row with the sport channels (2026-11-10, the `liveChannels` setting, set over DevTools): the row shows Ligue+ 1,
+      Canal+, Canal+ Sport, Canal+ Foot, beIN Sports 1 to 3, RMC Sport Live 1, Eurosport 1 and L'Équipe with their programmes. Still to see:
+      one of them playing from the row.
+- [ ] Prepared copies (`dev`, `1b8fbe7` and `4cd3f74`): the « Prêt, sans bruit » mark seen again on The Last of Us in Resume on
+      2026-11-10. Still to see: a copy playing from the TV and its resume point copied back on the original.
 
 ---
 
@@ -111,8 +123,10 @@ From `docs/research/prior-art.md` and upstream (ammar027/lumen-webos). Build wit
 
 - **Releases from this fork (2026-11-09).** A push to `main` of `Pierregvx/lumen-webos` publishes nothing: its release workflow has
   never run there (0 runs, no release), and the Homebrew Channel's builds come from `samrenfrew/lumen-webos`, which this account cannot push
-  to. For now the TV runs dev builds (`npm run deploy:home`), and work is merged into `dev`; `main` waits for a real release. To decide: turn
-  on the workflow in this fork (and give the Homebrew Channel its repository), or keep to dev builds.
+  to. For now the TV runs dev builds (`npm run deploy:home`), and work is merged into `dev`; `main` waits for a real release. Decided with
+  the owner on 2026-11-10: keep to dev builds; the workflow stays off in this fork; `main` is what the TV runs (pushed after each install,
+  publishing nothing); the owner never updates Lumen from the Homebrew Channel (its build has no `app/private/`). Fixes from
+  `samrenfrew/lumen-webos` (the `origin` remote) are merged in when wanted.
 - **Ciné Pierro as the TV's back end (2026-11-10, planned in cine-pierro's `docs/roadmap.md`).** The TV would talk only to the cine-pierro
   server for everything but the video bytes: pairing with a code instead of keeping the Jellyfin, Seerr and Immich keys, the subtitle choice
   and timing shared with the web player, one play logic (`/api/tv/v1/play`), and the Films & series side gathered into a plugin
@@ -121,22 +135,23 @@ From `docs/research/prior-art.md` and upstream (ammar027/lumen-webos). Build wit
 
 In rough order of value:
 
-1. Plex Continue Watching row from the Plex server's On Deck. Tiles open PlxNative. Opening a specific episode needs a launch parameter that
-   PlxNative does not have; that is a request to its author, not something this repo can add.
-2. Picture and sound mode per app (root; `watch.sh` already knows which app is in front).
-3. YouTube subscriptions row (YouTube Data API, TV sign-in with a code), opening videos in youtube-webos with its `contentTarget` launch
+1. Picture and sound mode per app (root; `watch.sh` already knows which app is in front).
+2. YouTube subscriptions row (YouTube Data API, TV sign-in with a code), opening videos in youtube-webos with its `contentTarget` launch
    parameter (`{"contentTarget":"v=<id>"}` is documented; `target` is not).
-4. Long-press shortcuts per app (for example YouTube: Subscriptions, Search).
-5. Bedtime button: lower backlight, Eye Comfort and sleep timer together (all three work as root).
-6. Colour buttons (if the spike finds any reach the app): Settings > Remote, an action per button (open an app, Control Center, screen off,
+3. Long-press shortcuts per app (for example YouTube: Subscriptions, Search).
+4. Bedtime button: lower backlight, Eye Comfort and sleep timer together (all three work as root).
+5. Colour buttons (if the spike finds any reach the app): Settings > Remote, an action per button (open an app, Control Center, screen off,
    sleep timer, picture mode, screensaver, nothing). Optionally Input Hook mappings so they work inside other apps too.
-7. Auto-switch to an HDMI input when its device turns on; power off when idle.
-8. Profiles, and a kids mode with a PIN and allowed hours.
-9. Privacy page: LG ad and Live Plus settings, plus hosts-level blocking of LG ad and tracking hosts (check what the Homebrew Channel's own
+6. Auto-switch to an HDMI input when its device turns on; power off when idle.
+7. Privacy page: LG ad and Live Plus settings, plus hosts-level blocking of LG ad and tracking hosts (check what the Homebrew Channel's own
    telemetry and ad blocking already covers before adding to `hosts-extra`).
+8. One language on screen: French everywhere but names (the subtitle menu mixes English and French, seen 2026-11-10).
 
 ## Parked
 
+- Set aside with the owner on 2026-11-10, kept in case: Plex Continue Watching row from the Plex server's On Deck. Tiles open PlxNative. Opening a specific episode needs a launch parameter that
+  PlxNative does not have; that is a request to its author, not something this repo can add.
+- Same day: Profiles, and a kids mode with a PIN and allowed hours.
 - Native (GPU) version of Lumen. Reference: PlxNative (Rust, SDL2, OpenGL ES, webosbrew native NDK; GPL-3.0-or-later, so read for approach
   only). If picked up again, start with a native Immich screensaver as a pilot rather than the whole launcher.
 - `content-visibility: auto` on off-screen rows: the lower rows are kept painted at opacity 0 on purpose, so showing them is a fade, not a
