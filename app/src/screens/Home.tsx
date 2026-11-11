@@ -72,8 +72,9 @@ const GRID_TOP = 76;
 /** the lowest a focused grid row may sit before the grid scrolls on (its tiles 40px lower) */
 const GRID_BOTTOM = 780;   // 40px less than it looks: the grid rows sit 40px lower while the remote is in them (theme/home.css)
 const FOLDER_PRESETS = ['Games', 'Tools', 'Media'];
-/** the Resume row's picture follows the focus this long after it stops */
-const BACKDROP_AFTER_MS = 250;
+/** the Resume row's picture follows the focus this long after it stops: long enough that moving along the row at a normal pace (a key
+ *  every 300-400 ms) never loads one, which cost the move up to 250 ms of GPU raster and the longest stalls (measured 2026-11-11) */
+const BACKDROP_AFTER_MS = 700;
 /** the strip along the bottom and top edges where a resting pointer scrolls the rows (the glass bar's tiles end above it) */
 const EDGE_STRIP = 70;
 const FOLDER_PREFIX = 'folder:';
@@ -536,8 +537,16 @@ export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, o
 	const wantBackdrop = active && onTile && onTile.resume ? onTile.resume.backdrop || '' : '';
 	const [backdrop, setBackdrop] = useState('');
 	useEffect(() => {
-		const timer = window.setTimeout(() => setBackdrop(wantBackdrop), wantBackdrop ? BACKDROP_AFTER_MS : 0);
-		return () => window.clearTimeout(timer);
+		let live = true;
+		// the picture is decoded before it shows, so its fade never waits on a half-drawn picture
+		const timer = window.setTimeout(() => {
+			if (!wantBackdrop) { setBackdrop(''); return; }
+			const img = new Image();
+			img.src = wantBackdrop;
+			const show = () => { if (live) setBackdrop(wantBackdrop); };
+			if (typeof img.decode === 'function') img.decode().then(show, show); else img.onload = show;
+		}, wantBackdrop ? BACKDROP_AFTER_MS : 0);
+		return () => { live = false; window.clearTimeout(timer); };
 	}, [wantBackdrop]);
 	return (
 		<div class={`screen${active ? '' : ' screen--inactive'}${lower ? ' screen--lower' : ''}${n.moving ? ' screen--moving' : ''}${n.dockHidden ? ' screen--dockhidden' : ''}${dockDim ? ' screen--dockdim' : ''}`}>

@@ -72,6 +72,14 @@ Add new items here, with the branch and what to check. Delete an item once Sam h
         frames in the 320 ms after each key). Pass: at most 10 % fewer frames than the old version.
       - Memory: `eval 'Math.round(performance.memory.usedJSHeapSize/1e6)'` after opening Discover and scrolling it to the bottom. Pass: at
         most 10 % more.
+      **Measured on the TV on 2026-11-11** (the owner at home; median of 3; installed then and left installed): cold launch, script
+      ready 223 → 267 ms, first frame 375 → 423 ms (+48 ms, +13 %: the 40 KB more script before the first frame), app grid 2883 → 2691 ms;
+      a Discover row scrolled 54.6 → 53.3 frames/s (−2.4 %, the page's own frames); OK on a poster to its buttons 30 → 25 ms; memory 10 →
+      10 MB. The plugin turned itself on (the picks server's address was set); the server answered contract revision 3. Seen with the keys,
+      nothing written: Discover's rows in the page's order with 31 genre tiles, the ★ scores and the dates, a series' season chips, a
+      library film's buttons (Report a problem's form and Prepare's Now / Tonight open and close with Back), More like this. Still to see:
+      a saga, the subtitles shared with the page (needs a play), Watch later on and off (writes). The way back: `build/rollback/` has the
+      previous version's package (the same files as the build installed before).
       Measured without the TV (2026-11-11): the app's script is 504.6 KB before, 519.7 KB with the plugin system and no plugin (+3.0 %),
       545.0 KB with Ciné Pierro (+8.0 %; gzip 157.5, 162.8, 172.0 KB); the .ipk 2.96, 2.97, 2.98 MB. At start the home screen asks what
       it asked before, once, and the plugin adds `GET /api/tv/v1`, `/requests/mine` (in place of Seerr's request list and one call per

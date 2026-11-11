@@ -185,3 +185,13 @@ Read over SSH with iPlayer playing. Nothing was changed.
 - The eight services cleanyourtv-WebOS stops all run here: `remotelogger`, `service-logger`, `contentminer`, `nudge`, `admanager`, `sportsalarm`, `adoverlay-service` and `uploadd`. Each uses about 1.2 MB, about 10 MB together. `acr2` is installed but was not running.
 - The large users are the apps. iPlayer's renderer used 119 MB. Lumen's renderer used 22 MB in the background. `ss.apiadapter.pub` used 23 MB, and its job is not known yet.
 - Stopping the services would free about 10 MB. That is a small gain.
+
+## Power on, and LG Home's auto-launch (2026-11-11)
+
+Measured with the remote, Quick Start+ on (`quickStartMode` "on", category `option`): the screen is on about 0.5 s after the power button.
+With LG Home's auto-launch on (`homeAutoLaunch` "on", category `general`), LG Home then came to the front and stayed about 2 s while
+`watch.sh` opened Lumen over it 2 to 4 times; Lumen was not in memory and drew its first frame 1.8 s after its start, about 3.7 s after the
+screen came on. Set to "off" the same day (`luna-send -n 1 luna://com.webos.settingsservice/setSystemSettings
+'{"category":"general","settings":{"homeAutoLaunch":"off"}}'`; "on" puts it back): LG Home no longer shows; the TV resumes its last input
+(HDMI 1) for a moment, and `watch.sh` puts Lumen in front. The owner prefers it. Not done: launching Lumen faster at the wake (its launch
+returned 3 s after the wake was seen) and keeping it in memory through standby.

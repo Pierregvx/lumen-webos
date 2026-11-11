@@ -77,3 +77,17 @@ Opening a list is still the heaviest step: about 65 ms of JS in the key handler 
 ## Settings rows (2026-10-26)
 
 Up and Down in a Settings list ran at about 16 to 18 fps. The rows shared one layer with the whole list, so each focus move rastered the full list (about 1000 by 840 px) for one row's zoom and shadow. Each row now has its own layer (`will-change: transform` on `.slist__row`), as the Guide rows do. In `walk.mjs settings`, raster time fell from about 1.1 s to 0.27 s and dropped frames by more than half. Sam: much smoother on the TV.
+
+## The Resume row and the rows' Up and Down (2026-11-11)
+
+Measured with `walk.mjs rows` (22 keys at 380 ms) on the plugin build, a still wallpaper, the owner at home.
+
+- The Resume row's picture (`home__backdrop`) changed 250 ms after the focus stopped, so at a normal pace it loaded on almost every move:
+  a new 1280 px picture, its decode and a full-screen fade. Each Right along the row cost about 300 to 380 ms of GPU raster with it and 90
+  to 130 ms without it (the picture hidden by `LIVECSS`), and two moves showed their first frame 180 and 263 ms after the key.
+- Now it waits 700 ms after the focus stops and is decoded before it shows (`Home.tsx`, `BACKDROP_AFTER_MS`). Same walk: style and layout
+  478 → 266 ms, paint 568 → 353 ms, layerize 419 → 242 ms, the worst gap 900 → 600 ms, key to screen p90 140 → 100 ms. One sample each.
+- Unchanged, and now the largest cost: **Up and Down between rows**, about 300 to 600 ms of GPU raster per press (keys 12, 13, 21, 22 of
+  the walk, with or without the picture). Next: find which layer rasters on a row change (`updown.mjs` with `LMAP=1`, then
+  `raster-tiles.mjs`), as was done for the dock and the grid.
+- The dock (glass bar) moves at about 6 frames per 320 ms (19 fps), with a GPU draw of 16.7 ms a frame: the live blur, as above.
