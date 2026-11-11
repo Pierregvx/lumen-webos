@@ -65,9 +65,9 @@ Add new items here, with the branch and what to check. Delete an item once Sam h
       `node tools/tv/cdp.mjs` from the Mac; see the `tv` skill):
       - First screen: launch Lumen cold three times; `grep ' boot ' /var/lib/homehook/lumen.log | tail -3` gives `frame` and `grid` in ms
         (`docs/research/startup-perf.md`). Pass: each within 10 % of the old version's.
-      - Opening a title: in Discover, focus a poster and time OK to the buttons with
-        `eval 'new Promise(r=>{const t=performance.now();window.dispatchEvent(new KeyboardEvent("keydown",{keyCode:13}));window.dispatchEvent(new KeyboardEvent("keyup",{keyCode:13}));requestAnimationFrame(()=>requestAnimationFrame(()=>r(Math.round(performance.now()-t))))})'`,
-        then the record's arrival (the buttons changing) by eye. Pass: within 10 %, and the extra buttons there in under 1 s.
+      - Opening a title: in Discover, OK on a poster (`key enter`, a real key: a KeyboardEvent made in `eval` has no key code), captured
+        as `tools/tv/perf/updown.mjs` does, then `node tools/tv/perf/key-timeline.mjs <capture> <mark>`: the time from the key to the frame
+        with the buttons. Then the record's extra buttons (Watch later…) by eye. Pass: within 10 %, and the extra buttons in under 1 s.
       - A row's scroll: `node tools/tv/perf/swaps-per-key.mjs` on ten Right presses in Discover's Trending row (`docs/research/frame-rate.md`:
         frames in the 320 ms after each key). Pass: at most 10 % fewer frames than the old version.
       - Memory: `eval 'Math.round(performance.memory.usedJSHeapSize/1e6)'` after opening Discover and scrolling it to the bottom. Pass: at
