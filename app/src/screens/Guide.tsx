@@ -183,7 +183,7 @@ export function Guide ({channels: every, groups, category, onCategory, listings,
 			<div class="guide__head">
 				<h1 class="guide__title">{tr('Guide')}</h1>
 				{typed && <div class={`guide__typed${typedHit ? '' : ' guide__typed--miss'}`}>{typed}</div>}
-				{all.length > 0 && <div class="guide__hint">▲ {tr('Search')} · ★ {tr('Hold OK to add a channel to the Live TV row, or take it off')}</div>}
+				{all.length > 0 && <div class="guide__hint">★ {tr('Hold OK to add a channel to the Live TV row, or take it off')}</div>}
 				{hasGroups && <div class={`guide__cat${head === 'group' ? ' guide__cat--focused' : ''}`} onClick={() => { setHead('group'); setMenu(true); }}>{category ? categoryLabel(category) : tr('All categories')}</div>}
 				{all.length > 0 && (
 					<label class={`guide__search${head === 'search' ? ' guide__search--focused' : ''}${typing ? ' guide__search--typing' : ''}`} onClick={() => { setHead('search'); startTyping(); }}>

@@ -58,8 +58,8 @@ server made from the contract's examples, built in from the draft folder; not on
       **The Guide, seen working the same evening** (keys sent over DevTools, the owner watching): GUIDE opens it with the search field
       and the category button at the top; Left opens the rail, Down and OK switch to the Full guide; Up from the first channel reaches
       the search field, Left the category button, OK its menu (14 categories, 2938 channels), Back closes it; Left past the earliest
-      programme opens the rail again. Found: the French hint at the top (« ▲ Rechercher · ★ OK maintenu… ») is cut off by the two
-      buttons; shorten it or drop it. Not tried: OK held to star a channel, typing a search.
+      programme opens the rail again. The French hint at the top was cut off by the two buttons: « ▲ Search · » is dropped (the field
+      is beside it), and « Now » and « Next » are in Lumen's own table (« Next » showed in English); the owner approved both live. Not tried: OK held to star a channel, typing a search.
       Still to try: (3) Control Center: a tile's list opens and closes with the Home row (lamp, speaker, air) fading with the grid. (4) The
       screensaver (Enabled/Disabled, Show: wallpaper or Immich), Brightness, the two-value settings that flip on OK. (5) Films & series
       with the plugin, Resume's prepared copies, the speaker bar: unchanged.
