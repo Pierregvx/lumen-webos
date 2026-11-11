@@ -64,6 +64,11 @@ server made from the contract's examples, built in from the draft folder; not on
       the Home row (lamp, Living Room at 25, play) and the air line; OK on Sound opens its 7 choices with the whole grid, the Home row and
       the air line faded to 0 behind them; Back closes the list with nothing changed and the grid comes back. Not tried: its 460 ms open
       by eye, a choice picked from a list.
+      **The screensaver, seen the same evening**: after the update the setting reads Disabled (Show: Wallpaper pictures) and
+      `/var/lib/homehook/no-screensaver` is gone; Control Center's picture button opens Lumen's screensaver on a wallpaper picture with
+      the clock and the date, and a key goes back to the home screen. The fork's old « Off » choice is gone, so LG's own screensaver
+      runs again where it was set to Off (upstream's choice: turning it off belongs to the service menu). Not tried: the idle timer
+      (set to 0), Immich photos, a key over an app. Brightness is off (`brightnessOn` false), not tried.
       Still to try: (4) The
       screensaver (Enabled/Disabled, Show: wallpaper or Immich), Brightness, the two-value settings that flip on OK. (5) Films & series
       with the plugin, Resume's prepared copies, the speaker bar: unchanged.
