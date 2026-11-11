@@ -320,6 +320,10 @@ From `docs/research/prior-art.md` and upstream (ammar027/lumen-webos). Build wit
   the owner on 2026-11-10: keep to dev builds; the workflow stays off in this fork; `main` is what the TV runs (pushed after each install,
   publishing nothing); the owner never updates Lumen from the Homebrew Channel (its build has no `app/private/`). Fixes from
   `samrenfrew/lumen-webos` (the `origin` remote) are merged in when wanted.
+  Found 2026-11-11: the release workflow is active on the fork after all (7 runs that day, dev builds from branch pushes), so a push
+  to `main` would publish a v2.2.x GitHub release on the fork and an `hbc-repo` branch. Turn it off before pushing `main`:
+  `gh workflow disable release --repo Pierregvx/lumen-webos`. The older branches `nas-split`, `feat/films-series`, `films-series` and
+  `fix/speaker-volume` hold nothing that is not on `main` in a newer form (checked file by file 2026-11-11).
 - **Ciné Pierro as the TV's back end**: under way as a plugin, see « Plugins, and Ciné Pierro par tv/v1 » above; what is left is play through the server (step
   3), pairing and the library through the server (step 4), and the TV screens for the contract's other parts.
 
