@@ -24,10 +24,42 @@ seen unless something looks wrong.
 
 ---
 
+## Plugins, and Ciné Pierro par tv/v1 (2026-11-11, branch `claude/tv-v1-parite-6eb48b`)
+
+Lumen has a generic plugin system (`docs/plans/plugins.md`): plugins compiled in from a folder outside the repository
+(`LUMEN_PLUGINS_DIR`, or `app/private/plugins/`), each turned on in Settings > Plugins, every call into one guarded. Without a plugin Lumen
+is the plain launcher. It is written to be proposed upstream as it is.
+
+**Ciné Pierro is a plugin, kept out of this public repository**: its draft is in `~/cine-pierro-wt/lumen-plugin-draft/` on the Mac (not a
+git checkout; to become `lumen-plugin/` in the private `cine-pierro` repository). It talks to the cine-pierro server through its
+versioned contract `/api/tv/v1` (contract revision 2 at cine-pierro `cca1e0c`), so Films & series has what the web page has. Build:
+`LUMEN_PLUGINS_DIR=~/cine-pierro/lumen-plugin npm run deploy:home` (or that line in `.env`). Its README says what is wired, what waits for
+the server (pairing, Jellyfin's address in `/me`, `mine` on every list) and its tests (`npm test` there: the contract check and 20 tests).
+
+What it brings, through Lumen's hooks: Discover from the server in the page's order (For you, Watch later, Trending, Platforms, Popular
+films, Film genres, Popular series, Series genres, the categories, Coming soon at the bottom), Watch later, More like this (the saga with
+Request the missing ones, Recommended, In the same spirit), each season's state as chips, the score already given on posters and the
+title, Report a problem on a title that is here, ⚡ Prepare now or 🌙 tonight (main account), requests through the server, and the
+subtitle choice and timing shared with the page's player (Lumen keeps its own copy as the fallback). Tried in the preview against a fake
+server made from the contract's examples, built in from the draft folder; not on the TV.
+
+---
+
 ## Verify on the TV (built, not yet seen working)
 
 Add new items here, with the branch and what to check. Delete an item once Sam has seen it work.
 
+- [ ] Plugins and Ciné Pierro (branch `claude/tv-v1-parite-6eb48b`, the section above) **(verify)**. Not installed. Built with the plugin:
+      Settings > Plugins shows Ciné Pierro on, its Server row says « v1.2 »; turned off, Films & series is Lumen's own again; Discover's rows come in the page's
+      order (For you, Watch later, Trending, Platforms, Popular films, Film genres, Popular series, Series genres, the categories, Films and
+      Series coming soon at the bottom) and scroll smoothly with the genre tiles; a poster already rated shows « ★ 8 »; a coming film shows
+      its date; Watch later on and off follows in the row; More like this on a film of a saga (Harry Potter) shows the saga first, and
+      Request the missing ones asks each; a series' sheet shows its seasons' chips (an episode in Resume too); Report a problem (only on a
+      title that is here) reaches Telegram and shows in the page; ⚡ Prepare › Tonight shows « 🌙 Tonight, 1 am » on the poster; a request
+      shows in Seerr under the person's own name; the requests' row on home; a subtitle picked on the TV shows picked in the page's
+      player for the same series, and the other way; the timing (‹ ›) set on the TV holds after a restart of Lumen and in the page; with
+      the server stopped, the player keeps the TV's own choice and Films & series falls back to nothing worse than « Seerr is not
+      answering ». Nothing of it is seen on the TV yet.
 - [ ] Films & series (`nas-split`, `docs/films-series.md` > The Films & series screen) **(verify)**: Library opens on Resume; Rate on a
       title's buttons (library and Seerr titles), the score shown on it after; the season list of a long series (South Park) scrolls in
       the request panel. Installed 2026-11-08; not yet tried with the remote. Installed again on 2026-11-10 (branch `tv/dev-speaker`,
@@ -132,11 +164,8 @@ From `docs/research/prior-art.md` and upstream (ammar027/lumen-webos). Build wit
   the owner on 2026-11-10: keep to dev builds; the workflow stays off in this fork; `main` is what the TV runs (pushed after each install,
   publishing nothing); the owner never updates Lumen from the Homebrew Channel (its build has no `app/private/`). Fixes from
   `samrenfrew/lumen-webos` (the `origin` remote) are merged in when wanted.
-- **Ciné Pierro as the TV's back end (2026-11-10, planned in cine-pierro's `docs/roadmap.md`).** The TV would talk only to the cine-pierro
-  server for everything but the video bytes: pairing with a code instead of keeping the Jellyfin, Seerr and Immich keys, the subtitle choice
-  and timing shared with the web player, one play logic (`/api/tv/v1/play`), and the Films & series side gathered into a plugin
-  (`app/src/plugins/cinepierro/`, built in, turned on by one setting). Adding subtitles from the TV comes with it; tracks added from the
-  web page show on the TV by themselves.
+- **Ciné Pierro as the TV's back end**: under way as a plugin, see « Plugins, and Ciné Pierro par tv/v1 » above; what is left is play through the server (step
+  3), pairing and the library through the server (step 4), and the TV screens for the contract's other parts.
 
 In rough order of value:
 

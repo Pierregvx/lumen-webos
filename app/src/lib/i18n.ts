@@ -729,10 +729,16 @@ export function isDark (mode: string, now = new Date()): boolean {
 export function setClockMode (mode: string): void { clockMode = mode; }
 export function getClockMode (): string { return clockMode; }
 
+/** Words the plugins bring (plugins/api.ts LumenPlugin.strings), by language: used when the table above has none. */
+const EXTRA: Record<string, Record<string, string>> = {};
+export function addStrings (table: Record<string, Record<string, string>>): void {
+	Object.keys(table).forEach((lang) => { EXTRA[lang] = {...table[lang], ...EXTRA[lang]}; });
+}
+
 export function t (text: string, vars?: {n: number}): string {
 	const row = TABLE[text];
 	const at = ORDER.indexOf(current);
-	let out = row && at >= 0 && row[at] ? row[at] : text;
+	let out = row && at >= 0 && row[at] ? row[at] : (EXTRA[current] && EXTRA[current][text]) || text;
 	if (vars) out = out.replace('{n}', String(vars.n));
 	return out;
 }

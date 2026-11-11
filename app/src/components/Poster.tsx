@@ -19,6 +19,12 @@ export interface PosterModel {
 	quiet?: string;
 	/** the banner says a copy is under way, not ready */
 	quietBusy?: boolean;
+	/** a plugin's tile (a genre): a picture with its name over it */
+	tile?: boolean;
+	/** this person's score, 1..10: « ★ 8 » in the bottom right corner */
+	mine?: number;
+	/** a title not out yet: its date (« 18 Nov ») in the bottom left corner */
+	date?: string;
 }
 
 interface Props {
@@ -45,12 +51,16 @@ export function Poster ({model, focused, load, onHover, onActivate}: Props) {
 	const a = model.availability;
 	const badge = !a ? '' : a === 'downloading' ? `${model.percent || 0} %` : tr(BADGE[a]);
 	return (
-		<div class={`poster${model.logo ? ' poster--logo' : ''}${focused ? ' poster--focused' : ''}`} onMouseEnter={onHover} onClick={onActivate}>
+		<div class={`poster${model.logo ? ' poster--logo' : ''}${model.tile ? ' poster--tile' : ''}${focused ? ' poster--focused' : ''}`} onMouseEnter={onHover} onClick={onActivate}
+			aria-label={model.mine ? `${model.title}, ${tr('your rating')} ${model.mine} / 10` : undefined}>
 			{model.imageUrl && load && broken !== model.imageUrl
 				? <img class="poster__image" src={model.imageUrl} alt="" decoding="async" onLoad={model.logo ? sized : undefined} onError={() => setBroken(model.imageUrl || '')} />
 				: <div class="poster__name">{model.title}</div>}
 			{badge && <div class={`poster__badge poster__badge--${a}`}>{badge}</div>}
 			{model.quiet && <div class={`poster__quiet${model.quietBusy ? ' poster__quiet--busy' : ''}`}>{model.quiet}</div>}
+			{model.tile && model.imageUrl && load && broken !== model.imageUrl && <div class="poster__tile">{model.title}</div>}
+			{model.date && <div class="poster__date">{model.date}</div>}
+			{model.mine ? <div class="poster__mine">★ {model.mine}</div> : null}
 			{model.progress ? <div class="poster__bar"><span style={{transform: `scaleX(${model.progress})`}} /></div> : null}
 		</div>
 	);

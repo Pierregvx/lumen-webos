@@ -18,6 +18,7 @@ import {countdownStart, cueAt, parseVtt, pickSubtitle, savedSubtitle, saveSubtit
 import {loggedFetch} from '../lib/log';
 import {episodesOf, nextEpisode, type JellyfinServer, type MediaItem} from '../lib/jellyfin';
 import {prepLabel, prepOf, usePrepared} from '../lib/prepared';
+import {choiceStore} from '../plugins';
 
 interface Props {
 	server: JellyfinServer;
@@ -198,16 +199,43 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 	const [line, setLine] = useState('');
 	/** subtitle timing for this file: positive shows them earlier, negative later (kept per file) */
 	const [offset, setOffset] = useState(0);
-	useEffect(() => { setOffset(now ? subOffset(now.id) : 0); }, [now && now.id]);
+	// a plugin may keep the choice and the timing elsewhere (plugins/api.ts ChoiceStore): its answer replaces this TV's copy when it comes,
+	// unless a subtitle was picked by hand meanwhile; this TV's copy is kept too, for when the plugin does not answer
+	const [kept, setKept] = useState<{id: string; subtitle?: {index: number; lang?: string} | 'off'} | null>(null);
+	const picked = useRef(false);
+	useEffect(() => {
+		setOffset(now ? subOffset(now.id) : 0);
+		picked.current = false;
+		const store = choiceStore();
+		if (!now || !store) return undefined;
+		let live = true;
+		store.load(now.seriesId || now.id, now.id).then((c) => {
+			if (!live || !c) return;
+			if (typeof c.offset === 'number') { setOffset(c.offset); saveSubOffset(now.id, c.offset); }
+			if (c.subtitle) setKept({id: now.id, subtitle: c.subtitle});
+		}, () => undefined);
+		return () => { live = false; store.flush(); };
+	}, [now && now.id]);
 	const shiftSubs = (by: number) => {
 		const next = Math.round((offset + by) * 100) / 100;
 		setOffset(next);
-		if (now) saveSubOffset(now.id, next);
+		if (now) { saveSubOffset(now.id, next); const store = choiceStore(); if (store) store.offset(now.id, next); }
 	};
 	useEffect(() => {
 		if (!stream || !now) return;
 		setSub(pickSubtitle(stream.subtitles, stream.audioLang, savedSubtitle(now.seriesId || now.id)));
 	}, [stream]);
+	useEffect(() => {
+		if (!stream || !now || !kept || kept.id !== now.id || picked.current || !kept.subtitle) return;
+		const c = kept.subtitle;
+		if (c === 'off') { setSub(null); return; }
+		// the same index when its language agrees, else a track in that language (another file may number its tracks differently)
+		const same = stream.subtitles.filter((x) => x.index === c.index)[0];
+		const lang = (c.lang || '').toLowerCase();
+		const byLang = lang ? stream.subtitles.filter((x) => (x.lang || '').toLowerCase() === lang)[0] : undefined;
+		const chosen = same && (!lang || !same.lang || same.lang.toLowerCase() === lang) ? same : byLang || same;
+		if (chosen) setSub(chosen);
+	}, [stream, kept]);
 	useEffect(() => {
 		setCues([]); setLine('');
 		if (!sub) return undefined;
@@ -217,7 +245,12 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 	}, [sub && sub.vttUrl]);
 	const chooseSub = (choice: SubTrack | null) => {
 		setSub(choice);
-		if (now) saveSubtitle(now.seriesId || now.id, choice ? choice.index : 'off');
+		picked.current = true;
+		if (now) {
+			saveSubtitle(now.seriesId || now.id, choice ? choice.index : 'off');
+			const store = choiceStore();
+			if (store) store.subtitle(now.seriesId || now.id, choice ? {index: choice.index, lang: choice.lang} : null);
+		}
 		setMenu(null);
 	};
 

@@ -25,10 +25,26 @@ export interface SeerrTitle {
 	trailerYoutubeId?: string;
 	/** who made it (a film's directors, a series' creators), then the main actors in billing order (the full record only) */
 	cast?: SeerrPerson[];
+	// ----- from a plugin's catalog (plugins/api.ts), absent when Seerr is reached straight -----
+	/** this person's score (★), null when skipped */
+	mine?: number | null;
+	/** in this person's « À voir plus tard » */
+	later?: boolean;
+	/** its release date (YYYY-MM-DD) when not out yet */
+	release?: string;
+	/** For you's line on why */
+	reason?: string;
+	/** this person's request was declined (it can be asked again) */
+	declined?: boolean;
+	/** this person's own request, waiting for the administrator */
+	pendingApproval?: boolean;
+	/** a library title's Jellyfin id */
+	jellyfinId?: string;
+	minutes?: number;
 }
 
 /** A person in the cast: their TMDB id, which opens their page, and TMDB's w185 photo (2:3, as a poster). `job` is set for who made the title. */
-export interface SeerrPerson { id: string; name: string; character?: string; photoUrl?: string; job?: 'director' | 'creator' }
+export interface SeerrPerson { id: string; /** a plugin's own reference to the person (its page) */ ref?: string; name: string; character?: string; photoUrl?: string; job?: 'director' | 'creator' }
 
 const SERVER_KEY = 'seerr-server';
 const TIMEOUT_MS = 8000;

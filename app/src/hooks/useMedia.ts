@@ -4,6 +4,7 @@ import {cachedServer, resume, type JellyfinServer, type MediaItem} from '../lib/
 import {cachedSeerr, myPending, type SeerrServer, type SeerrTitle} from '../lib/seerr';
 import {newSeasons, type NewSeason} from '../lib/seasons';
 import {isWebOS} from '../lib/luna';
+import {catalog, plugins} from '../plugins';
 
 export interface MediaState {
 	jellyfin: JellyfinServer | null;
@@ -42,7 +43,8 @@ export function useMedia (autoSeasons: boolean): MediaState {
 		else setSeasons([]);
 		Promise.all([
 			resume(jf).catch(() => null),
-			sr ? myPending(sr, jf.userId).catch(() => null) : Promise.resolve([])
+			// a plugin's catalog, when one is on, gives the person's requests
+			catalog() ? (catalog() as NonNullable<ReturnType<typeof catalog>>).requestsMine().catch(() => null) : sr ? myPending(sr, jf.userId).catch(() => null) : Promise.resolve([])
 		]).then(([r, p]) => {
 			// one that forgot the sign-in (401) has cleared it; a server that did not answer takes its row away (the cache only serves the
 			// first paint), so there are no tiles pointing at a server that is off
@@ -57,9 +59,11 @@ export function useMedia (autoSeasons: boolean): MediaState {
 
 	useEffect(() => {
 		const cancel = isWebOS() ? afterFirstFrame(refresh) : (refresh(), () => undefined);
-		const onVisibility = () => { if (!document.hidden) refresh(); };
+		const onVisibility = () => { if (!document.hidden) { plugins.tell('foreground'); refresh(); } };
+		// a plugin turned on, or its data changed: the rows are read again
+		const unsubscribe = plugins.subscribe(refresh);
 		document.addEventListener('visibilitychange', onVisibility);
-		return () => { cancel(); document.removeEventListener('visibilitychange', onVisibility); };
+		return () => { cancel(); unsubscribe(); document.removeEventListener('visibilitychange', onVisibility); };
 	}, [refresh]);
 
 	const dropSeason = useCallback((tmdbId: string) => setSeasons((list) => list.filter((x) => x.title.tmdbId !== tmdbId)), []);

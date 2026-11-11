@@ -33,6 +33,8 @@ function classicScriptTag (): Plugin {
 	 *  - LUMEN_APP_ID, LUMEN_APP_TITLE: stamped into dist/appinfo.json and the APP_ID constant. Default: the dev build.
 	 *  - LUMEN_PRIVATE=0: build without app/private/ (what the public release is).
 	 *  - LUMEN_DEV=1 / 0: a dev build or not (default: dev when the id ends in .dev). Dev builds offer Settings > Frame-rate counter.
+	 *  - LUMEN_PLUGINS_DIR: the folder of plugins to build in (docs/plans/plugins.md). Default: app/private/plugins/ when it is there; none
+	 *    with LUMEN_PRIVATE=0.
 	 */
 	function lumenSettings (mode: string) {
 		const env = loadEnv(mode, REPO_ROOT, 'LUMEN_');
@@ -42,7 +44,9 @@ function classicScriptTag (): Plugin {
 			title: env.LUMEN_APP_TITLE || 'Home Dev',
 			// a dev build (the .dev id, or LUMEN_DEV=1 from the release workflow for branch pushes) offers tools that stable does not
 			dev: env.LUMEN_DEV === '1' || (env.LUMEN_DEV !== '0' && /\.dev$/.test(env.LUMEN_APP_ID || 'com.samrenfrew.lumen.dev')),
-			privateDir: env.LUMEN_PRIVATE !== '0' && existsSync(privateDir) ? privateDir : ''
+			privateDir: env.LUMEN_PRIVATE !== '0' && existsSync(privateDir) ? privateDir : '',
+			pluginsDir: env.LUMEN_PLUGINS_DIR ? resolve(REPO_ROOT, env.LUMEN_PLUGINS_DIR.replace(/^~(?=\/)/, process.env.HOME || '~'))
+				: env.LUMEN_PRIVATE !== '0' && existsSync(join(privateDir, 'plugins')) ? join(privateDir, 'plugins') : ''
 		};
 	}
 
@@ -94,11 +98,42 @@ function classicScriptTag (): Plugin {
 		};
 	}
 
+	const PLUGINS_MODULE = 'virtual:lumen-plugins';
+
+	/**
+	 * Plugins are compiled in, never loaded at run time (docs/plans/plugins.md). `pluginsDir` is one plugin (an index.ts in it), or each of its
+	 * folders with an index.ts (or index.tsx) is one: its default export is a LumenPlugin. virtual:lumen-plugins is the list of them, in folder order; empty without the folder.
+	 * A plugin imports Lumen's side from 'lumen-plugin-api' (src/plugins/api.ts) and nothing else of Lumen.
+	 */
+	function lumenPlugins (pluginsDir: string): Plugin {
+		const entries = (): string[] => {
+			if (!pluginsDir || !existsSync(pluginsDir)) return [];
+			// the folder may be one plugin itself (a plugin's own repository), or hold several
+			const own = ['index.ts', 'index.tsx'].map((f) => join(pluginsDir, f)).filter((f) => existsSync(f))[0];
+			if (own) return [own];
+			return readdirSync(pluginsDir).sort()
+				.map((d) => ['index.ts', 'index.tsx'].map((f) => join(pluginsDir, d, f)).filter((f) => existsSync(f))[0])
+				.filter((f): f is string => !!f);
+		};
+		return {
+			name: 'lumen-plugins',
+			resolveId (id) { return id === PLUGINS_MODULE ? '\0' + PLUGINS_MODULE : undefined; },
+			load (id) {
+				if (id !== '\0' + PLUGINS_MODULE) return undefined;
+				const list = entries();
+				if (list.length && this.info) this.info(`plugins: ${list.map((f) => f.split('/').slice(-2, -1)[0]).join(', ')}`);
+				return list.map((f, i) => `import p${i} from ${JSON.stringify(f)};`).join('\n') + `\nexport default [${list.map((_, i) => 'p' + i).join(', ')}];\n`;
+			}
+		};
+	}
+
 	export default defineConfig(({mode}) => {
 		const lumen = lumenSettings(mode);
 		return {
 		base: './',            // the app is loaded from a local file path on the TV
-		plugins: [preact(), classicScriptTag(), lumenPrivate(lumen.privateDir, lumen.appId, lumen.title)],
+		plugins: [preact(), classicScriptTag(), lumenPrivate(lumen.privateDir, lumen.appId, lumen.title), lumenPlugins(lumen.pluginsDir)],
+		resolve: {alias: {'lumen-plugin-api': resolve(APP_DIR, 'src/plugins/api.ts')}},
+		server: {fs: {allow: [APP_DIR].concat(lumen.pluginsDir ? [lumen.pluginsDir] : [])}},
 		define: {__LUMEN_APP_ID__: JSON.stringify(lumen.appId), __LUMEN_DEV__: JSON.stringify(mode === 'development' || lumen.dev)},
 		build: {
 			target: BROWSER_TARGET,

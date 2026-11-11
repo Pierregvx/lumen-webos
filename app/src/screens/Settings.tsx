@@ -58,7 +58,9 @@ const GROUPS: {id: OptionGroup; label: string; glyph: GlyphName}[] = [
 	{id: 'photos', label: 'Photos', glyph: 'image'},
 	{id: 'media', label: 'Films & series', glyph: 'film'},
 	{id: 'region', label: 'Language and Region', glyph: 'globe'},
-	{id: 'system', label: 'System', glyph: 'gear'}
+	{id: 'system', label: 'System', glyph: 'gear'},
+	// only when the build has a plugin (docs/plans/plugins.md)
+	{id: 'plugins', label: 'Plugins', glyph: 'grid'}
 ];
 const CHOOSE_WALLPAPER = 'choose-wallpaper';
 

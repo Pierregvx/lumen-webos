@@ -8,7 +8,8 @@
     "dev": "vite --port 5199",
     "build": "tsc --noEmit && vite build",
     "package": "sh scripts/package.sh",
-    "manifest": "node scripts/gen-manifest.mjs"
+    "manifest": "node scripts/gen-manifest.mjs",
+    "test": "node --test test/*.test.mjs"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.6",

@@ -59,6 +59,8 @@ import {rate, toRate} from './lib/ratings';
 import {RatePanel} from './components/RatePanel';
 import type {MediaItem} from './lib/jellyfin';
 import {pickAgain, recoServer, saveRecoServer, sendRatings} from './lib/recos';
+import {startPlugins, usePlugins} from './plugins';
+import {pluginOption, pluginOptions, pluginText} from './plugins/settings';
 
 type Screen = 'home' | 'settings' | 'ambient' | 'guide' | 'media';
 
@@ -189,6 +191,9 @@ export function App () {
 		setToast({text, kind});
 		toastTimer.current = window.setTimeout(() => setToast(null), TIMING.toastMs);
 	}, []);
+	// the plugins the build has (plugins/index.ts): started once; Settings > Plugins follows them
+	useEffect(() => { startPlugins(showToast); }, []);
+	const pluginsNow = usePlugins();
 
 	// Magic Remote scroll wheel = Up/Down (rows on the home screen, lists and grids elsewhere)
 	useEffect(() => {
@@ -988,9 +993,11 @@ export function App () {
 				label: 'Liquid glass dock (dev builds)',
 				description: 'The dock bends the picture at its edges, like Liquid Glass on Apple TV. Too slow for everyday use on this TV, so only dev builds offer it.',
 				value: config.liquidDock
-			}] : [])
+			}] : []),
+			// ----- Plugins (plugins/settings.ts): only when the build has one -----
+			...pluginOptions()
 		];
-	}, [config, choices, immich.ready, immichDraft, immichTest, media.jellyfin, media.seerr, mediaDraft, quick, mediaTest, aiServer]);
+	}, [config, choices, immich.ready, immichDraft, immichTest, media.jellyfin, media.seerr, mediaDraft, quick, mediaTest, aiServer, pluginsNow]);
 
 	const wallpaper: WallpaperTab = useMemo(() => {
 		if (!inSettings) return {categories: [], entries: [], onPick: () => undefined};
@@ -1265,6 +1272,8 @@ export function App () {
 	/** text typed on a Settings text page */
 	const onText = useCallback((optionId: string, value: string) => {
 		const v = value.trim();
+		const said = pluginText(optionId, v);
+		if (said !== null) { if (said) showToast(said, 'error'); return; }
 		if (optionId === OPTION.jfUrl) { setMediaDraft((d) => ({...d, jfUrl: v})); setQuick(null); }
 		else if (optionId === OPTION.jfUser) setMediaDraft((d) => ({...d, user: v}));
 		else if (optionId === OPTION.jfPass) setMediaDraft((d) => ({...d, pass: value}));
@@ -1280,6 +1289,7 @@ export function App () {
 	}, []);
 
 	const onOption = useCallback((optionId: string) => {
+		if (pluginOption(optionId)) return;
 		if (optionId === OPTION.restore) {
 			readBackup().then((saved) => {
 				if (!saved) { showToast('No settings backup found on the TV', 'error'); return; }

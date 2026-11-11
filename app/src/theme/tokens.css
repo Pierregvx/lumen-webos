@@ -86,6 +86,14 @@
 	--player-eps-now: #ffd27a;
 	/* Discover's AI picks: the line saying why */
 	--media-why: #ffd27a;
+	/* what a plugin's catalog brings (screens/Media.tsx): the score already given, a tile's tint, chips by tone */
+	--media-mine: #ffd27a;
+	--media-mine-bg: rgba(5, 7, 15, 0.78);
+	--media-tile-tint: linear-gradient(0deg, rgba(5, 7, 15, 0.85) 0%, rgba(5, 7, 15, 0.25) 70%);
+	--media-chip: rgba(255, 255, 255, 0.16);
+	--media-chip-ok: rgba(22, 163, 74, 0.7);
+	--media-chip-busy: rgba(217, 119, 6, 0.7);
+	--media-chip-asked: rgba(99, 102, 241, 0.7);
 	/* the Films & series screen: the shade over the focused title's picture, darker at the left (the text) and at the bottom (the rows) */
 	--media-shade: linear-gradient(90deg, rgba(5, 7, 15, 0.92) 0%, rgba(5, 7, 15, 0.55) 45%, rgba(5, 7, 15, 0.1) 75%), linear-gradient(0deg, rgba(5, 7, 15, 0.95) 0%, rgba(5, 7, 15, 0.6) 42%, rgba(5, 7, 15, 0) 62%);
 	/* a meter: how far through its programme a channel is */

@@ -38,7 +38,7 @@
 	display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .media__buttons { display: flex; flex-direction: row; gap: 20px; margin-top: 28px; }
-.media-btn { padding: 14px 34px; border-radius: var(--radius-capsule); font-size: 26px; font-weight: 600; background: rgba(255, 255, 255, 0.18); text-shadow: none; transition: transform var(--dur-focus) ease-out; }
+.media-btn { flex: none; white-space: nowrap; padding: 14px 34px; border-radius: var(--radius-capsule); font-size: 26px; font-weight: 600; background: rgba(255, 255, 255, 0.18); text-shadow: none; transition: transform var(--dur-focus) ease-out; }
 .media-btn--primary { background: rgba(255, 255, 255, 0.9); color: var(--focus-ink); }
 .media-btn--focused { background: var(--focus-fill); color: var(--focus-ink); transform: scale(var(--lift-pill)); box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3); }
 
@@ -118,3 +118,29 @@
 .home__backdrop { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; animation: media-fade var(--dur-media-hero) ease-out both; }
 .home__backdrop img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; }
 .home__backdrop::after { content: ''; position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: var(--media-shade); }
+
+/* ---------- what a plugin's catalog brings (plugins/api.ts; docs/plans/plugins.md) ---------- */
+/* the score already given: « ★ 8 » in a poster's bottom right corner, and « ★ Already rated : 8 / 10 » under the facts */
+.poster__mine { position: absolute; right: 10px; bottom: 10px; padding: 3px 10px; border-radius: var(--radius-capsule); background: var(--media-mine-bg); color: var(--media-mine); font-size: 18px; font-weight: 700; }
+.poster__quiet ~ .poster__mine { bottom: 44px; }
+/* a title not out yet: its date in the bottom left corner */
+.poster__date { position: absolute; left: 10px; bottom: 10px; padding: 3px 10px; border-radius: var(--radius-capsule); background: var(--media-mine-bg); font-size: 18px; font-weight: 700; }
+/* a tile (a genre): its picture under a tint, its name at its foot */
+.poster--tile::after { content: ''; position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: var(--media-tile-tint); }
+.poster__tile { position: absolute; left: 12px; right: 12px; bottom: 16px; z-index: 1; font-size: 26px; font-weight: 700; line-height: 1.1; }
+.media__mine { margin-top: 10px; font-size: 24px; font-weight: 600; color: var(--media-mine); }
+/* chips under the facts (a series' seasons): ok, busy, asked, none */
+.media__chips { display: flex; flex-direction: row; flex-wrap: wrap; gap: 10px; margin-top: 14px; max-height: 84px; overflow: hidden; }
+.media-chip { padding: 5px 14px; border-radius: var(--radius-capsule); background: var(--media-chip); font-size: 18px; font-weight: 600; white-space: nowrap; }
+.media-chip--ok { background: var(--media-chip-ok); }
+.media-chip--busy { background: var(--media-chip-busy); }
+.media-chip--asked { background: var(--media-chip-asked); }
+.media__overview--short { -webkit-line-clamp: 2; }
+/* a plugin's form (components/FormPanel.tsx) and short list (ChoicePanel.tsx), in the request panel's box */
+.media-ask__note { margin-bottom: 18px; }
+.media-form__hint { font-style: normal; font-size: 20px; opacity: 0.65; margin-left: 10px; }
+.media-form__field { width: 100%; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; font-size: 24px; }
+.media-form__notes { margin-top: 18px; }
+.media-form__note { margin: 6px 0 0; font-size: 20px; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.media-form__note--ok { color: var(--media-chip-ok); opacity: 1; }
+.media-form__note--busy { color: var(--media-mine); opacity: 1; }

@@ -10,6 +10,10 @@
 // load their pictures, and the large picture changes a moment after the focus stops moving.
 // Rate, among a title's buttons (as on Ciné Pierro's title sheet): the score out of 10 for the picks, given or changed at any time, for a
 // library title (an episode rates its series) or a Seerr title seen elsewhere. It shows the score once there is one (★ 8/10).
+// Plugins (plugins/api.ts, docs/plans/plugins.md): a plugin's catalog, when one is on, replaces the Seerr calls (Discover, search, a title's
+// record, pages, requests); its titles may carry the person's score (« ★ 8 » on a poster), a release date, chips under the facts, and its
+// rows may hold tiles (a genre) that open a page. Plugins add buttons to a title; what a button does comes back as a toast, a page, a form
+// or a short list, which this screen draws.
 import {useCallback, useEffect, useMemo, useRef, useState} from 'preact/hooks';
 import {t as tr} from '../lib/i18n';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
@@ -27,6 +31,10 @@ import {launchApp} from '../lib/launch';
 import {SYSTEM_APP} from '../config/constants';
 import type {MediaState} from '../hooks/useMedia';
 import {cachedPicks, markPickRequested, picks as aiPicks, recoServer, sendRatings} from '../lib/recos';
+import {catalog as pluginCatalog, plugins, usePlugins} from '../plugins';
+import type {ActionResult, Chip, ChoiceSpec, FormSpec, Page, PageAction, PageRef, Row, Tile, TitleRef} from '../plugins/api';
+import {ChoicePanel} from '../components/ChoicePanel';
+import {FormPanel} from '../components/FormPanel';
 
 export type MediaTab = 'library' | 'discover' | 'search';
 
@@ -36,6 +44,10 @@ interface Entry {
 	jf?: MediaItem; sr?: SeerrTitle;
 	/** a platform's logo, or an actor: OK opens their page */
 	brand?: Platform; person?: SeerrPerson;
+	/** a plugin's tile (a genre, a platform): OK opens its page */
+	tile?: Tile;
+	/** a title not out yet: its release date (YYYY-MM-DD), on its poster */
+	date?: string;
 }
 interface Shelf { id: string; label: string; items: Entry[] }
 /** a page opened over the tabs (a platform's, a title's cast, an actor's); its shelves are null while they load */
@@ -45,11 +57,28 @@ interface Place {
 	more?: Shelf[];
 	/** a platform's logo, drawn above the title in focus */
 	logo?: string;
+	/** a plugin's button for some of the page's titles */
+	action?: PageAction;
 }
 /** All, Films or Series: what a platform's or an actor's page keeps in its rows */
 type Kind = 'all' | 'movie' | 'tv';
 const KINDS: {id: Kind; label: string}[] = [{id: 'all', label: 'All'}, {id: 'movie', label: 'Films'}, {id: 'tv', label: 'Series'}];
-type Button = 'play' | 'trailer' | 'request' | 'status' | 'cast' | 'rate';
+/** Lumen's own buttons, the page's button, and a plugin's (its index in the plugins' list) */
+type Button = 'play' | 'trailer' | 'request' | 'status' | 'cast' | 'rate' | 'page' | number;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** « 18 Nov », with the year when it is not this one's */
+function shortDate (iso: string): string {
+	const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+	if (!m) return '';
+	const day = `${Number(m[3])} ${tr(MONTHS[Number(m[2]) - 1] || '')}`;
+	return Number(m[1]) === new Date().getFullYear() ? day : `${day} ${m[1]}`;
+}
+/** « 18 November 2026 » in the TV's language */
+function longDate (iso: string): string {
+	const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+	if (!m) return iso;
+	try { return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString(undefined, {day: 'numeric', month: 'long', year: 'numeric'}); } catch { return iso.slice(0, 10); }
+}
 
 interface Props {
 	state: MediaState;
@@ -89,8 +118,25 @@ function quietOf (e: Entry): {quiet?: string; quietBusy?: boolean; progress?: nu
 }
 
 const fromSeerr = (t: SeerrTitle): Entry => ({
-	key: 'sr:' + t.type + t.tmdbId, title: t.title, posterUrl: t.posterUrl, backdropUrl: t.backdropUrl, year: t.year, genres: [], rating: t.rating, overview: t.overview, sr: t
+	key: 'sr:' + t.type + t.tmdbId, title: t.title, posterUrl: t.posterUrl, backdropUrl: t.backdropUrl, year: t.year, genres: [], rating: t.rating, overview: t.overview, sr: t,
+	reason: t.reason, date: t.release, minutes: t.minutes
 });
+const fromTile = (x: Tile): Entry => ({key: 'tl:' + x.key, title: x.name, posterUrl: x.image, backdropUrl: x.logo ? undefined : x.image, genres: [], tile: x});
+/** a plugin's rows as the screen's shelves */
+const shelvesOf = (rows: Row[]): Shelf[] => rows.map((r) => ({id: r.id, label: r.label, items: r.tiles ? r.tiles.map(fromTile) : (r.titles || []).map(fromSeerr)}))
+	.filter((sh) => sh.items.length > 0);
+/** what a plugin is told of a title: the library's ids when it is there, its TMDB id, and the catalog's record once read */
+function refOf (e: Entry | null | undefined, more: SeerrTitle | null): TitleRef | null {
+	if (!e || e.brand || e.person || e.tile) return null;
+	if (e.jf) {
+		const it = e.jf;
+		const episode = it.type === 'Episode';
+		return {type: it.type === 'Movie' ? 'movie' : 'tv', title: it.title, year: it.year, tmdbId: episode ? more ? more.tmdbId : undefined : it.tmdbId,
+			jellyfinId: episode ? it.seriesId : it.id, fileId: it.type === 'Series' ? undefined : it.id, here: true, details: more || undefined};
+	}
+	if (!e.sr) return null;
+	return {type: e.sr.type, title: e.sr.title, year: e.sr.year, tmdbId: e.sr.tmdbId, jellyfinId: e.sr.jellyfinId, here: e.sr.availability === 'available', details: more || undefined};
+}
 const fromPerson = (p: SeerrPerson): Entry => ({key: 'pp:' + p.id + (p.job ? ':' + p.job : ''), title: p.name, posterUrl: p.photoUrl, genres: [], overview: p.job === 'director' ? tr('Director') : p.job === 'creator' ? tr('Creator') : p.character, person: p});
 /** Discover's row of platforms (the same on every TV: nothing to load) */
 const BRANDS: Shelf = {id: 'platforms', label: 'Platforms', items: PLATFORMS.map((p): Entry => ({key: 'pf:' + p.id, title: p.name, posterUrl: p.logoUrl, genres: [], brand: p}))};
@@ -105,7 +151,7 @@ function tmdbOf (e: Entry | null | undefined): Pick<SeerrTitle, 'tmdbId' | 'type
 /** What a title's rating is kept as (lib/ratings.ts): a film or a series of the library by its Jellyfin id (an episode rates its series), a
  *  Seerr title seen elsewhere by its TMDB id, as Ciné Pierro keeps it (tmdb:<movie|tv>:<id>). */
 function rateTarget (e: Entry | null | undefined): MediaItem | null {
-	if (!e || e.brand || e.person) return null;
+	if (!e || e.brand || e.person || e.tile) return null;
 	if (e.jf) {
 		const it = e.jf;
 		if (it.type !== 'Episode') return it;
@@ -157,9 +203,13 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	// the banners follow what is prepared on the NAS's fast disk
 	usePrepared(active);
 	const sr = state.seerr;
-	const tabs = useMemo((): MediaTab[] => (sr ? ['library', 'discover', 'search'] : ['library', 'search']), [!!sr]);
+	// a plugin's catalog, when one is on, in place of Seerr
+	const pluginsNow = usePlugins();
+	const cat = pluginCatalog();
+	const seerrOn = !!sr || !!cat;
+	const tabs = useMemo((): MediaTab[] => (seerrOn ? ['library', 'discover', 'search'] : ['library', 'search']), [seerrOn]);
 	const [tab, setTab] = useState<MediaTab>('library');
-	const owner = (s ? s.url + s.token : '') + '|' + (sr ? sr.url + sr.key : '');
+	const owner = (s ? s.url + s.token : '') + '|' + (cat ? 'plugin' + pluginsNow : sr ? sr.url + sr.key : '');
 	if (owner !== cacheOwner) { Object.keys(cache).forEach((k) => { delete cache[k]; }); cacheOwner = owner; }
 	const [shelves, setShelves] = useState<Record<string, Shelf[]>>(() => ({...cache}));
 	const [zone, setZone] = useState<'tabs' | 'field' | 'buttons' | 'rows'>('rows');
@@ -171,6 +221,20 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	const [hero, setHero] = useState<Entry | null>(null);
 	/** Seerr's full record of the hero (seasons, trailer, fresh status) */
 	const [more, setMore] = useState<SeerrTitle | null>(null);
+	/** the entry `more` was read for, and the plugin's chips under it */
+	const [moreKey, setMoreKey] = useState('');
+	const [chips, setChips] = useState<{key: string; list: Chip[]} | null>(null);
+	/** a plugin's form or short list over the screen */
+	const [form, setForm] = useState<FormSpec | null>(null);
+	const [choice, setChoice] = useState<ChoiceSpec | null>(null);
+	/** bumped to read the hero's record again (a plugin's button changed it) */
+	const [reread, setReread] = useState(0);
+	/** Discover's platforms from the plugin's catalog */
+	const [brands, setBrands] = useState<Shelf | null>(null);
+	useEffect(() => {
+		if (!cat) { setBrands(null); return; }
+		cat.platforms().then((tiles) => setBrands(tiles.length ? {id: 'platforms', label: 'Platforms', items: tiles.map(fromTile)} : null), () => setBrands(null));
+	}, [cat]);
 	const [query, setQuery] = useState('');
 	const [typing, setTyping] = useState(false);
 	const [asking, setAsking] = useState<SeerrTitle | null>(null);
@@ -210,7 +274,8 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	const forYouShown = useRef(!!forYou);
 	const [forYouNote, setForYouNote] = useState('');
 	useEffect(() => {
-		if (!showForYou || !sr || tab !== 'discover' || !recoServer()) return;
+		// a plugin's catalog brings its own For you with Discover
+		if (cat || !showForYou || !sr || tab !== 'discover' || !recoServer()) return;
 		const kept = cachedPicks();
 		if (kept && kept.fresh) return;
 		if (!kept) setForYouNote('Picking titles for you…');
@@ -223,11 +288,17 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	}, [tab, sr && sr.key]);
 
 	useEffect(() => {
-		if (!sr || tab !== 'discover' || cache.discover) return undefined;
+		if (!seerrOn || tab !== 'discover' || cache.discover) return undefined;
 		const timer = window.setTimeout(() => { if (!cache.discover) setSeerrDown(true); }, 9000);
-		loadDiscover(sr, (list) => { show('discover', list); setSeerrDown(false); });
+		if (cat) cat.discover((rows) => { show('discover', shelvesOf(rows)); setSeerrDown(false); }, (titles) => {
+			if (!titles || !titles.length || !showForYou) return;
+			if (!forYouShown.current) setRows((all) => ({...all, discover: (all.discover || 0) + 1}));
+			forYouShown.current = true;
+			setForYou({id: 'foryou', label: 'For you', items: titles.map(fromSeerr)});
+		});
+		else if (sr) loadDiscover(sr, (list) => { show('discover', list); setSeerrDown(false); });
 		return () => window.clearTimeout(timer);
-	}, [sr && sr.key, tab]);
+	}, [sr && sr.key, cat, tab]);
 
 	// search: both servers, a moment after the last key; the library's copy of a title wins
 	useEffect(() => {
@@ -237,7 +308,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 			const seq = ++searchSeq.current;
 			Promise.all([
 				s ? searchJellyfin(s, text).catch(() => [] as MediaItem[]) : Promise.resolve([] as MediaItem[]),
-				sr ? searchSeerr(sr, text).catch(() => [] as SeerrTitle[]) : Promise.resolve([] as SeerrTitle[])
+				cat ? cat.search(text).catch(() => [] as SeerrTitle[]) : sr ? searchSeerr(sr, text).catch(() => [] as SeerrTitle[]) : Promise.resolve([] as SeerrTitle[])
 			]).then(([mine, theirs]) => {
 				if (seq !== searchSeq.current) return;
 				const have: Record<string, true> = {};
@@ -263,8 +334,11 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		if (tab === 'library') return resumeShelf ? [resumeShelf].concat(shelves.library || []) : shelves.library || [];
 		if (tab !== 'discover') return shelves[tab] || [];
 		const lists = shelves.discover || [];
-		return (forYou && showForYou ? [forYou] : []).concat(lists.slice(0, 1), [BRANDS], lists.slice(1));
-	}, [place, kind, tab, shelves, forYou, showForYou, resumeShelf]);
+		// a plugin's first row may be the person's own list (« later »): it stays under For you, the platforms after the next one
+		const lead = cat ? lists.filter((x) => x.id === 'later') : [];
+		const rest = cat ? lists.filter((x) => x.id !== 'later') : lists;
+		return (forYou && showForYou ? [forYou] : []).concat(lead, rest.slice(0, 1), (cat ? [brands] : [BRANDS]).filter((x): x is Shelf => !!x), rest.slice(1));
+	}, [place, kind, tab, shelves, forYou, showForYou, resumeShelf, brands, cat]);
 	/** the page has films and series both: All, Films and Series are offered */
 	const both = useMemo(() => {
 		const all = place && place.shelves ? place.shelves.concat(place.more || []) : [];
@@ -282,31 +356,63 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		const timer = window.setTimeout(() => {
 			setHero(item || null);
 			setMore(null);
+			setChips(null);
 			// a library title is read too, for its cast
 			const asked = tmdbOf(item);
-			if (asked && sr) details(sr, asked).then((d) => { if (d.tmdbId === asked.tmdbId && d.type === asked.type) setMore(d); }, () => undefined);
+			const key = item ? item.key : '';
+			const ref = refOf(item, null);
+			if (cat && ref) cat.title(ref).then((d) => {
+				setMore(d); setMoreKey(key);
+				if (cat.chips) cat.chips({...ref, tmdbId: ref.tmdbId || d.tmdbId, details: d}, d).then((list) => setChips({key, list}), () => undefined);
+			}, () => undefined);
+			else if (asked && sr) details(sr, asked).then((d) => { if (d.tmdbId === asked.tmdbId && d.type === asked.type) { setMore(d); setMoreKey(key); } }, () => undefined);
 		}, hero ? HERO_AFTER_MS : 0);
 		return () => window.clearTimeout(timer);
-	}, [item && item.key]);
+	}, [item && item.key, reread]);
 
 	const t = hero && hero.sr ? (more && more.tmdbId === hero.sr.tmdbId ? more : hero.sr) : null;
 	const trailer = hero ? (hero.jf ? hero.jf.trailerYoutubeId : t && t.trailerYoutubeId) : undefined;
 	const heroRef = tmdbOf(hero);
 	const cast = more && heroRef && more.tmdbId === heroRef.tmdbId && more.type === heroRef.type ? more.cast : undefined;
+	/** the catalog's record of the hero, once read */
+	const heroMore = more && hero && moreKey === hero.key ? more : null;
+	/** the plugins' buttons on the hero */
+	const actions = useMemo(() => {
+		const ref = refOf(hero, heroMore);
+		return ref ? plugins.titleActions(ref) : [];
+	}, [hero, heroMore, pluginsNow]);
+	const pageAction = useMemo(() => {
+		if (!place || !place.action || !hero || !hero.sr) return null;
+		try { return place.action.applies(hero.sr) ? place.action : null; } catch { return null; }
+	}, [place, hero]);
 	const buttons = useMemo((): Button[] => {
-		if (!hero || hero.brand || hero.person) return [];
+		if (!hero || hero.brand || hero.person || hero.tile) return [];
 		const first: Button = hero.jf || (t && t.availability === 'available') ? 'play' : t && t.availability === 'none' ? 'request' : 'status';
 		const list: Button[] = trailer ? [first, 'trailer'] : [first];
+		if (pageAction) list.push('page');
 		// Cast sits with the other buttons on every title Seerr knows; a title with no actors says so on press
 		const withCast = tmdbOf(hero) ? list.concat('cast') : list;
-		return rateTarget(hero) ? withCast.concat('rate') : withCast;
-	}, [hero, t, trailer]);
+		return (rateTarget(hero) ? withCast.concat('rate') : withCast).concat(actions.map((_, i) => i));
+	}, [hero, t, trailer, actions, pageAction]);
 	/** the score already given to the hero (null: skipped, undefined: none) */
 	const heroTarget = rateTarget(hero);
 	const heroScore = useMemo(() => {
 		const r = heroTarget ? ratings().filter((x) => x.id === heroTarget.id)[0] : undefined;
 		return r ? r.score : undefined;
 	}, [heroTarget && heroTarget.id, rated]);
+	/** the scores given on this TV, by what they are kept as */
+	const localScores = useMemo(() => {
+		const all: Record<string, number> = {};
+		ratings().forEach((x) => { if (typeof x.score === 'number') all[x.id] = x.score; });
+		return all;
+	}, [rated]);
+	/** a poster's score: the catalog's (`mine`), else the one given on this TV */
+	const scoreOf = (e: Entry): number | undefined => {
+		if (e.sr && typeof e.sr.mine === 'number') return e.sr.mine;
+		const target = rateTarget(e);
+		return target ? localScores[target.id] : undefined;
+	};
+	const heroMine = typeof heroScore === 'number' ? heroScore : heroMore && typeof heroMore.mine === 'number' ? heroMore.mine : undefined;
 
 	const play = useCallback((e: Entry) => {
 		if (!s) return;
@@ -339,23 +445,42 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 
 	const sending = useRef('');
 	const ask = useCallback((title: SeerrTitle, seasons?: number[]) => {
-		if (!sr || sending.current === title.type + title.tmdbId) return;
+		if (!seerrOn || sending.current === title.type + title.tmdbId) return;
 		sending.current = title.type + title.tmdbId;
-		request(sr, title, seasons).then((r) => {
+		(cat ? cat.request(title, seasons).catch(() => 'Seerr did not take the request') : sr ? request(sr, title, seasons) : Promise.resolve('Seerr did not take the request')).then((r) => {
 			sending.current = '';
 			if (r === true) { markRequested(title.type, title.tmdbId); onToast(tr('Requested') + ' · ' + title.title); }
 			else onToast(tr(r), 'error');
 		});
-	}, [sr, markRequested, onToast]);
+	}, [sr, cat, markRequested, onToast]);
 
 	/** a series: the panel needs its seasons, which only the full record has */
 	const askSeasons = (title: SeerrTitle) => {
 		if (title.seasons) { setAsking(title); return; }
-		if (!sr) return;
-		details(sr, title).then((d) => setAsking(d), () => onToast(tr('Seerr did not answer'), 'error'));
+		const read = cat ? cat.title({type: title.type, title: title.title, tmdbId: title.tmdbId, here: false}) : sr ? details(sr, title) : null;
+		if (read) read.then((d) => setAsking(d), () => onToast(tr('Seerr did not answer'), 'error'));
 	};
 
 	/** a page over the tabs: shown at once (its shelves, or Loading…), filled when they come */
+	/** a plugin's page: its rows, its logo, its button */
+	const openPage = (key: string, name: string, page: Promise<Page>) => {
+		openPlace(key, name, null, page.then((p) => {
+			setPlaces((all) => all.map((x) => (x.key === key ? {...x, name: p.name || x.name, logo: p.logo || x.logo, action: p.action} : x)));
+			return shelvesOf(p.rows);
+		}));
+	};
+	/** what a plugin's button asked for */
+	const follow = (r: ActionResult | void, e: Entry | null) => {
+		if (!r) return;
+		if (r.error) onToast(tr(r.error), 'error');
+		else if (r.toast) onToast(tr(r.toast));
+		if (r.page && e) openPage('pg:' + e.key + ':' + Date.now(), e.title, r.page);
+		if (r.form) setForm(r.form);
+		if (r.choice) setChoice(r.choice);
+		if (r.reload) setReread((n) => n + 1);
+	};
+	const failedAction = () => onToast(tr('The plugin did not answer'), 'error');
+
 	const openPlace = (key: string, name: string, now: Shelf[] | null, later?: Promise<Shelf[]>, logo?: string) => {
 		setPlaces((all) => all.filter((p) => p.key !== key).concat({key, name, shelves: now, logo}));
 		setRows((all) => ({...all, [key]: 0}));
@@ -372,6 +497,11 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		[first, second].filter((x) => x.titles.length).map((x) => ({id: x.id, label: x.label, items: x.titles.map(fromSeerr)}));
 	/** OK on a platform's logo or an actor: their page */
 	const openEntry = (e: Entry) => {
+		if (cat) {
+			const ref: PageRef | null = e.tile ? e.tile.page : e.brand ? {kind: 'platform', id: e.brand.id} : e.person ? {kind: 'person', person: e.person} : null;
+			if (ref) openPage(e.key, e.title, cat.page(ref));
+			return;
+		}
 		if (!sr) return;
 		if (e.brand) {
 			const key = e.key;
@@ -388,7 +518,9 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 
 	const press = (b: Button | undefined, e: Entry | null) => {
 		if (!e) return;
-		if (e.brand || e.person) openEntry(e);
+		if (e.brand || e.person || e.tile) openEntry(e);
+		else if (typeof b === 'number') { const a = actions[b]; if (a) a.run().then((r) => follow(r, e), failedAction); }
+		else if (b === 'page' && pageAction) pageAction.run().then((r) => follow(r, e), failedAction);
 		else if (b === 'cast') {
 			if (cast && cast.length) openPlace('cast:' + e.key, e.title, [{id: 'cast', label: 'Cast', items: cast.map(fromPerson)}]);
 			else onToast(tr('No cast listed for this title'));
@@ -408,6 +540,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		if (!rate(it, score)) { onToast(tr('The TV could not keep the rating (storage full?)'), 'error'); return; }
 		setRated((n) => n + 1);
 		sendRatings();
+		plugins.tell('rated', {id: it.id, type: it.type === 'Series' ? 'Series' : 'Movie', title: it.title, year: it.year}, score);
 		onToast(`${it.title} · ${score}/10`);
 	};
 
@@ -415,7 +548,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	const stopTyping = () => { setTyping(false); if (field.current) field.current.blur(); };
 
 	const handleKey = useCallback((key: NavKey): boolean => {
-		if (asking || rating) return true;    // the request or rating panel has the keys
+		if (asking || rating || form || choice) return true;    // a panel has the keys
 		if (typing) {
 			if (key === 'back') { stopTyping(); return true; }
 			if (key === 'down') { stopTyping(); setZone(list.length ? 'rows' : 'field'); return true; }
@@ -460,21 +593,21 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		else if (key === 'down') setRows((all) => ({...all, [view]: clamp(r + 1, 0, list.length - 1)}));
 		else if (key === 'left' || key === 'right') setCols((all) => ({...all, [colKey(shelf)]: clamp(c + (key === 'right' ? 1 : -1), 0, shelf.items.length - 1)}));
 		return true;
-	}, [asking, rating, typing, zone, tab, tabs, hero, buttons, list.length, shelf, r, c, onClose, place, view, inSearch, both, kind]);
+	}, [asking, rating, form, choice, typing, zone, tab, tabs, hero, buttons, list.length, shelf, r, c, onClose, place, view, inSearch, both, kind]);
 	useKeys(handleKey, active);
 
 	useOkPress({onPress: () => {
-		if (asking || rating || typing) return;
+		if (asking || rating || form || choice || typing) return;
 		if (zone === 'field') startTyping();
 		else if (zone === 'buttons') press(buttons[button], hero);
-		else if (zone === 'rows' && item && (item.brand || item.person)) openEntry(item);
+		else if (zone === 'rows' && item && (item.brand || item.person || item.tile)) openEntry(item);
 		else if (zone === 'rows' && item) {
 			// OK on a poster, in any row: its buttons in the hero (Play first, so OK twice plays); Back returns to the row
 			if (!hero || hero.key !== item.key) setHero(item);
 			setButton(0);
 			setZone('buttons');
 		}
-	}, onLongPress: () => undefined}, active && !asking && !rating && !typing);
+	}, onLongPress: () => undefined}, active && !asking && !rating && !form && !choice && !typing);
 
 	// the hero picture: the new one fades in over the last one
 	const heroUrl = hero && hero.backdropUrl || '';
@@ -482,10 +615,16 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	if (pictures.now !== heroUrl) setPictures({now: heroUrl, under: pictures.now});
 	const under = pictures.under;
 
+	const release = hero ? hero.date || (heroMore ? heroMore.release : undefined) : undefined;
 	const meta = hero ? [hero.jf && hero.jf.type === 'Episode' ? hero.jf.subtitle : '', hero.year, hero.minutes ? `${Math.floor(hero.minutes / 60) ? Math.floor(hero.minutes / 60) + ' h ' : ''}${hero.minutes % 60} min` : '',
-		hero.genres.slice(0, 2).join(', '), hero.rating ? `★ ${hero.rating.toFixed(1)}` : '', hero.sr ? tr(hero.sr.type === 'tv' ? 'Series' : 'Film') : ''].filter(Boolean).join(' · ') : '';
-	const label = (b: Button) => b === 'play' ? '▶ ' + tr(hero && hero.jf && hero.jf.progress ? 'Resume' : 'Play')
-		: b === 'trailer' ? tr('Trailer') : b === 'cast' ? tr('Cast') : b === 'rate' ? (typeof heroScore === 'number' ? `★ ${heroScore}/10` : '☆ ' + tr('Rate'))
+		hero.genres.slice(0, 2).join(', '), hero.rating ? `★ ${hero.rating.toFixed(1)}` : '', hero.sr ? tr(hero.sr.type === 'tv' ? 'Series' : 'Film') : '',
+		release ? `${tr('Out on')} ${longDate(release)}` : ''].filter(Boolean).join(' · ') : '';
+	/** « ★ Already rated : 8 / 10 » under the facts */
+	const mineLine = hero && typeof heroMine === 'number' ? `★ ${tr('Already rated')} : ${heroMine} / 10` : '';
+	const heroChips = chips && hero && chips.key === hero.key ? chips.list.slice(0, 12) : [];
+	const label = (b: Button) => typeof b === 'number' ? (actions[b] ? tr(actions[b].label) : '') : b === 'page' ? (pageAction ? tr(pageAction.label) : '')
+		: b === 'play' ? '▶ ' + tr(hero && hero.jf && hero.jf.progress ? 'Resume' : 'Play')
+		: b === 'trailer' ? tr('Trailer') : b === 'cast' ? tr('Cast') : b === 'rate' ? (typeof heroMine === 'number' ? `★ ${heroMine}/10` : '☆ ' + tr('Rate'))
 		: b === 'request' ? '+ ' + tr('Request') : t ? statusText(t.availability, t.percent) : '';
 	const empty = place ? (place.shelves ? 'Nothing found' : 'Loading…') : tab === 'library' ? (!s ? 'Sign in to Jellyfin in Settings > Films & series' : failed ? 'Jellyfin is not answering' : 'Loading…')
 		: tab === 'discover' ? (seerrDown ? 'Seerr is not answering' : 'Loading…') : query.trim().length < 2 ? 'Type a title' : 'Nothing found';
@@ -520,11 +659,13 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 					{place && place.logo && <img class="media__logo" src={place.logo} alt="" decoding="async" />}
 					<h1 class="media__title">{hero.title}</h1>
 					{meta && <div class="media__meta">{meta}</div>}
+					{mineLine && <div class="media__mine">{mineLine}</div>}
 					{hero.reason && <div class="media__why">✦ {hero.reason}</div>}
-					{hero.overview && <p class="media__overview">{hero.overview}</p>}
+					{heroChips.length > 0 && <div class="media__chips">{heroChips.map((x) => <span key={x.text} class={`media-chip media-chip--${x.tone || 'none'}`}>{tr(x.text)}</span>)}</div>}
+					{hero.overview && <p class={`media__overview${heroChips.length || mineLine ? ' media__overview--short' : ''}`}>{hero.overview}</p>}
 					<div class="media__buttons">
 						{buttons.map((b, i) => (
-							<span key={b} class={`media-btn${i === 0 && b !== 'status' ? ' media-btn--primary' : ''}${zone === 'buttons' && i === button ? ' media-btn--focused' : ''}`}
+							<span key={String(b)} class={`media-btn${i === 0 && b !== 'status' ? ' media-btn--primary' : ''}${zone === 'buttons' && i === button ? ' media-btn--focused' : ''}`}
 								onClick={() => { setButton(i); setZone('buttons'); press(b, hero); }}>{label(b)}</span>
 						))}
 					</div>
@@ -543,7 +684,8 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 								<h2 class="media__label">{tr(sh.label)}</h2>
 								<div class="media__strip" style={{transform: `translateX(${-offset}px)`}}>
 									{sh.items.map((e, k) => (
-										<Poster key={e.key} model={{key: e.key, title: e.title, imageUrl: e.posterUrl, availability: e.sr ? e.sr.availability : undefined, percent: e.sr && e.sr.percent, logo: !!e.brand, ...quietOf(e)}}
+										<Poster key={e.key} model={{key: e.key, title: e.title, imageUrl: e.posterUrl, availability: e.sr ? e.sr.availability : undefined, percent: e.sr && e.sr.percent, logo: !!e.brand || !!(e.tile && e.tile.logo),
+												tile: !!e.tile && !e.tile.logo, mine: scoreOf(e), date: e.date ? shortDate(e.date) : undefined, ...quietOf(e)}}
 											focused={zone === 'rows' && i === r && k === at} load={near && k >= at - FOCUS_COL - 1 && k <= at + 8}
 											onHover={() => { if (!realPointer.current) return; setZone('rows'); setRows((all) => ({...all, [view]: i})); setCols((all) => ({...all, [colKey(sh)]: k})); }}
 											onActivate={() => press(e.jf ? 'play' : undefined, e)} />
@@ -556,6 +698,10 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 			</div>
 			{rating && <RatePanel title={rating.title} active={active} change start={typeof heroScore === 'number' ? heroScore : undefined} onDone={doneRating} />}
 			{asking && <RequestPanel title={asking} active={active} onRequest={(seasons) => { ask(asking, seasons); setAsking(null); }} onClose={() => setAsking(null)} />}
+			{form && <FormPanel form={form} active={active} onClose={() => setForm(null)}
+				onSend={(option, text) => form.send(option, text).then((r) => { setForm(null); follow(r, hero); }, failedAction)} />}
+			{choice && <ChoicePanel title={choice.title} note={choice.note ? tr(choice.note) : undefined} rows={choice.rows.map((x) => tr(x))} active={active} onClose={() => setChoice(null)}
+				onPick={(i) => { const c = choice; setChoice(null); c.pick(i).then((r) => follow(r, hero), failedAction); }} />}
 		</div>
 	);
 }
