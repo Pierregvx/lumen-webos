@@ -33,9 +33,9 @@ is the plain launcher. It is written to be proposed upstream as it is.
 
 **Ciné Pierro is a plugin, kept out of this public repository**: its draft is in `~/cine-pierro-wt/lumen-plugin-draft/` on the Mac (not a
 git checkout; to become `lumen-plugin/` in the private `cine-pierro` repository). It talks to the cine-pierro server through its
-versioned contract `/api/tv/v1` (contract revision 2 at cine-pierro `cca1e0c`), so Films & series has what the web page has. Build:
+versioned contract `/api/tv/v1` (revision 4 on cine-pierro's branch `tv-play`, with pairing), so Films & series has what the web page has. Build:
 `LUMEN_PLUGINS_DIR=~/cine-pierro/lumen-plugin npm run deploy:home` (or that line in `.env`). Its README says what is wired, what waits for
-the server (pairing, Jellyfin's address in `/me`, `mine` on every list) and its tests (`npm test` there: the contract check and 20 tests).
+the server (Jellyfin's address in `/me`, `mine` on every list) and its tests (`npm test` there: the contract check and 20 tests).
 
 What it brings, through Lumen's hooks: Discover from the server in the page's order (For you, Watch later, Trending, Platforms, Popular
 films, Film genres, Popular series, Series genres, the categories, Coming soon at the bottom), Watch later, More like this (the saga with
@@ -79,6 +79,10 @@ server made from the contract's examples, built in from the draft folder; not on
 
 Add new items here, with the branch and what to check. Delete an item once Sam has seen it work.
 
+- [ ] Pairing with Ciné Pierro (built 2026-11-11 in the plugin and on cine-pierro's branch `tv-play`, not deployed nor installed yet)
+      **(verify)**: Settings > Plugins > Ciné Pierro > Pair shows a 6-digit code; typed in Ciné Pierro's Réglages > TV, the TV says
+      « Paired as … » within 3 s and Films & series works as before (a request still approved at once for the main account). Unpairing
+      there: the next Films & series call falls back to the TV's Jellyfin sign-in, and Pair shows again. Lumen's core is unchanged.
 - [ ] Plugins and Ciné Pierro (branch `claude/tv-v1-parite-6eb48b`, the section above) **(verify)**. Not installed. Built with the plugin:
       Settings > Plugins shows Ciné Pierro on, its Server row says « v1.2 »; turned off, Films & series is Lumen's own again; Discover's rows come in the page's
       order (For you, Watch later, Trending, Platforms, Popular films, Film genres, Popular series, Series genres, the categories, Films and
@@ -328,7 +332,7 @@ From `docs/research/prior-art.md` and upstream (ammar027/lumen-webos). Build wit
   (`gh workflow disable release --repo Pierregvx/lumen-webos`; `enable` puts it back), then upstream 2.2.0 went to `main`. The older branches `nas-split`, `feat/films-series`, `films-series` and
   `fix/speaker-volume` hold nothing that is not on `main` in a newer form (checked file by file 2026-11-11).
 - **Ciné Pierro as the TV's back end**: under way as a plugin, see « Plugins, and Ciné Pierro par tv/v1 » above; what is left is play through the server (step
-  3), pairing and the library through the server (step 4), and the TV screens for the contract's other parts.
+  3, for a TV with no Jellyfin sign-in), the library through the server (step 4; pairing is built, see Verify on the TV), and the TV screens for the contract's other parts.
 
 In rough order of value:
 
