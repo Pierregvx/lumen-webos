@@ -163,7 +163,10 @@ Add new items here, with the branch and what to check. Delete an item once Sam h
       the TV refuses its stream's format). Swap it for another sport channel, or find which of Ligue+'s streams the TV plays.
 - [ ] Prepared copies (`dev`, `1b8fbe7` and `4cd3f74`): the « Prêt, sans bruit » mark seen again on The Last of Us in Resume on
       2026-11-10. Seen the same evening: a copy (Parks and Recreation S6E16, opened with the `play` launch parameter) plays from the NVMe,
-      and its resume point is copied back on the original.
+      and its resume point is copied back on the original. 2026-11-11, with the plugin build: The Last of Us S01E06 started from Lumen
+      plays the copy (the video's item is the copy's id; Jellyfin's only open media file is under the copies' folder), and Jellyfin reads
+      nothing on the hard disk. The hard disk still wakes every 30 to 40 s, from `dockerd` (about 11 KB, the NAS's roadmap), not from the
+      play. Still to see: the original's resume point and watched mark after the episode ends.
 - [ ] Lumen's Guide has the overlay's rail in place of the switch at the top right (branch `live-tv-preview`, on the TV). Left from
       Now and Next opens it, and Left past the earliest programme in the Full guide. Up/Down and OK pick a view, Right goes back. Up at
       the top of the list no longer leaves the list. The rail is 340px open and each item is as wide as its name (tried live; the
