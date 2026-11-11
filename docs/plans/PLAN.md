@@ -155,6 +155,12 @@ Add new items here, with the branch and what to check. Delete an item once Sam h
 - [ ] Exiting an app, or pressing Exit on the remote, opens LG Home, not Lumen (Sam, 2026-10-26). Only the Home key is rebound by Input
       Hook. The likely fix is the Native Home item under "Next" (`setDefaultApp`), so check whether it covers Exit and app close first.
 - [ ] Draw the lower rows one row at a time, not all at once 3.5 s after launch (`docs/research/startup-perf.md`, Still open).
+- [ ] Up and Down between the home screen's lower rows lag (the owner, 2026-11-11): each press rasters 300 to 600 ms on the GPU, several
+      full-screen layers (`docs/research/frame-rate.md` > The Resume row and the rows' Up and Down). Seen with the plugin build, and the
+      cause is older than it: the Resume row's picture (since `films-series`) and layers under the Live TV row. Done: the picture waits
+      700 ms and is decoded first. Next: name the two full-screen layers that raster on Down into the Live TV row
+      (`tools/tv/perf/rows-updown.mjs`, hiding its parts one by one). Done when a row change shows at most 10 % more raster than a move
+      along a row.
 
 ### Spikes (yes/no answers, noted in `docs/research/spikes.md`)
 - [ ] Recents button: rebind it with Input Hook to launch Lumen with `{"view":"recent"}`.
