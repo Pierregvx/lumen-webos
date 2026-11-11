@@ -88,6 +88,12 @@ Measured with `walk.mjs rows` (22 keys at 380 ms) on the plugin build, a still w
 - Now it waits 700 ms after the focus stops and is decoded before it shows (`Home.tsx`, `BACKDROP_AFTER_MS`). Same walk: style and layout
   478 → 266 ms, paint 568 → 353 ms, layerize 419 → 242 ms, the worst gap 900 → 600 ms, key to screen p90 140 → 100 ms. One sample each.
 - Unchanged, and now the largest cost: **Up and Down between rows**, about 300 to 600 ms of GPU raster per press (keys 12, 13, 21, 22 of
-  the walk, with or without the picture). Next: find which layer rasters on a row change (`updown.mjs` with `LMAP=1`, then
-  `raster-tiles.mjs`), as was done for the dock and the grid.
+  the walk, with or without the picture). `tools/tv/perf/rows-updown.mjs` (updown.mjs's twin, between the Resume row and the Live TV row;
+  `LMAP=1 CATS=cc,disabled-by-default-cc.debug`, then `raster-tiles.mjs`) shows what rasters: on Down, three full-screen layers of 10
+  tiles each plus a row's strip (16 tiles); on Up, the new `home__backdrop` (20 tiles) and three full-screen layers again.
+- Tried and dropped: keeping the picture's layer always mounted (two pictures, opacity only, `will-change: opacity`). Up went from 122 to
+  40 tiles, but the always-there full-screen layers cost every frame: the walk's raster rose from 3.2 to 4.9 s and the apps row fell from
+  13-15 to 6 frames per key. Back to the picture mounted only when it shows.
+- Still unexplained: on Down into the Live TV row, two full-screen layers (no DOM node in the layer map) raster 10 to 13 tiles each, with
+  `.home__backdrop`, `.lowerveil` or `.dockdim` hidden alike. Next: hide the Live TV row's parts one by one (its live picture first).
 - The dock (glass bar) moves at about 6 frames per 320 ms (19 fps), with a GPU draw of 16.7 ms a frame: the live blur, as above.
