@@ -69,6 +69,10 @@ server made from the contract's examples, built in from the draft folder; not on
       the clock and the date, and a key goes back to the home screen. The fork's old « Off » choice is gone, so LG's own screensaver
       runs again where it was set to Off (upstream's choice: turning it off belongs to the service menu). Not tried: the idle timer
       (set to 0), Immich photos, a key over an app. Brightness is off (`brightnessOn` false), not tried.
+      **Films & series with the plugin, seen unchanged the same evening**: Library opens on Resume, The Last of Us first with « Prêt,
+      sans bruit », its score (« ★ Déjà noté : 8 / 10 »), the season chips (S1 · là, S2 · là) and the plugin's buttons (À voir plus tard,
+      Dans le même genre, Signaler un problème, Préparer); Discover has the server's rows in the page's order, For you to Séries à venir.
+      Not tried: playing a title, the speaker bar.
       Still to try: (4) The
       screensaver (Enabled/Disabled, Show: wallpaper or Immich), Brightness, the two-value settings that flip on OK. (5) Films & series
       with the plugin, Resume's prepared copies, the speaker bar: unchanged.
