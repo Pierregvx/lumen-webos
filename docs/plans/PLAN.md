@@ -60,6 +60,22 @@ Add new items here, with the branch and what to check. Delete an item once Sam h
       player for the same series, and the other way; the timing (‹ ›) set on the TV holds after a restart of Lumen and in the page; with
       the server stopped, the player keeps the TV's own choice and Films & series falls back to nothing worse than « Seerr is not
       answering ». Nothing of it is seen on the TV yet.
+      **Speed against the version before (fork `main`, `7151467`): no worse than 10 %.** Measure each version the same way, the TV on,
+      Lumen in front, three times, and keep the median (DevTools commands: `~/tv-outils/tv eval '…'` from the NAS, or
+      `node tools/tv/cdp.mjs` from the Mac; see the `tv` skill):
+      - First screen: launch Lumen cold three times; `grep ' boot ' /var/lib/homehook/lumen.log | tail -3` gives `frame` and `grid` in ms
+        (`docs/research/startup-perf.md`). Pass: each within 10 % of the old version's.
+      - Opening a title: in Discover, focus a poster and time OK to the buttons with
+        `eval 'new Promise(r=>{const t=performance.now();document.dispatchEvent(new KeyboardEvent("keydown",{keyCode:13}));document.dispatchEvent(new KeyboardEvent("keyup",{keyCode:13}));requestAnimationFrame(()=>requestAnimationFrame(()=>r(Math.round(performance.now()-t))))})'`,
+        then the record's arrival (the buttons changing) by eye. Pass: within 10 %, and the extra buttons there in under 1 s.
+      - A row's scroll: `node tools/tv/perf/swaps-per-key.mjs` on ten Right presses in Discover's Trending row (`docs/research/frame-rate.md`:
+        frames in the 320 ms after each key). Pass: at most 10 % fewer frames than the old version.
+      - Memory: `eval 'Math.round(performance.memory.usedJSHeapSize/1e6)'` after opening Discover and scrolling it to the bottom. Pass: at
+        most 10 % more.
+      Measured without the TV (2026-11-11): the app's script is 504.6 KB before, 519.7 KB with the plugin system and no plugin (+3.0 %),
+      545.0 KB with Ciné Pierro (+8.0 %; gzip 157.5, 162.8, 172.0 KB); the .ipk 2.96, 2.97, 2.98 MB. At start the home screen asks what
+      it asked before, once, and the plugin adds `GET /api/tv/v1`, `/requests/mine` (in place of Seerr's request list and one call per
+      pending title) and `/me`, all after the first frame.
 - [ ] Films & series (`nas-split`, `docs/films-series.md` > The Films & series screen) **(verify)**: Library opens on Resume; Rate on a
       title's buttons (library and Seerr titles), the score shown on it after; the season list of a long series (South Park) scrolls in
       the request panel. Installed 2026-11-08; not yet tried with the remote. Installed again on 2026-11-10 (branch `tv/dev-speaker`,

@@ -60,8 +60,10 @@ export function useMedia (autoSeasons: boolean): MediaState {
 	useEffect(() => {
 		const cancel = isWebOS() ? afterFirstFrame(refresh) : (refresh(), () => undefined);
 		const onVisibility = () => { if (!document.hidden) { plugins.tell('foreground'); refresh(); } };
-		// a plugin turned on, or its data changed: the rows are read again
-		const unsubscribe = plugins.subscribe(refresh);
+		// a plugin's catalog came or went (turned on or off, its server answered): the rows are read again; nothing else does it, so
+		// the start-up's plugin news does not read Jellyfin twice
+		let hadCatalog = !!catalog();
+		const unsubscribe = plugins.subscribe(() => { const has = !!catalog(); if (has !== hadCatalog) { hadCatalog = has; refresh(); } });
 		document.addEventListener('visibilitychange', onVisibility);
 		return () => { cancel(); unsubscribe(); document.removeEventListener('visibilitychange', onVisibility); };
 	}, [refresh]);

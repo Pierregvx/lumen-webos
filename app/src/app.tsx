@@ -138,6 +138,13 @@ export function App () {
 	// a fresh install first looks for the settings backup on the TV (lib/backup.ts); nothing is seeded until that has answered
 	const [restoring, setRestoring] = useState(() => !hasSavedConfig());
 	const [focusRow, setFocusRow] = useState<{id: string; seq: number} | undefined>(undefined);
+	// the plugins start after the first frame, as the other start-up reads, and before them (this effect comes first, with no delay), so
+	// the rows below are read once, with the plugins on; the toast is drawn by showToast, defined further down
+	const pluginToast = useRef<(text: string, kind?: 'info' | 'error') => void>(() => undefined);
+	useEffect(() => {
+		const start = () => startPlugins((text, kind) => pluginToast.current(text, kind));
+		return isWebOS() ? afterFirstFrame(start, 0) : (start(), () => undefined);
+	}, []);
 	const media = useMedia(config.autoSeasons);
 	/** what is prepared on the NAS's fast disk: the Resume tiles' banners (lib/prepared.ts) */
 	const prepared = usePrepared(!!media.jellyfin);
@@ -191,8 +198,8 @@ export function App () {
 		setToast({text, kind});
 		toastTimer.current = window.setTimeout(() => setToast(null), TIMING.toastMs);
 	}, []);
+	pluginToast.current = showToast;
 	// the plugins the build has (plugins/index.ts): started once; Settings > Plugins follows them
-	useEffect(() => { startPlugins(showToast); }, []);
 	const pluginsNow = usePlugins();
 
 	// Magic Remote scroll wheel = Up/Down (rows on the home screen, lists and grids elsewhere)
