@@ -48,10 +48,14 @@ server made from the contract's examples, built in from the draft folder; not on
 
 ## Verify on the TV (built, not yet seen working)
 
-- [ ] Upstream 2.2.0 merged into the fork (2026-11-11, branch `claude/merge-upstream-2-2-7857a1`) **(verify)**, to try at home with the
-      owner, in this order: (1) Settings > System > TV scripts: Update; Settings > Home and Power: Home button opens Lumen, When the TV
-      turns on Lumen, then a restart; switch off and on with the remote (Lumen in front, no LG Home, no HDMI 1 first), and a Home press
-      from an app (`docs/keep-alive.md` > What changes with upstream 2.2.0). (2) The Guide: Left opens the rail (Now and Next, Full
+- [ ] Upstream 2.2.0 merged into the fork (2026-11-11, branch `claude/merge-upstream-2-2-7857a1`) **(verify)**, installed on the TV
+      that evening with the plugin (and Lumen Guide). **Switch-on seen working, 2026-11-11, the owner at home:** TV scripts updated (the
+      old ones kept in `/var/lib/homehook/backup-avant-upstream-2-2/`), Home takeover and power-on set to Lumen, then a reboot: Lumen was
+      in front as soon as the TV answered (41 s after the boot, `poweron_loaded` Lumen). Then with the remote: switch off, switch on 15 s
+      later, and Home from an app: the owner saw all of it right (Lumen in front, no LG Home, no HDMI 1). Recorded on the TV: after 14 s
+      in standby, Lumen in front 1 s after the wake (it had been preloaded 10 s into standby); after 2 s in standby, about 3 s; from
+      YouTube, Home brought Lumen back with nothing in front between. `homeAutoLaunch` is still off.
+      Still to try: (2) The Guide: Left opens the rail (Now and Next, Full
       guide); Up from the first channel reaches the category button and the search field, as the switcher did before; OK held still stars
       a channel. (3) Control Center: a tile's list opens and closes with the Home row (lamp, speaker, air) fading with the grid. (4) The
       screensaver (Enabled/Disabled, Show: wallpaper or Immich), Brightness, the two-value settings that flip on OK. (5) Films & series
