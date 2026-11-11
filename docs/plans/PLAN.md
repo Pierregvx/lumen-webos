@@ -55,9 +55,12 @@ server made from the contract's examples, built in from the draft folder; not on
       later, and Home from an app: the owner saw all of it right (Lumen in front, no LG Home, no HDMI 1). Recorded on the TV: after 14 s
       in standby, Lumen in front 1 s after the wake (it had been preloaded 10 s into standby); after 2 s in standby, about 3 s; from
       YouTube, Home brought Lumen back with nothing in front between. `homeAutoLaunch` is still off.
-      Still to try: (2) The Guide: Left opens the rail (Now and Next, Full
-      guide); Up from the first channel reaches the category button and the search field, as the switcher did before; OK held still stars
-      a channel. (3) Control Center: a tile's list opens and closes with the Home row (lamp, speaker, air) fading with the grid. (4) The
+      **The Guide, seen working the same evening** (keys sent over DevTools, the owner watching): GUIDE opens it with the search field
+      and the category button at the top; Left opens the rail, Down and OK switch to the Full guide; Up from the first channel reaches
+      the search field, Left the category button, OK its menu (14 categories, 2938 channels), Back closes it; Left past the earliest
+      programme opens the rail again. Found: the French hint at the top (« ▲ Rechercher · ★ OK maintenu… ») is cut off by the two
+      buttons; shorten it or drop it. Not tried: OK held to star a channel, typing a search.
+      Still to try: (3) Control Center: a tile's list opens and closes with the Home row (lamp, speaker, air) fading with the grid. (4) The
       screensaver (Enabled/Disabled, Show: wallpaper or Immich), Brightness, the two-value settings that flip on OK. (5) Films & series
       with the plugin, Resume's prepared copies, the speaker bar: unchanged.
 
