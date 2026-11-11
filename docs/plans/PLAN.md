@@ -60,7 +60,11 @@ server made from the contract's examples, built in from the draft folder; not on
       the search field, Left the category button, OK its menu (14 categories, 2938 channels), Back closes it; Left past the earliest
       programme opens the rail again. The French hint at the top was cut off by the two buttons: « ▲ Search · » is dropped (the field
       is beside it), and « Now » and « Next » are in Lumen's own table (« Next » showed in English); the owner approved both live. Not tried: OK held to star a channel, typing a search.
-      Still to try: (3) Control Center: a tile's list opens and closes with the Home row (lamp, speaker, air) fading with the grid. (4) The
+      **Control Center, seen working the same evening** (over DevTools, the owner watching): the settings button's launch opens it with
+      the Home row (lamp, Living Room at 25, play) and the air line; OK on Sound opens its 7 choices with the whole grid, the Home row and
+      the air line faded to 0 behind them; Back closes the list with nothing changed and the grid comes back. Not tried: its 460 ms open
+      by eye, a choice picked from a list.
+      Still to try: (4) The
       screensaver (Enabled/Disabled, Show: wallpaper or Immich), Brightness, the two-value settings that flip on OK. (5) Films & series
       with the plugin, Resume's prepared copies, the speaker bar: unchanged.
 
