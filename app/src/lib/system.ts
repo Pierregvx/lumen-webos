@@ -6,7 +6,7 @@ import * as root from './root';
 // watch.sh's flags go in one root call. At launch it waits until the home screen is up, so it does not hold up the app list (three calls
 // there took up to 2 s on a cold start, docs/research/startup-perf.md); watch.sh needs them only for the screensaver, minutes away. A
 // change in Settings later is written at once.
-const flags: root.HomehookFlags = {video: false, ambient: false, saverOff: false};
+const flags: root.HomehookFlags = {video: false, ambient: false};
 const FLAGS_AFTER_LAUNCH_MS = 5000;
 let flagsTimer = 0;
 
@@ -19,11 +19,12 @@ function writeFlags (): void {
 /** Tells the TV-side watcher that the video wallpaper is on, so LG's screensaver is ended while Lumen is in front. */
 export function setVideoFlag (on: boolean): void { flags.video = on; writeFlags(); }
 
-/** Settings > Screensaver: watch.sh opens Lumen's ambient screen instead of LG's screensaver. */
+/** Settings > Screensaver > Lumen: watch.sh opens Lumen's ambient screen instead of LG's screensaver. */
 export function setAmbientFlag (on: boolean): void { flags.ambient = on; writeFlags(); }
 
-/** Settings > Screensaver > Off: watch.sh ends LG's screensaver as soon as it starts. */
-export function setSaverOffFlag (on: boolean): void { flags.saverOff = on; writeFlags(); }
+/** An older Settings > Screensaver > Off may have left its flag on the TV; nothing in Settings could undo it now. Every flags write
+ *  removes it (root.setHomehookFlags). */
+export function clearSaverOffFlag (): void { writeFlags(); }
 
 export function setAmbientShowing (on: boolean): void {
 	if (!isWebOS()) return;

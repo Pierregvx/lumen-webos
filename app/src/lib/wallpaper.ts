@@ -18,6 +18,8 @@ import {bootMark} from './log';
 const HTML_CLASS = 'wp-image';
 const PROXY = 'https://images.weserv.nl/';       // free image resizer: a 1920-wide copy instead of the multi-MB original
 const FADE_MS = 450;
+/** the new picture's layer is drawn this long before its fade starts, so its first draw does not stall the fade */
+const FADE_WARM_MS = 150;
 /** how long after a picture is up before the next launch's one is fetched, so it never competes with start-up */
 const PREPARE_DELAY_MS = 8000;
 /** never in a URL, so it can join the two URLs of a portrait pair */
@@ -35,8 +37,9 @@ export function resized (url: string, width: number): string {
 let picks: string[] = [];
 let newOnLaunch = true;
 /** the pictures 'pick' chooses from (cloud:<id>, local:N), and whether each launch opens on a new one */
+const isPick = (k: string) => k.indexOf('local:') === 0 ? !!LOCAL_WALLPAPERS[Number(k.slice(6))] : WALLPAPERS.some((w) => w.id === k.slice(6));
 export function setPicks (keys: string[], fresh: boolean): void {
-	picks = keys.filter((k) => k.indexOf('local:') === 0 ? !!LOCAL_WALLPAPERS[Number(k.slice(6))] : WALLPAPERS.some((w) => w.id === k.slice(6)));
+	picks = keys.filter(isPick);
 	newOnLaunch = fresh;
 	// the picture on screen was just taken out of the picks: show one that is still in
 	if (currentSel === 'pick' && shownKey && picks.indexOf(shownKey) === -1) setWallpaper('pick');
@@ -237,9 +240,13 @@ function paint (el: HTMLElement, src: string, pos: string): void {
 	layer.className = pair ? 'wpfade wp-pair' : 'wpfade';
 	layer.style.backgroundImage = next;
 	layer.style.backgroundPosition = pos;
+	// its own GPU layer from the start, drawn while still invisible, so the fade only changes opacity
+	layer.style.willChange = 'opacity';
 	el.appendChild(layer);
-	window.requestAnimationFrame(() => window.requestAnimationFrame(() => { layer.style.opacity = '1'; }));
-	fadeTimer = window.setTimeout(() => { el.style.backgroundImage = next; el.style.backgroundPosition = pos; el.classList.toggle('wp-pair', pair); layer.remove(); }, FADE_MS + 60);
+	fadeTimer = window.setTimeout(() => {
+		layer.style.opacity = '1';
+		fadeTimer = window.setTimeout(() => { el.style.backgroundImage = next; el.style.backgroundPosition = pos; el.classList.toggle('wp-pair', pair); layer.remove(); }, FADE_MS + 60);
+	}, FADE_WARM_MS);
 }
 
 /** The sharp picture on screen now (one URL, or two for a portrait pair) and its Immich id, or null when none is painted. */
@@ -247,6 +254,18 @@ export function shownWallpaper (): {urls: string[]; id: string} | null {
 	const src = local ? local.full : shown;
 	if (!src || released || !element || element.style.backgroundImage === 'none') return null;
 	return {urls: src.split(PAIR_SEP), id: shownId};
+}
+
+/** The next picture for Lumen's screensaver showing Wallpaper pictures: another of the picks, or of the bundled pictures when none are picked. */
+export function nextPicture (keys: string[], shown: string): {id: string; urls: string[]} | null {
+	const valid = keys.filter(isPick);
+	const pool = valid.length > 0 ? valid : LOCAL_WALLPAPERS.map((_, i) => `local:${i}`);
+	const others = pool.filter((k) => k !== shown);
+	const key = others.length > 0 ? randomOf(others) : pool[0];
+	if (!key) return null;
+	if (key.indexOf('local:') === 0) return {id: key, urls: [LOCAL_WALLPAPERS[Number(key.slice(6))].file]};
+	const item = WALLPAPERS.filter((w) => w.id === key.slice(6))[0];
+	return {id: key, urls: [resized(cloudUrl(item), 1920)]};
 }
 
 /** Resolves once the first wallpaper of this launch is on screen (or there is none to show), so heavier work can wait for it. */

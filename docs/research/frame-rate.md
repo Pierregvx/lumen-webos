@@ -74,10 +74,57 @@ The panel opened on default values (backlight 100, Eye Comfort off) and redrew w
 
 Opening a list is still the heaviest step: about 65 ms of JS in the key handler and 200 ms of raster for the new options and the pill.
 
+### Lists again (2026-10-26)
+
+After the design cleanup, lists felt laggy again: list close drew 215 ms of raster in 4 frames, and list open 274 ms in 3 frames. The live blur was not the cause: only 2 or 3 controls blur during a list open. `LayerTree.layerPainted` showed that each list open and close repainted all ten controls and all seven choices twice. Tests in the live page found two triggers. A class that sets `opacity` on a control repaints it, even when the value does not change and the control has its own layer. A change of `pointer-events` on a parent repaints all its children too. An opacity animation on the same control repaints nothing. The grid and the list were hidden by such classes (`cc__grid--leaving`, `cc__list--shown`).
+
+The classes are gone. The fades that hide the grid now keep running at their end value while the list is open, and the opened tile is hidden by an animation too. Mouse handlers check the phase instead of `pointer-events`. With the change live: list close 11 ms of raster in 8 frames (worst gap 180 ms to 57 ms), list open 218 ms in 5 frames (worst gap 195 ms to 105 ms).
+
 ## Settings rows (2026-10-26)
 
 Up and Down in a Settings list ran at about 16 to 18 fps. The rows shared one layer with the whole list, so each focus move rastered the full list (about 1000 by 840 px) for one row's zoom and shadow. Each row now has its own layer (`will-change: transform` on `.slist__row`), as the Guide rows do. In `walk.mjs settings`, raster time fell from about 1.1 s to 0.27 s and dropped frames by more than half. Sam: much smoother on the TV.
 
+## Opening Settings, and keeping it built while closed (2026-11-01)
+
+From an idea in Glasshouse: build the other screens while Home is still, so they open faster. A dev-only switch (`lumen.warm` in `app.tsx`) kept Settings built while closed, hidden (`mounted`) or drawn at 1% opacity so its tiles stay rastered (`drawn`). Each open was timed from the nav line: the key press, then the end of the first long frame gap, which is when Settings shows.
+
+- Settings shows about 420 to 470 ms after OK once it has been opened before in the session. About 100 to 170 ms is the page's own work before the switch, and about 250 to 350 ms is the wait for the first frame. Keeping it built did not change this: `mounted` gave about 440 ms, the same as off.
+- The first open after a page reload: about 525 ms with it off, about 480 ms built (three tries each, spread about 60 ms). The difference is inside the spread.
+- The first open after an install took 870 ms. That is the browser's caches being empty, which warm-up does not cover.
+- `drawn` made closing Settings worse: the return to Home gained gaps of 117 to 167 ms, where off had none.
+
+Not worth it: building Settings is not where the time goes. The Guide was not tried; it fetches its data when it opens, so it is a different case. The time left is the app's render when the screen changes and the first frame's raster.
+
+## The Guide with the live preview (2026-11-06)
+
+`guide.mjs` on Now and Next, 6 rows, 900 ms between keys, the logo box on screen both times. "On" tunes each channel 250 ms after focus lands on it; "off" never tunes.
+
+| Median per key | Preview on | Preview off |
+|---|---|---|
+| Down: key to first frame | 220 ms | 191 ms |
+| Up: key to first frame | 233 ms | 115 ms |
+| Down: main thread | 330 ms | 142 ms |
+| Down: paint | 67 ms | 25 ms |
+| Down: GPU draw per frame | 19 ms | 7 ms |
+
+What costs what:
+
+- The page's own calls are cheap: a tune 3 to 8 ms, a release 3 to 21 ms, one `listMuteStatus` check 3 to 12 ms.
+- A playing preview adds about 4 ms of GPU draw to every frame (`probe.mjs`: 12 ms against 8 ms, 42 ms frame gap against 36 ms).
+- The biggest cost is outside Lumen. Each tune makes the TV store that channel's guide data: `legacy-broadcast` writes to the guide database (`mojodb-luna -c /etc/palm/db8/epgdb.conf`) about 7 times a second. That process went to about 140 to 150% CPU after a few tunes, and about 55% a minute after the last one. With `ss.apiadapter` (about 38% all the time), the CPU was down to about 15% free during a tune. Free memory fell from 97 MB to 37 MB while a preview played.
+
+So each channel the preview tunes slows Lumen for a while after it, not only while it plays. Fewer tunes is the lever: a longer dwell, so that normal scrolling does not tune each channel it passes.
+
+Then at a normal scrolling pace, one key every 450 ms, with a 45 s rest before each run (medians, Now and Next):
+
+| Per key | Dwell 250 ms | Dwell 600 ms | No tuning |
+|---|---|---|---|
+| Down: main thread | 223 ms | 109 ms | 117 ms |
+| Up: main thread | 303 ms | 99 ms | 115 ms |
+| Up: worst frame gap | 156 ms | 112 ms | 128 ms |
+| Full guide Down: main thread | 254 ms | 90 ms | 163 ms |
+
+A 600 ms dwell scrolls like no preview at all. It is now the default (`previewTiming.dwell` in `LivePreview.tsx`).
 ## The Resume row and the rows' Up and Down (2026-11-11)
 
 Measured with `walk.mjs rows` (22 keys at 380 ms) on the plugin build, a still wallpaper, the owner at home.

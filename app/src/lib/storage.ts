@@ -85,14 +85,27 @@ export interface UserConfig {
 	liquidDock: boolean;
 	/** the Immich sources the ambient screen shows, joined with | (immich:recent|immich:album:<id>, ...) */
 	ambient: string;
-	/** your photos replace LG's screensaver (Screensaver in Control Center shows them either way) */
+	/** Lumen's screensaver replaces LG's (Screensaver in Control Center shows Lumen's either way) */
 	ambientOn: boolean;
-	/** no screensaver at all: watch.sh ends LG's as soon as it starts, and Lumen starts none of its own */
-	saverOff: boolean;
+	/** what Lumen's screensaver shows: wallpaper (the pictures picked in Choose wallpaper) | immich (the ambient sources) */
+	saverShow: string;
 	/** seconds each photo stays on the ambient screen */
 	ambientSeconds: number;
 	/** how far the screensaver lowers the TV's backlight while it shows: tv (not at all) | dim | low */
 	ambientBrightness: string;
+	/** Settings > Brightness: tools/tv/watch.sh sets the TV's backlight (and Eye Comfort, unless blEye is keep) at three times of day */
+	brightnessOn: boolean;
+	/** when each part of the day starts ("HH:MM") and its backlight (0 to 100) */
+	blDayAt: string;
+	blDay: number;
+	blEveningAt: string;
+	blEvening: number;
+	blNightAt: string;
+	blNight: number;
+	/** minutes each part of the day takes to move from the last one's backlight to its own; 0 changes it at once */
+	blRamp: number;
+	/** Eye Comfort through the day: keep (as the TV is set) | off | evening (evening and night) | night */
+	blEye: string;
 	/** screensaver photos look like a print on the wall: lifted blacks, paper whites, light falling off from the top left */
 	ambientPrint: boolean;
 	/** how far back the Immich Recent sources reach, in days: 30 | 90 | 180 | 365 */
@@ -105,6 +118,12 @@ export interface UserConfig {
 	videoHours: string;
 	/** dev builds: show the frame-rate counter (lib/fps.ts) */
 	fpsCounter: boolean;
+	/** dev builds: a live picture of the channel in focus in the Guide (components/LivePreview.tsx) */
+	guidePreview: boolean;
+	/** dev builds: the focused channel tile on Home's Live TV row plays a live preview */
+	homePreview: boolean;
+	/** dev builds: the live preview plays its sound */
+	guideSound: boolean;
 	/** false on a fresh install until the installed apps have been put on the home screen once */
 	seeded: boolean;
 	/** the built-in tiles (Settings, TV Settings, Inputs) have been put on the home screen once; taken off, they stay off */
@@ -165,15 +184,27 @@ export const DEFAULT_CONFIG: UserConfig = {
 	liquidDock: false,
 	ambient: 'immich:recent',
 	ambientOn: false,
-	saverOff: false,
+	saverShow: 'wallpaper',
 	ambientSeconds: 30,
 	ambientBrightness: 'dim',
 	ambientPrint: false,
+	brightnessOn: false,
+	blDayAt: '07:00',
+	blDay: 80,
+	blEveningAt: '18:00',
+	blEvening: 60,
+	blNightAt: '22:00',
+	blNight: 30,
+	blRamp: 0,
+	blEye: 'keep',
 	immichRecentDays: 180,
 	focusStrength: 'normal',
 	firstRow: 6,
 	videoHours: 'always',
 	fpsCounter: false,
+	guidePreview: false,
+	homePreview: false,
+	guideSound: false,
 	seeded: false,
 	builtinTiles: false,
 	liveTvRow: true,
@@ -243,15 +274,28 @@ export function parseConfig (raw: string): UserConfig {
 		ambientSeconds: [10, 20, 30, 60, 120, 300].indexOf(Number(parsed.ambientSeconds)) !== -1 ? Number(parsed.ambientSeconds) : 30,
 		ambientBrightness: parsed.ambientBrightness === 'tv' || parsed.ambientBrightness === 'low' ? parsed.ambientBrightness : 'dim',
 		ambientPrint: parsed.ambientPrint === true,
+		brightnessOn: parsed.brightnessOn === true,
+		blDayAt: hhmm(parsed.blDayAt, DEFAULT_CONFIG.blDayAt),
+		blDay: level(parsed.blDay, DEFAULT_CONFIG.blDay),
+		blEveningAt: hhmm(parsed.blEveningAt, DEFAULT_CONFIG.blEveningAt),
+		blEvening: level(parsed.blEvening, DEFAULT_CONFIG.blEvening),
+		blNightAt: hhmm(parsed.blNightAt, DEFAULT_CONFIG.blNightAt),
+		blNight: level(parsed.blNight, DEFAULT_CONFIG.blNight),
+		blRamp: [0, 30, 60, 90, 120].indexOf(Number(parsed.blRamp)) !== -1 ? Number(parsed.blRamp) : 0,
+		blEye: parsed.blEye === 'off' || parsed.blEye === 'evening' || parsed.blEye === 'night' ? parsed.blEye : 'keep',
 		immichRecentDays: [30, 90, 180, 365].indexOf(Number(parsed.immichRecentDays)) !== -1 ? Number(parsed.immichRecentDays) : 180,
 		ambient: typeof parsed.ambient === 'string' && parsed.ambient.indexOf('immich:') === 0 ? parsed.ambient : 'immich:recent',
 		// before ambientOn, an empty source meant LG's screensaver
 		ambientOn: typeof parsed.ambientOn === 'boolean' ? parsed.ambientOn : typeof parsed.ambient === 'string' && parsed.ambient.indexOf('immich:') === 0,
-		saverOff: parsed.saverOff === true,
+		// before saverShow, Lumen's screensaver could only show Immich
+		saverShow: parsed.saverShow === 'wallpaper' || parsed.saverShow === 'immich' ? parsed.saverShow : parsed.ambientOn === true ? 'immich' : 'wallpaper',
 		focusStrength: parsed.focusStrength === 'subtle' || parsed.focusStrength === 'strong' ? parsed.focusStrength : 'normal',
 		firstRow: parsed.firstRow === 5 || parsed.firstRow === 7 ? parsed.firstRow : 6,
 		videoHours: parsed.videoHours === 'day' || parsed.videoHours === 'evening' || parsed.videoHours === 'night' ? parsed.videoHours : 'always',
 		fpsCounter: parsed.fpsCounter === true,
+		guidePreview: __LUMEN_DEV__ && parsed.guidePreview === true,
+		homePreview: __LUMEN_DEV__ && parsed.homePreview === true,
+		guideSound: __LUMEN_DEV__ && parsed.guideSound === true,
 		seeded: parsed.seeded !== false,
 		builtinTiles: parsed.builtinTiles === true,
 		liveTvRow: parsed.liveTvRow !== false,
@@ -263,6 +307,9 @@ export function parseConfig (raw: string): UserConfig {
 		guideFull: parsed.guideFull === true
 	});
 }
+
+const hhmm = (v: unknown, fallback: string) => typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : fallback;
+const level = (v: unknown, fallback: number) => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 100 ? v : fallback;
 
 /** Landscapes and Art: what the pictures start from on a new install */
 export function starterPicks (): string[] {

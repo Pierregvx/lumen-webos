@@ -49,6 +49,7 @@ export function where (): Where {
 export function setWhere (screen: string, controls: boolean): void {
 	if (!__LUMEN_DEV__) return;
 	state = {screen, controls};
+	// other dev hooks (lumen.preview) may have made window.lumen first
 	const w = window as unknown as {lumen?: {where?: () => Where}};
 	w.lumen = w.lumen || {};
 	w.lumen.where = where;

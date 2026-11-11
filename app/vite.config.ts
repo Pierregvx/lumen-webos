@@ -1,4 +1,4 @@
-import {cpSync, existsSync, readFileSync, readdirSync, statSync, writeFileSync} from 'node:fs';
+import {cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync} from 'node:fs';
 import {dirname, join, normalize, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {defineConfig, loadEnv, type Plugin} from 'vite';
@@ -47,6 +47,21 @@ function classicScriptTag (): Plugin {
 			privateDir: env.LUMEN_PRIVATE !== '0' && existsSync(privateDir) ? privateDir : '',
 			pluginsDir: env.LUMEN_PLUGINS_DIR ? resolve(REPO_ROOT, env.LUMEN_PLUGINS_DIR.replace(/^~(?=\/)/, process.env.HOME || '~'))
 				: env.LUMEN_PRIVATE !== '0' && existsSync(join(privateDir, 'plugins')) ? join(privateDir, 'plugins') : ''
+		};
+	}
+
+	/** The TV-side scripts, shipped inside the app as dist/tv/ so Settings > System > TV scripts can install them (lib/root.ts installTvScripts).
+	 *  Their source stays in tools/tv/, where the SSH tools and the docs point. Keep this list in step with TV_SCRIPTS in lib/root.ts. */
+	const TV_SCRIPTS = ['watch.sh', 'stadia.sh', 'resume.sh', 'home-setup.sh', 'privacy.sh', '60-homehook', 'hosts-extra'];
+	function tvScripts (): Plugin {
+		let outDir = 'dist';
+		return {
+			name: 'lumen-tv-scripts',
+			configResolved (config) { outDir = resolve(config.root, config.build.outDir); },
+			writeBundle () {
+				mkdirSync(join(outDir, 'tv'), {recursive: true});
+				for (const f of TV_SCRIPTS) cpSync(join(REPO_ROOT, 'tools', 'tv', f), join(outDir, 'tv', f));
+			}
 		};
 	}
 
@@ -127,20 +142,43 @@ function classicScriptTag (): Plugin {
 		};
 	}
 
+	/** Lumen Guide (docs/plans/guide-overlay.md): the overlay app, built from guide.html into dist-guide/ with LUMEN_TARGET=guide. Its appinfo is
+	 *  public-guide/appinfo.json; from app/private/ it takes only the font, since it shows no icons or wallpapers. */
+	const GUIDE_ID = 'com.samrenfrew.lumen.guide';
+	function guideFont (privateDir: string): Plugin {
+		let outDir = 'dist-guide';
+		return {
+			name: 'lumen-guide-font',
+			configResolved (config) { outDir = resolve(config.root, config.build.outDir); },
+			resolveId (id) { return id === PRIVATE_MODULE ? '\0' + PRIVATE_MODULE : undefined; },
+			load (id) { return id === '\0' + PRIVATE_MODULE ? 'export const ICON_PACK = {};\nexport const PRIVATE_WALLPAPERS = null;\n' : undefined; },
+			writeBundle () {
+				const font = privateDir && join(privateDir, 'fonts', 'sf.woff2');
+				if (font && existsSync(font)) { mkdirSync(join(outDir, 'fonts'), {recursive: true}); cpSync(font, join(outDir, 'fonts', 'sf.woff2')); }
+			}
+		};
+	}
+
 	export default defineConfig(({mode}) => {
 		const lumen = lumenSettings(mode);
+		const guide = process.env.LUMEN_TARGET === 'guide';
+		const appId = guide ? GUIDE_ID : lumen.appId;
 		return {
 		base: './',            // the app is loaded from a local file path on the TV
-		plugins: [preact(), classicScriptTag(), lumenPrivate(lumen.privateDir, lumen.appId, lumen.title), lumenPlugins(lumen.pluginsDir)],
+		publicDir: guide ? 'public-guide' : 'public',
+		plugins: guide
+			? [preact(), classicScriptTag(), guideFont(lumen.privateDir), lumenPlugins('')]
+			: [preact(), classicScriptTag(), lumenPrivate(lumen.privateDir, lumen.appId, lumen.title), tvScripts(), lumenPlugins(lumen.pluginsDir)],
 		resolve: {alias: {'lumen-plugin-api': resolve(APP_DIR, 'src/plugins/api.ts')}},
-		server: {fs: {allow: [APP_DIR].concat(lumen.pluginsDir ? [lumen.pluginsDir] : [])}},
-		define: {__LUMEN_APP_ID__: JSON.stringify(lumen.appId), __LUMEN_DEV__: JSON.stringify(mode === 'development' || lumen.dev)},
+		server: {fs: {allow: [APP_DIR].concat(lumen.pluginsDir && !guide ? [lumen.pluginsDir] : [])}},
+		define: {__LUMEN_APP_ID__: JSON.stringify(appId), __LUMEN_DEV__: JSON.stringify(mode === 'development' || lumen.dev)},
 		build: {
 			target: BROWSER_TARGET,
-			outDir: 'dist',
+			outDir: guide ? 'dist-guide' : 'dist',
 			modulePreload: false,
 			cssTarget: BROWSER_TARGET,
 			rollupOptions: {
+				input: guide ? resolve(APP_DIR, 'guide.html') : resolve(APP_DIR, 'index.html'),
 				output: {
 					format: 'iife',
 					inlineDynamicImports: true,

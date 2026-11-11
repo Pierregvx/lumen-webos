@@ -14,6 +14,7 @@ Sam's check at the TV, after the session:
 
 On the TV now (each list is LG's list plus the ids named):
 - Lumen is in `com.webos.memorymanager.KeepAlive`: the memory manager never closes it.
+- Lumen Guide (`com.samrenfrew.lumen.guide`, the overlay) was added to `KeepAlive` on 2026-11-07 (docs/plans/guide-overlay.md, Status).
 - Lumen, iPlayer, YouTube, Plex, Channel 4 and Channel 5 are in `com.webos.memorymanager.KeepOnLaunchEx`: opening another app does not
   close them, but the memory manager still can when it needs room.
 - iPlayer's appinfo is patched to `"closeOnBackground": false` (original at `/var/lib/homehook/iplayer-appinfo.backup.json`).
@@ -140,8 +141,37 @@ Most useful first:
    `isAllowed: false` for the three, and none of them ran in the first 5 minutes after boot. Netflix is also `false`: it has a preload
    entry but is not installed, so the entry only matters if it comes back. LG Home (CRIU), Live TV, HDMI 1, HDMI 3, Live Menu and Voice
    are still allowed; LG Home stays because the power button opens it before `watch.sh` swaps in Lumen. This also stops YouTube getting a running dot before anyone opens it.
+   Undone on the TV, seen 2026-10-31: the file was rewritten 2026-10-26 19:08 with `youtube.leanback.v4` and `netflix` back to `true`
+   (AirPlay and LG Channels still `false`). Nothing in the repo or the session notes did it. The preload manager writes this file itself
+   when its policy changes ("Save configuration"), so something called `setPreloadPolicy` that evening (unknown what: an LG setting, an
+   app update, or LG's own services). Set back to `false` in the file 2026-10-31 (backup `/var/lib/homehook/preload-conf.backup-2026-10-31.json`);
+   it takes effect at the next reboot. `setPreloadPolicy` with `"isAllowed":false` returns true but changes nothing live.
+   Undone again, seen 2026-11-01: rewritten 18:58 (TV clock) with YouTube back to `true`, during the Home takeover tests. Since then
+   `watch.sh` sets the apps in its `NO_PRELOAD` list (Netflix, AirPlay, LG Channels) back to `false` at start and after each wake (verify).
+   YouTube is left out on purpose: Sam does not mind it preloading.
+   LG Home off too, 2026-11-02 (verify): with the Home takeover on, each preload of `com.webos.app.home` shows the stand-in in front, and it
+   opens Lumen over the app being watched (seen four times that morning over iPlayer, caller `com.webos.service.preloadmanager` in
+   `/var/log/messages`). The stand-in's `document.hidden` check did not stop it. `com.webos.app.home` is now in `NO_PRELOAD`. Set to
+   `false` in the file by hand, then `systemctl restart preload-manager.service` (no effect on the app in front).
+   That did not hold: by 11:03 the TV had set Home back to `true`, and the preload manager opened Home over iPlayer again at 14:28.
+   Since 2026-11-02 (verify) `watch.sh` stops the preload manager outright (`systemctl stop preload-manager.service`) at start, after
+   each wake and every 30 ticks. Nothing is preloaded by LG any more, YouTube and Live TV included; `watch.sh` still preloads Lumen. Runs 2 and 3 in the table above show switching the preloads off
+   changed little (lowest usable memory 202 and 194 MB, the same warm count). YouTube asks for 135 MB in `supportAppList`, and the
+   memory manager closes it when another app needs the room.
+   Found 2026-10-31: switching off with the remote (power state `Active Standby`) closes every app but Live TV, Lumen included, with no
+   close line in `/var/log/messages`. `KeepAlive` does not protect it. So the first Home press after a switch-on was a cold start (Home
+   pressed 5 s after switch-on, Lumen up 6 to 9 s later). About 40 s into standby the TV suspends (`Suspend`, reason `quickStart`). The
+   watcher now starts Lumen hidden 10 s into each standby. Lumen loads fully there (its boot line is written) and is still open after the
+   suspend: one switch-on later it came up 1 s after LG Home. Not yet measured: a Home press in the first seconds after switching on into
+   Live TV. In the one test so far, Sam switched on only 6 s after the preload started; Home then took 9 s, so the TV may also be slow to
+   answer while it starts Live TV.
 5. Preload our own apps. Adding them to the config did not work, and `setPreloadPolicy` answers "Cannot find" for an app it does not know.
-   Untried: `allowedApps` in `/var/preferences/webos-preload-manager-conf.json`, and the preload manager's own stored list.
+   Read from the binary 2026-10-31 (`/usr/bin/webos-preload-manager`): its candidates come from the config key
+   `com.webos.service.preloadmanager.supportAppList` (each app also needs `true` in `allowedApps`), ranked by launch counts in the db8 kind
+   `com.webos.statisticsManager.appLaunchHistory:1`, capped by `com.webos.service.preloadmanager.maxPreloadApp`. The conf file also has an
+   `applications` key (untried). So Lumen in `supportAppList` was probably not enough on its own: it also needs an `allowedApps` entry, and
+   enough launches to rank. Separately, the TV preloads the last input at boot with `/etc/palm/preload-last-input.sh`
+   (`preload: partial`, hidden). Lumen is a TV input now, so when it is the last input, the TV already preloads it with no help from us.
 6. Keep the iPlayer patch after an iPlayer update: reapply it at boot when the flag is back. Unknown whether the app manager reads the
    change without a reboot.
 7. The Recents button: still off on the remote. Now that apps stay open, it is worth turning on again.
@@ -195,3 +225,29 @@ screen came on. Set to "off" the same day (`luna-send -n 1 luna://com.webos.sett
 '{"category":"general","settings":{"homeAutoLaunch":"off"}}'`; "on" puts it back): LG Home no longer shows; the TV resumes its last input
 (HDMI 1) for a moment, and `watch.sh` puts Lumen in front. The owner prefers it. Not done: launching Lumen faster at the wake (its launch
 returned 3 s after the wake was seen) and keeping it in memory through standby.
+
+### What changes with upstream 2.2.0 (merged 2026-11-11, not yet on the TV)
+
+The fix above was a TV setting only: `homeAutoLaunch` off, and the old `watch.sh` putting Lumen in front once the TV had resumed on its
+last input. Upstream's way, now in this fork, replaces it once the TV scripts are updated from Settings > System > TV scripts:
+
+- **Switch-on from standby** (Quick Start+, a resume, not a boot): `resume.sh` opens Lumen itself at `Prepare Resume`, and `watch.sh`
+  opens it at a switch-on, both only while Settings > Home and Power > When the TV turns on is Lumen (`home-setup.sh power-on on`, which
+  writes `/var/lib/homehook/bootd-override.md5`). With Last input, they leave the TV alone.
+- **A full boot** (power cut, Wake-on-LAN after a restart): `bootd` opens Lumen first, from the copy of `bootd.json` that `power-on on`
+  writes. It takes effect after one reboot.
+- **Home, Exit and Back out of an app** open Lumen through the Home takeover (`native-home on`, a stand-in mounted over LG Home), so
+  LG Home never shows even if `homeAutoLaunch` is on.
+- **LG's preloads**: `watch.sh` stops LG's preload manager at start, after each wake and every 30 ticks, so LG Home is no longer
+  preloaded and pulled over the app being watched; it also sets Netflix, AirPlay and LG Channels back to `false` in the preload file.
+- **The guard**: at each boot `home-setup.sh guard` undoes power-on and the Home takeover if no Lumen build is installed.
+
+Details: `docs/home-and-power-on.md`. Leave `homeAutoLaunch` off for the first try at home, so only one thing changes at a time; then
+try it on, which should make no visible difference with the takeover mounted. To put it back on (or off again):
+
+```sh
+luna-send -n 1 luna://com.webos.settingsservice/setSystemSettings '{"category":"general","settings":{"homeAutoLaunch":"on"}}'
+```
+
+To undo upstream's switch-on: Settings > Home and Power, or `sh /var/lib/homehook/home-setup.sh native-home off` and `power-on off`,
+then reboot.

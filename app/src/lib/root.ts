@@ -26,7 +26,7 @@ const SETTINGS: Record<string, {category: string; values?: string[]}> = {
 };
 
 /** Files under HOMEHOOK that Lumen may write or read. */
-const FILES = ['lumen-config.json', 'recent', 'immich.json'] as const;
+const FILES = ['lumen-config.json', 'recent', 'immich.json', 'backlight-schedule'] as const;
 export type HomehookFile = typeof FILES[number];
 const LOG = `${HOMEHOOK}/lumen.log`;
 const LOG_MAX_BYTES = 64 * 1024;
@@ -142,6 +142,15 @@ export function eventList (channelIds: string[], localStart: string, localEnd: s
 	return run(luna('luna://com.webos.service.iepg/getEventList', {bFVPChannelId: true, channelId: channelIds, dataType: 0, fepgType: 'Forward', localStartTime: localStart, localEndTime: localEnd, sort: 0}), 12000);
 }
 
+/** The id of Live TV's last channel, or '' when the TV gives none. The page itself may not call this service. `apiadapter/tv/getCurrentChannel`
+ *  only knows channels opened through apiadapter; this one is what Glasshouse reads as Live TV leaves (docs/research/live-tv.md). */
+export function currentChannel (): Promise<string> {
+	return run(luna('luna://com.webos.service.utp.boot/getLastChannelId', {})).then((text) => {
+		const m = /"channelId":"([^"]*)"/.exec(text);
+		return m && CHANNEL_ID.test(m[1]) ? m[1] : '';
+	});
+}
+
 /** Opens Live TV on a channel (from Home too). */
 export function openChannel (channelId: string): Promise<void> {
 	if (!CHANNEL_ID.test(channelId)) return Promise.reject(new Error('refused: channel id'));
@@ -197,14 +206,13 @@ export interface HomehookFlags {
 	video: boolean;
 	/** LG's screensaver is replaced with Lumen's ambient screen (your photos) */
 	ambient: boolean;
-	/** Settings > Screensaver > Off: LG's screensaver is ended as soon as it starts, in every app */
-	saverOff: boolean;
 }
 
-/** Sets watch.sh's three flag files in one call. */
+/** Sets watch.sh's flag files in one call. It also removes the flag that told watch.sh to end LG's screensaver at once (Settings >
+ *  Screensaver > Off, since removed: turning it off belongs to the service menu), which an older Lumen may have left. */
 export function setHomehookFlags (f: HomehookFlags): Promise<void> {
 	const flag = (on: boolean, name: string) => (on ? `touch ${HOMEHOOK}/${name}` : `rm -f ${HOMEHOOK}/${name}`);
-	return run(`mkdir -p ${HOMEHOOK} && ${flag(f.video, 'video-wallpaper')} && ${flag(f.ambient, 'ambient-screensaver')} && ${flag(f.saverOff, 'no-screensaver')}`)
+	return run(`mkdir -p ${HOMEHOOK} && ${flag(f.video, 'video-wallpaper')} && ${flag(f.ambient, 'ambient-screensaver')} && rm -f ${HOMEHOOK}/no-screensaver`)
 		.then(() => undefined);
 }
 
@@ -264,6 +272,91 @@ const APP_DIR = /^\/media\/developer\/apps\/usr\/palm\/applications\/com\.samren
 export function copyFontIn (appDir: string): Promise<boolean> {
 	if (!APP_DIR.test(appDir)) return Promise.reject(new Error('refused: app folder'));
 	return run(`[ -f ${HOMEHOOK}/fonts/sf.woff2 ] && mkdir -p ${appDir}/fonts && cp ${HOMEHOOK}/fonts/sf.woff2 ${appDir}/fonts/sf.woff2 && echo ok; true`).then((out) => out.trim() === 'ok');
+}
+
+/** The TV-side scripts shipped in the app's tv/ folder (vite.config.ts TV_SCRIPTS) and installed under HOMEHOOK; 60-homehook goes in the
+ *  Homebrew Channel's boot folder, and hosts-extra is copied only when the TV has none (it is yours to edit). */
+const TV_SCRIPTS = ['watch.sh', 'stadia.sh', 'resume.sh', 'home-setup.sh', 'privacy.sh'] as const;
+const BOOT_DIR = '/var/lib/webosbrew/init.d';
+const BOOT_HOOK = `${BOOT_DIR}/60-homehook`;
+
+/** Lumen builds the TV scripts may point Home and power-on at (tools/tv/home-setup.sh ME). */
+const LUMEN_IDS = ['com.samrenfrew.lumen', 'com.samrenfrew.lumen.dev'];
+
+/** One read of everything Settings shows about the TV scripts, as key=value lines (parsed by lib/tvsetup.ts): `scripts` (ok, old, missing
+ *  or unshipped), then home-setup.sh's and privacy.sh's own `state` lines when they are installed. */
+export function tvStatus (appDir: string): Promise<string> {
+	if (!APP_DIR.test(appDir)) return Promise.reject(new Error('refused: app folder'));
+	const S = `${appDir}/tv`;
+	const check = TV_SCRIPTS.map((f) => `if [ ! -f ${HOMEHOOK}/${f} ]; then m=1; elif ! cmp -s ${S}/${f} ${HOMEHOOK}/${f}; then d=1; fi`).join('; ');
+	return run([
+		'm=0; d=0',
+		check,
+		`if [ ! -f ${BOOT_HOOK} ]; then m=1; elif ! cmp -s ${S}/60-homehook ${BOOT_HOOK}; then d=1; fi`,
+		`if [ ! -d ${S} ]; then echo scripts=unshipped; elif [ $m = 1 ]; then echo scripts=missing; elif [ $d = 1 ]; then echo scripts=old; else echo scripts=ok; fi`,
+		`[ -f ${HOMEHOOK}/home-setup.sh ] && sh ${HOMEHOOK}/home-setup.sh state`,
+		`[ -f ${HOMEHOOK}/privacy.sh ] && sh ${HOMEHOOK}/privacy.sh state`,
+		'true'
+	].join('; '), 25000);
+}
+
+/** Installs or updates the TV scripts from the app's own tv/ folder, then restarts the watchers so the new ones run. Each file is written
+ *  aside and moved into place, so a running script is never changed under it. True when it finished. */
+export function installTvScripts (appDir: string): Promise<boolean> {
+	if (!APP_DIR.test(appDir)) return Promise.reject(new Error('refused: app folder'));
+	const S = `${appDir}/tv`;
+	const copy = (from: string, to: string) => `cp ${from} ${to}.new && chmod +x ${to}.new && mv -f ${to}.new ${to}`;
+	return run([
+		`[ -d ${S} ]`,
+		`mkdir -p ${HOMEHOOK} ${BOOT_DIR}`,
+		...TV_SCRIPTS.map((f) => copy(`${S}/${f}`, `${HOMEHOOK}/${f}`)),
+		copy(`${S}/60-homehook`, BOOT_HOOK),
+		`{ [ -f ${HOMEHOOK}/hosts-extra ] || cp ${S}/hosts-extra ${HOMEHOOK}/hosts-extra; }`,
+		`${BOOT_HOOK} restart`,
+		'echo installed'
+	].join(' && '), 20000).then((out) => /installed\s*$/.test(out));
+}
+
+/** home-setup.sh's changes, by name. */
+const HOME_ACTIONS = {
+	nativeOn: 'native-home on',
+	nativeOff: 'native-home off',
+	powerOnOn: 'power-on on',
+	powerOnOff: 'power-on off'
+} as const;
+export type HomeAction = keyof typeof HOME_ACTIONS;
+
+/** Runs one of home-setup.sh's changes (Settings > Home and Power). `appId` is the Lumen build to point at. Returns what it printed. */
+export function homeSetup (action: HomeAction, appId: string): Promise<string> {
+	const verb = HOME_ACTIONS[action];
+	if (!verb) return Promise.reject(new Error('refused: home action'));
+	const on = action === 'nativeOn' || action === 'powerOnOn';
+	if (on && LUMEN_IDS.indexOf(appId) === -1) return Promise.reject(new Error('refused: app id'));
+	return run(`sh ${HOMEHOOK}/home-setup.sh ${verb}${on ? ' ' + appId : ''} 2>&1; true`, 20000);
+}
+
+/** privacy.sh's changes, by name (Settings > Privacy). */
+const PRIVACY_ACTIONS = {
+	agreementsOff: 'agreements off',
+	agreementsRestore: 'agreements restore',
+	lmtOn: 'lmt on',
+	lmtOff: 'lmt off',
+	livePlusOn: 'liveplus on',
+	livePlusOff: 'liveplus off',
+	hostsOn: 'hosts on',
+	hostsOff: 'hosts off',
+	servicesOn: 'services on',
+	servicesOff: 'services off',
+	updatesOn: 'updates on',
+	updatesOff: 'updates off'
+} as const;
+export type PrivacyAction = keyof typeof PRIVACY_ACTIONS;
+
+/** Runs one of privacy.sh's changes. Returns what it printed. */
+export function privacy (action: PrivacyAction): Promise<string> {
+	const verb = PRIVACY_ACTIONS[action];
+	if (!verb) return Promise.reject(new Error('refused: privacy action'));
+	return run(`sh ${HOMEHOOK}/privacy.sh ${verb} 2>&1; true`, 30000);
 }
 
 /** Writes text to one of FILES. The text travels as base64, so nothing in it is ever read by the shell. */
