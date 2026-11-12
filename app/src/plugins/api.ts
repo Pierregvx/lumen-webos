@@ -4,9 +4,10 @@
 //
 // A plugin gives data and actions; Lumen draws them. It has no components of its own, so a plugin cannot break a screen's layout, and every
 // call into it goes through the registry's guard (registry.ts): a throw is caught and logged, a promise that hangs is cut after a while.
+import type {MediaItem} from '../lib/jellyfin';
 import type {Platform, SeerrPerson, SeerrTitle} from '../lib/seerr';
 
-export type {Platform, SeerrPerson, SeerrTitle};
+export type {MediaItem, Platform, SeerrPerson, SeerrTitle};
 export {readCache, writeCache} from '../lib/boot';
 export {loggedFetch, logError} from '../lib/log';
 
@@ -36,6 +37,9 @@ export interface LumenPlugin {
 	/** Films & series' catalog (Discover, search, a title's record, pages, requests): the first plugin that gives one replaces Lumen's own
 	 *  Seerr calls */
 	catalog?: () => CatalogSource | null;
+	/** Films & series' library (the Resume row, Recently added, Films, Series): the first plugin that gives one is read before Jellyfin;
+	 *  when it fails Lumen reads Jellyfin itself. The genre rows, a series' episodes and the play stay Jellyfin's. */
+	library?: () => LibrarySource | null;
 	/** where the player keeps the subtitle choice and timing (Lumen keeps its own copy too, used when this one fails) */
 	choices?: () => ChoiceStore | null;
 	/** extra buttons on a title in Films & series, after Lumen's own */
@@ -108,6 +112,11 @@ export interface CatalogSource {
 	/** the person's requests not in the library yet (the home screen's row) */
 	requestsMine: () => Promise<SeerrTitle[]>;
 }
+
+/** The library's rows as Lumen's own Jellyfin items (their ids are Jellyfin's, so a title opens and plays as before; images are drawn from
+ *  `primaryOf` / `backdropOf` with the Jellyfin server Lumen is signed in to). */
+export interface LibraryRows { resume: MediaItem[]; latest: MediaItem[]; movies: MediaItem[]; series: MediaItem[] }
+export interface LibrarySource { read: () => Promise<LibraryRows> }
 
 export interface TitleAction { id: string; label: string; run: () => Promise<ActionResult> }
 /** what Lumen does after an action: say something, open a page, a form or a short list, or read the title again */

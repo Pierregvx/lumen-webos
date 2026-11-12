@@ -31,7 +31,7 @@ import {launchApp} from '../lib/launch';
 import {SYSTEM_APP} from '../config/constants';
 import type {MediaState} from '../hooks/useMedia';
 import {cachedPicks, markPickRequested, picks as aiPicks, recoServer, sendRatings} from '../lib/recos';
-import {catalog as pluginCatalog, plugins, usePlugins} from '../plugins';
+import {catalog as pluginCatalog, library as pluginLibrary, plugins, usePlugins} from '../plugins';
 import type {ActionResult, Chip, ChoiceSpec, FormSpec, Page, PageAction, PageRef, Row, Tile, TitleRef} from '../plugins/api';
 import {ChoicePanel} from '../components/ChoicePanel';
 import {FormPanel} from '../components/FormPanel';
@@ -172,9 +172,20 @@ function loadLibrary (s: JellyfinServer, onPart: (list: Shelf[]) => void): void 
 		onPart(list.filter(Boolean));
 	};
 	const entries = (items: MediaItem[]) => items.map((it) => fromJellyfin(s, it));
-	latest(s).then((items) => put({id: 'latest', label: 'Recently added', items: entries(items)}, 0), () => undefined);
-	byType(s, 'Movie').then((items) => put({id: 'movies', label: 'Films', items: entries(items)}, 1), () => undefined);
-	byType(s, 'Series').then((items) => put({id: 'series', label: 'Series', items: entries(items)}, 2), () => undefined);
+	const own = () => {
+		latest(s).then((items) => put({id: 'latest', label: 'Recently added', items: entries(items)}, 0), () => undefined);
+		byType(s, 'Movie').then((items) => put({id: 'movies', label: 'Films', items: entries(items)}, 1), () => undefined);
+		byType(s, 'Series').then((items) => put({id: 'series', label: 'Series', items: entries(items)}, 2), () => undefined);
+	};
+	// a plugin's library (its server reads Jellyfin) gives the first three rows; when it fails, Jellyfin is read here
+	const lib = pluginLibrary();
+	if (lib) {
+		lib.read().then((r) => {
+			put({id: 'latest', label: 'Recently added', items: entries(r.latest)}, 0);
+			put({id: 'movies', label: 'Films', items: entries(r.movies)}, 1);
+			put({id: 'series', label: 'Series', items: entries(r.series)}, 2);
+		}, own);
+	} else own();
 	genres(s).then((names) => names.slice(0, GENRE_ROWS).forEach((g, i) => {
 		byGenre(s, g).then((items) => put({id: 'genre:' + g, label: g, items: entries(items)}, 3 + i), () => undefined);
 	}), () => undefined);

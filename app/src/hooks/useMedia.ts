@@ -4,7 +4,7 @@ import {cachedServer, resume, type JellyfinServer, type MediaItem} from '../lib/
 import {cachedSeerr, myPending, type SeerrServer, type SeerrTitle} from '../lib/seerr';
 import {newSeasons, type NewSeason} from '../lib/seasons';
 import {isWebOS} from '../lib/luna';
-import {catalog, plugins} from '../plugins';
+import {catalog, library, plugins} from '../plugins';
 
 export interface MediaState {
 	jellyfin: JellyfinServer | null;
@@ -22,6 +22,12 @@ export interface MediaState {
 }
 
 const CACHE_KEY = 'lumen-boot-media-v1';
+
+/** The Resume row: a plugin's library when one is on (Jellyfin read by its server), else, or when it fails, Jellyfin itself. */
+function readResume (jf: JellyfinServer): Promise<MediaItem[]> {
+	const lib = library();
+	return lib ? lib.read().then((r) => r.resume, () => resume(jf)) : resume(jf);
+}
 
 /** The Resume row's titles. The last read is drawn at once on a cold start; the servers are asked again after the first frame, and each time
  *  Lumen comes back to the front (a film may have been watched since). Nothing is asked with no server set up. */
@@ -42,7 +48,7 @@ export function useMedia (autoSeasons: boolean): MediaState {
 		if (sr) newSeasons(jf, sr, auto.current).then(setSeasons, () => undefined);
 		else setSeasons([]);
 		Promise.all([
-			resume(jf).catch(() => null),
+			readResume(jf).catch(() => null),
 			// a plugin's catalog, when one is on, gives the person's requests
 			catalog() ? (catalog() as NonNullable<ReturnType<typeof catalog>>).requestsMine().catch(() => null) : sr ? myPending(sr, jf.userId).catch(() => null) : Promise.resolve([])
 		]).then(([r, p]) => {
@@ -62,8 +68,9 @@ export function useMedia (autoSeasons: boolean): MediaState {
 		const onVisibility = () => { if (!document.hidden) { plugins.tell('foreground'); refresh(); } };
 		// a plugin's catalog came or went (turned on or off, its server answered): the rows are read again; nothing else does it, so
 		// the start-up's plugin news does not read Jellyfin twice
-		let hadCatalog = !!catalog();
-		const unsubscribe = plugins.subscribe(() => { const has = !!catalog(); if (has !== hadCatalog) { hadCatalog = has; refresh(); } });
+		const sources = () => `${!!catalog()}${!!library()}`;
+		let had = sources();
+		const unsubscribe = plugins.subscribe(() => { const now = sources(); if (now !== had) { had = now; refresh(); } });
 		document.addEventListener('visibilitychange', onVisibility);
 		return () => { cancel(); unsubscribe(); document.removeEventListener('visibilitychange', onVisibility); };
 	}, [refresh]);

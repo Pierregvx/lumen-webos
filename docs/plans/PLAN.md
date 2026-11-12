@@ -79,6 +79,11 @@ server made from the contract's examples, built in from the draft folder; not on
 
 Add new items here, with the branch and what to check. Delete an item once Sam has seen it work.
 
+- [ ] The library through Ciné Pierro (branch `claude/tv-v1-parite-6eb48b`: the plugins' `library()` hook; the plugin and the server on
+      cine-pierro's branch `tv-library`, contract revision 6; not deployed nor installed yet) **(verify)**: with the plugin on and the
+      server deployed, the home screen's Resume row and Films & series > Library's Recently added, Films and Series look as before (the
+      same titles and pictures); an episode resumes where it stopped; a prepared copy still plays from the NVMe; with the server stopped,
+      the rows still come (Lumen reads Jellyfin). The genre rows, a series' episodes and the play stay Jellyfin's.
 - [ ] Pairing with Ciné Pierro (in the plugin; server deployed and plugin build installed 2026-11-11). Pairing seen on 2026-11-12: Pair
       showed a code, typed in Réglages > TV it paired the TV as the main account. **(verify)** what is left: a request from the TV still
       approved at once; unpairing there makes the next Films & series call fall back to the TV's Jellyfin sign-in, and Pair shows again.

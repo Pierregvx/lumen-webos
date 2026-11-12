@@ -41,6 +41,7 @@ Lumen is signed in to), `store` (its own storage) and `t` (Lumen's translation).
 | Hook | Where Lumen uses it | Shape |
 |---|---|---|
 | `catalog()` | Films & series: Discover, search, a title's record, the pages (a platform, a person, a tile), requests, the home screen's requests row. The first plugin that gives one replaces Lumen's own Seerr calls. | `CatalogSource` |
+| `library()` | Films & series' library: the home screen's Resume row and the Library tab's Recently added, Films and Series. The first plugin that gives one is read before Jellyfin; when its read fails, Lumen reads Jellyfin itself. Its items are Lumen's own `MediaItem`s with Jellyfin's ids, so a title opens and plays as before; the genre rows, a series' episodes and the play stay Jellyfin's. | `LibrarySource` |
 | `choices()` | The player: where the subtitle choice and timing are kept (Lumen keeps its own copy too, used when the plugin fails). | `ChoiceStore` |
 | `titleActions(title)` | Films & series: buttons after Lumen's own on the title in focus. Each returns an `ActionResult`: a toast or an error, a page, a form (`FormPanel`), a short list (`ChoicePanel`), or « read the title again ». | `TitleAction[]` |
 | `rated(title, score)` | A score was given with Rate. | |
@@ -122,9 +123,9 @@ The plugin system touches few files outside `app/src/plugins/`; these are where 
 |---|---|
 | `app/vite.config.ts` | `lumenPlugins()`, the `lumen-plugin-api` alias, `server.fs.allow` |
 | `app/src/env.d.ts` | `virtual:lumen-plugins` |
-| `app/src/screens/Media.tsx` | the catalog in place of Seerr, the title's plugin buttons, pages, forms, chips, `mine` and dates on posters |
+| `app/src/screens/Media.tsx` | the library's first three rows, the catalog in place of Seerr, the title's plugin buttons, pages, forms, chips, `mine` and dates on posters |
 | `app/src/screens/Player.tsx` | the choice store (one effect, three lines in the subtitle and timing handlers) |
-| `app/src/hooks/useMedia.ts` | the catalog's requests row, `foreground` |
+| `app/src/hooks/useMedia.ts` | the catalog's requests row, the library's Resume row, `foreground` |
 | `app/src/app.tsx` | `startPlugins`, Settings > Plugins rows (three lines) |
 | `app/src/screens/Settings.tsx`, `components/SettingsList.tsx` | the Plugins group |
 | `app/src/lib/i18n.ts` | `addStrings` |

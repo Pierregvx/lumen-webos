@@ -152,3 +152,17 @@ test('a start that throws does not stop Lumen starting the others', () => {
 	r.startAll(ctx);
 	assert.equal(good.seen.starts, 1);
 });
+
+test('the library: the first plugin that gives one; its read is shielded, a failure reaches Lumen, which reads Jellyfin', async () => {
+	const {r} = setup();
+	const rows = {resume: [{id: 'e1', type: 'Episode', title: 'A Series', genres: []}], latest: [], movies: [], series: []};
+	r.register(fake('none').plugin);
+	r.register(fake('lib', {library: () => ({read: () => Promise.resolve(rows)})}).plugin);
+	r.register(fake('down', {library: () => ({read: () => Promise.reject(new Error('off'))})}).plugin);
+	r.setOn('none', true); r.setOn('lib', true); r.setOn('down', true);
+	assert.deepEqual(await r.first('library').read(), rows);
+	r.setOn('lib', false);
+	await assert.rejects(r.first('library').read(), /off/);
+	r.setOn('down', false);
+	assert.equal(r.first('library'), null);
+});
