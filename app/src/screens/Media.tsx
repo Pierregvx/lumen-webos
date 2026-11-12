@@ -347,6 +347,17 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	}, [place]);
 	const r = clamp(rows[view] || 0, 0, Math.max(0, list.length - 1));
 	const shelf = list[r];
+	// shelves come in whatever order the servers answer, each in its own place: one landing above the focused shelf would move the
+	// focus onto another. Once the focus has left the top row, it stays on its shelf as the list grows (a key moving it is left alone).
+	const anchor = useRef<{view: string; list: Shelf[]; r: number; id: string}>({view: '', list: [], r: 0, id: ''});
+	useEffect(() => {
+		const was = anchor.current;
+		if (was.view === view && was.list !== list && was.r === r && r > 0 && was.id && (!shelf || shelf.id !== was.id)) {
+			const j = list.findIndex((x) => x.id === was.id);
+			if (j >= 0) { anchor.current = {...was, list, r: j}; setRows((all) => ({...all, [view]: j})); return; }
+		}
+		anchor.current = {view, list, r, id: shelf ? shelf.id : ''};
+	}, [list, r, view]);
 	const colKey = (sh: Shelf) => view + ':' + sh.id;
 	const c = shelf ? clamp(cols[colKey(shelf)] || 0, 0, shelf.items.length - 1) : 0;
 	const item = shelf ? shelf.items[c] : undefined;
