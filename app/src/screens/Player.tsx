@@ -88,6 +88,8 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 	const [picker, setPicker] = useState<Picker | null>(null);
 	const [started, setStarted] = useState(false);
 	const failed = useRef(false);
+	/** Lumen is out of sight (standby, another app in front): the hand-over timers wait, so Jellyfin's app is not opened over that */
+	const [away, setAway] = useState(() => document.hidden);
 
 	// the page goes transparent and the wallpaper video lets go while the player is up
 	useEffect(() => {
@@ -143,12 +145,12 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 		setCurrent({...nextEp, resumeTicks: 0});
 	};
 
-	// a stream that never starts hands over to Jellyfin's app
+	// a stream that never starts hands over to Jellyfin's app (counted again from the return to the front)
 	useEffect(() => {
-		if (!stream || started) return undefined;
+		if (!stream || started || away) return undefined;
 		const timer = window.setTimeout(() => { if (now) fallBack(now); }, START_LIMIT_MS);
 		return () => window.clearTimeout(timer);
-	}, [stream, started]);
+	}, [stream, started, away]);
 
 	// ----- Jellyfin hears about it -----
 	/** the last position seen while playing: when the player closes the video may already be emptied, so Stopped reports this */
@@ -171,19 +173,27 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 	useEffect(() => {
 		if (!stream) return undefined;
 		const timer = window.setInterval(() => { if (startedRef.current && video.current) reportProgress(server, stream, pos(), video.current.paused); }, REPORT_EVERY_MS);
-		return () => { window.clearInterval(timer); stopReport(stream); };
+		// this stream's <video> goes with it (the next episode gets a new one): let go of its decoder now, not when it is collected
+		const v = video.current;
+		return () => {
+			window.clearInterval(timer);
+			stopReport(stream);
+			if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
+		};
 	}, [stream]);
-	// the picture freezes after it started (server asleep, network gone): say so, then Jellyfin's app takes over from there
+	// the picture freezes after it started (server asleep, network gone): say so, then Jellyfin's app takes over from there; not while
+	// paused (nothing is waited for) or out of sight
 	const [stalled, setStalled] = useState(false);
 	useEffect(() => {
-		if (!stalled || !now) return undefined;
+		if (!stalled || !now || paused || away) return undefined;
 		const timer = window.setTimeout(() => fallBack(now), STALL_LIMIT_MS);
 		return () => window.clearTimeout(timer);
-	}, [stalled]);
+	}, [stalled, paused, away]);
 	// the TV going to standby or another app in front: pause and say where it stopped
 	useEffect(() => {
 		const onVisibility = () => {
 			const v = video.current;
+			setAway(document.hidden);
 			if (document.hidden && v && stream && startedRef.current) { v.pause(); reportProgress(server, stream, pos(), true); }
 		};
 		document.addEventListener('visibilitychange', onVisibility);
@@ -448,7 +458,8 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 		setStalled(false);
 		if (!startedRef.current && stream) { startedRef.current = true; setStarted(true); startedFor.current = stream.playSessionId; reportStart(server, stream, pos()); }
 	};
-	const onPause = () => { setPaused(true); if (stream && startedRef.current) reportProgress(server, stream, pos(), true); };
+	// the pause that comes as a video is let go of (closing, the next episode) is not reported: its Stopped has gone out already
+	const onPause = () => { setPaused(true); if (stream && startedRef.current && stoppedFor.current !== stream.playSessionId) reportProgress(server, stream, pos(), true); };
 	const onTime = () => {
 		const v = video.current;
 		if (!v) return;
