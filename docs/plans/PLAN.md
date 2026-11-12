@@ -79,10 +79,9 @@ server made from the contract's examples, built in from the draft folder; not on
 
 Add new items here, with the branch and what to check. Delete an item once Sam has seen it work.
 
-- [ ] Pairing with Ciné Pierro (built 2026-11-11 in the plugin and on cine-pierro's branch `tv-play`, not deployed nor installed yet)
-      **(verify)**: Settings > Plugins > Ciné Pierro > Pair shows a 6-digit code; typed in Ciné Pierro's Réglages > TV, the TV says
-      « Paired as … » within 3 s and Films & series works as before (a request still approved at once for the main account). Unpairing
-      there: the next Films & series call falls back to the TV's Jellyfin sign-in, and Pair shows again. Lumen's core is unchanged.
+- [ ] Pairing with Ciné Pierro (in the plugin; server deployed and plugin build installed 2026-11-11). Pairing seen on 2026-11-12: Pair
+      showed a code, typed in Réglages > TV it paired the TV as the main account. **(verify)** what is left: a request from the TV still
+      approved at once; unpairing there makes the next Films & series call fall back to the TV's Jellyfin sign-in, and Pair shows again.
 - [ ] Plugins and Ciné Pierro (branch `claude/tv-v1-parite-6eb48b`, the section above) **(verify)**. Not installed. Built with the plugin:
       Settings > Plugins shows Ciné Pierro on, its Server row says « v1.2 »; turned off, Films & series is Lumen's own again; Discover's rows come in the page's
       order (For you, Watch later, Trending, Platforms, Popular films, Film genres, Popular series, Series genres, the categories, Films and
