@@ -533,6 +533,9 @@ export function App () {
 
 	/** Lumen's screensaver straight away, without LG's showing first; LG's own when Lumen's is not chosen (unless forced, from Control Center). */
 	const showScreensaver = (lumen = configRef.current.ambientOn) => {
+		// a film or a channel playing in Lumen stops first (Control Center's picture button can be pressed over one): it would play on, with
+		// its sound, under the screensaver
+		setPlaying(null); setLiveOn(null);
 		if (lumen) { ambientOpening.current = videoOnRef.current ? null : shownWallpaper(); saverFrom.current = ''; setScreen('ambient'); return; }
 		startScreensaver().catch(() => showToast("Couldn't start the screensaver (it needs the Homebrew Channel)", 'error'));
 	};
