@@ -55,9 +55,12 @@ const digitOf = (e: KeyboardEvent) => (e.keyCode >= 48 && e.keyCode <= 57 ? e.ke
 
 export function LivePlayer ({server, channels, groups, category, onCategory, start, listings, logos, now, pending, browse, active, onClose, onToast}: Props) {
 	const video = useRef<HTMLVideoElement>(null);
-	/** the channel shown in the banner (moves at once on a zap) and the one playing (follows after ZAP_AFTER_MS) */
-	const [shown, setShown] = useState(() => Math.max(0, channels.findIndex((c) => c.id === start.id)));
-	const [tuned, setTuned] = useState(shown);
+	/** the channel shown in the banner (moves at once on a zap) and the one playing (follows after ZAP_AFTER_MS), by id: the list can
+	 *  change under the player (on a cold start the cached list is cut to the row's and the favourites, then the full one comes), and
+	 *  a place in it would then name another channel */
+	const [shownId, setShownId] = useState(start.id);
+	const [tunedId, setTunedId] = useState(start.id);
+	const indexOf = (id: string) => channels.findIndex((c) => c.id === id);
 	const [stream, setStream] = useState<LiveStream | null>(null);
 	const [state, setState] = useState<'opening' | 'playing' | 'failed'>('opening');
 	const [banner, setBanner] = useState(true);
@@ -74,7 +77,8 @@ export function LivePlayer ({server, channels, groups, category, onCategory, sta
 	/** asked to play the tuned channel again (OK, or picking it in the list, once it failed) */
 	const [retry, setRetry] = useState(0);
 
-	const channel = channels[shown] || start;
+	const channel = channels.filter((c) => c.id === shownId)[0] || start;
+	const tunedChannel = channels.filter((c) => c.id === tunedId)[0] || (tunedId === start.id ? start : null);
 
 	// the page goes transparent and the wallpaper video lets go while the player is up
 	useEffect(() => {
@@ -100,7 +104,7 @@ export function LivePlayer ({server, channels, groups, category, onCategory, sta
 
 	// open the tuned channel, once the last one is closed
 	useEffect(() => {
-		const c = channels[tuned];
+		const c = tunedChannel;
 		if (!c) return undefined;
 		let live = true;
 		setStream(null);
@@ -117,7 +121,7 @@ export function LivePlayer ({server, channels, groups, category, onCategory, sta
 			wake();
 		});
 		return () => { live = false; };
-	}, [tuned, retry]);
+	}, [tunedId, retry]);
 
 	// the player goes, or Lumen leaves the screen: the stream is closed
 	useEffect(() => {
@@ -137,7 +141,8 @@ export function LivePlayer ({server, channels, groups, category, onCategory, sta
 	const zapTimer = useRef(0);
 	const zap = (step: number) => {
 		if (channels.length < 2) { wake(); return; }
-		setShown((i) => {
+		setShownId((id) => {
+			const i = Math.max(0, indexOf(id));
 			// within the category picked, when this channel is in it
 			const within = category && channels[i] && channels[i].group === category;
 			let next = i;
@@ -145,9 +150,10 @@ export function LivePlayer ({server, channels, groups, category, onCategory, sta
 				next = (next + step + channels.length) % channels.length;
 				if (!within || channels[next].group === category) break;
 			}
+			const to = channels[next].id;
 			window.clearTimeout(zapTimer.current);
-			zapTimer.current = window.setTimeout(() => setTuned(next), ZAP_AFTER_MS);
-			return next;
+			zapTimer.current = window.setTimeout(() => setTunedId(to), ZAP_AFTER_MS);
+			return to;
 		});
 		wake();
 	};
@@ -155,8 +161,8 @@ export function LivePlayer ({server, channels, groups, category, onCategory, sta
 	/** straight to a channel (the list, a typed number): no wait, it was picked */
 	const tuneTo = (i: number) => {
 		window.clearTimeout(zapTimer.current);
-		setShown(i);
-		setTuned(i);
+		setShownId(channels[i].id);
+		setTunedId(channels[i].id);
 		wake();
 	};
 
@@ -167,10 +173,10 @@ export function LivePlayer ({server, channels, groups, category, onCategory, sta
 		else if (key === 'left') { setPanel(true); window.clearTimeout(bannerTimer.current); setBanner(false); }
 		else wake();
 		return true;
-	}, [channels.length, category, onClose]);
+	}, [channels, category, onClose]);
 	useKeys(handleKey, keysOn);
 	useOkPress({onPress: () => {
-		if (state === 'failed' && shown === tuned) { setRetry((n) => n + 1); wake(); }
+		if (state === 'failed' && shownId === tunedId) { setRetry((n) => n + 1); wake(); }
 		else if (banner) { window.clearTimeout(bannerTimer.current); setBanner(false); }
 		else wake();
 	}, onLongPress: () => undefined}, keysOn);
@@ -213,7 +219,7 @@ export function LivePlayer ({server, channels, groups, category, onCategory, sta
 		};
 		window.addEventListener('keydown', onKey);
 		return () => window.removeEventListener('keydown', onKey);
-	}, [keysOn, channels.length]);
+	}, [keysOn, channels]);
 
 	const onPlaying = () => {
 		if (state === 'playing' || !stream) return;
@@ -230,7 +236,12 @@ export function LivePlayer ({server, channels, groups, category, onCategory, sta
 	const {now: on, next} = nowNextAt(listings[channel.signal], now);
 	const logo = channelLogo(channel, logos);
 	const color = channelColor(channel.name);
-	const zapping = shown !== tuned;
+	const zapping = shownId !== tunedId;
+	// the <video> goes on a zap and with each stream: let go of its decoder and its connection now, not when it is collected
+	useEffect(() => {
+		const v = video.current;
+		return () => { if (v) { v.pause(); v.removeAttribute('src'); v.load(); } };
+	}, [stream, zapping]);
 	return (
 		<div class="player live live--focused">
 			{stream && !zapping && <video ref={video} class="player__video" src={stream.url} autoPlay onPlaying={onPlaying} onError={onError} />}
@@ -269,7 +280,7 @@ export function LivePlayer ({server, channels, groups, category, onCategory, sta
 				onPick={(c) => {
 					const i = channels.findIndex((x) => x.id === c.id);
 					setPanel(false);
-					if (i >= 0 && i !== tuned) tuneTo(i);
+					if (i >= 0 && c.id !== tunedId) tuneTo(i);
 					else if (state === 'failed') { setRetry((n) => n + 1); wake(); }
 					else wake();
 				}} />}
