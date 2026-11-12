@@ -56,6 +56,8 @@ interface Props {
 	dockHide?: string;
 	/** darken the wallpaper while the dock is hidden */
 	dockDim?: boolean;
+	/** the Resume row's picture (Settings > Home Screen): off | quick | normal */
+	resumePicture?: string;
 	captions?: boolean;
 	/** put the focus on this row (a launch with {"view":"recent"}); a new seq asks again */
 	focusRow?: {id: string; seq: number};
@@ -72,9 +74,10 @@ const GRID_TOP = 76;
 /** the lowest a focused grid row may sit before the grid scrolls on (its tiles 40px lower) */
 const GRID_BOTTOM = 780;   // 40px less than it looks: the grid rows sit 40px lower while the remote is in them (theme/home.css)
 const FOLDER_PRESETS = ['Games', 'Tools', 'Media'];
-/** the Resume row's picture follows the focus this long after it stops: long enough that moving along the row at a normal pace (a key
- *  every 300-400 ms) never loads one, which cost the move up to 250 ms of GPU raster and the longest stalls (measured 2026-11-11) */
-const BACKDROP_AFTER_MS = 700;
+/** the Resume row's picture follows the focus this long after it stops (Settings > Home Screen > Resume picture). Normal is long enough that
+ *  moving along the row at a normal pace (a key every 300-400 ms) never loads one, which cost the move up to 250 ms of GPU raster and the
+ *  longest stalls (measured 2026-11-11); quick may load one between two keys. */
+const BACKDROP_AFTER_MS: Record<string, number> = {quick: 300, normal: 700};
 /** the strip along the bottom and top edges where a resting pointer scrolls the rows (the glass bar's tiles end above it) */
 const EDGE_STRIP = 70;
 const FOLDER_PREFIX = 'folder:';
@@ -147,7 +150,7 @@ const INPUTS_KEY = 'inputs';
 /** drawn: every row, whatever is added later */
 const ALL_ROWS = 1000;
 
-export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, onEdit, folders, weather, weatherLine, forecast, dockHide, dockDim, captions = true, focusRow, tiles, perRow = 6}: Props) {
+export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, onEdit, folders, weather, weatherLine, forecast, dockHide, dockDim, resumePicture = 'normal', captions = true, focusRow, tiles, perRow = 6}: Props) {
 	const nav = useRef<Nav>({engaged: false, zone: 'rows', rowIndex: 0, columns: {}, topIndex: 0, panelIndex: 0, ctxIndex: 0, moving: null, swallowOk: false, suppressClick: false, folder: '', folderIndex: 0, ctxFrom: 'rows', ctxLevel: 'main', ctxConfirm: false, ctxAnchor: null, mode: 'key', dockHidden: false, panelFrom: 'top'});
 	// when Down was last pressed at the last input, with nowhere lower to go
 	const bottomDown = useRef(0);
@@ -534,7 +537,8 @@ export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, o
 	// on the Resume row the focused title's picture takes the wallpaper's place, a moment after the focus stops (Films & séries)
 	const onRow = n.engaged && n.zone === 'rows' ? rows[clamp(n.rowIndex, 0, rows.length - 1)] : undefined;
 	const onTile = onRow && onRow.className === 'row--resume' ? onRow.items[columnOf(onRow)] : undefined;
-	const wantBackdrop = active && onTile && onTile.resume ? onTile.resume.backdrop || '' : '';
+	const backdropAfter = BACKDROP_AFTER_MS[resumePicture];
+	const wantBackdrop = active && backdropAfter && onTile && onTile.resume ? onTile.resume.backdrop || '' : '';
 	const [backdrop, setBackdrop] = useState('');
 	useEffect(() => {
 		let live = true;
@@ -545,9 +549,9 @@ export function Home ({rows, topItems, inputs, active, onActivate, showPeriod, o
 			img.src = wantBackdrop;
 			const show = () => { if (live) setBackdrop(wantBackdrop); };
 			if (typeof img.decode === 'function') img.decode().then(show, show); else img.onload = show;
-		}, wantBackdrop ? BACKDROP_AFTER_MS : 0);
+		}, wantBackdrop ? backdropAfter : 0);
 		return () => { live = false; window.clearTimeout(timer); };
-	}, [wantBackdrop]);
+	}, [wantBackdrop, backdropAfter]);
 	return (
 		<div class={`screen${active ? '' : ' screen--inactive'}${lower ? ' screen--lower' : ''}${n.moving ? ' screen--moving' : ''}${n.dockHidden ? ' screen--dockhidden' : ''}${dockDim ? ' screen--dockdim' : ''}`}>
 			<div class="dockdim" />
