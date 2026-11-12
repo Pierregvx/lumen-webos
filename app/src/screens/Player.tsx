@@ -11,7 +11,7 @@ import {t as tr} from '../lib/i18n';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
 import {useRealPointer} from '../hooks/useRealPointer';
-import {releaseVideo, setVideoPaused} from '../lib/wallpaperVideo';
+import {releaseVideo, setVideoHeldByPlayer} from '../lib/wallpaperVideo';
 import {imageUrl} from '../lib/jellyfin';
 import {episodeAfter, openStream, reportProgress, reportStart, reportStopped, type Stream, type SubTrack} from '../lib/player';
 import {countdownStart, cueAt, parseVtt, pickSubtitle, savedSubtitle, saveSubtitle, saveSubOffset, STILL_THERE_AFTER, subOffset, type Cue} from '../lib/playerLogic';
@@ -92,9 +92,9 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 	// the page goes transparent and the wallpaper video lets go while the player is up
 	useEffect(() => {
 		document.documentElement.classList.add('playing');
-		setVideoPaused(true);
+		setVideoHeldByPlayer(true);
 		releaseVideo();
-		return () => { document.documentElement.classList.remove('playing'); setVideoPaused(false); };
+		return () => { document.documentElement.classList.remove('playing'); setVideoHeldByPlayer(false); };
 	}, []);
 
 	const fallBack = useCallback((it: MediaItem) => {

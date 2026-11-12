@@ -11,7 +11,7 @@ import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {t as tr} from '../lib/i18n';
 import {useKeys, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
-import {releaseVideo, setVideoPaused} from '../lib/wallpaperVideo';
+import {releaseVideo, setVideoHeldByPlayer} from '../lib/wallpaperVideo';
 import {closeLeftover, closeLive, openLive, reportLiveStart, type LiveStream} from '../lib/iptv';
 import {channelColor, channelLogo, clockText, nowNextAt, progress, timeLeft, type Channel, type Listings} from '../lib/livetv';
 import {ChannelPanel} from '../components/ChannelPanel';
@@ -79,9 +79,9 @@ export function LivePlayer ({server, channels, groups, category, onCategory, sta
 	// the page goes transparent and the wallpaper video lets go while the player is up
 	useEffect(() => {
 		document.documentElement.classList.add('playing');
-		setVideoPaused(true);
+		setVideoHeldByPlayer(true);
 		releaseVideo();
-		return () => { document.documentElement.classList.remove('playing'); setVideoPaused(false); };
+		return () => { document.documentElement.classList.remove('playing'); setVideoHeldByPlayer(false); };
 	}, []);
 
 	const wake = useCallback(() => {

@@ -30,7 +30,9 @@ function startWhenQuiet (): void {
 	window.setTimeout(check, Math.max(0, 6000 - performance.now()));
 }
 let releaseTimer = 0;
-let paused = false;          // held while Settings is open (the video is hidden behind it, so it need not decode)
+let paused = false;          // held while Settings is open (the video is hidden behind it, so it need not decode), or a player is up
+let screenHold = false;      // the screen asks: anything but the home screen hides the video
+let playerHold = false;      // a player is up: it has the TV's video hardware
 let released = false;       // the clip was dropped while the launcher was out of sight
 let choice: string[] = [];   // [] = all places in a random order, else only the clips of those places
 
@@ -85,8 +87,10 @@ function ensureVideo (): HTMLVideoElement {
 			video.pause();
 			// out of sight for a while: let go of the decoder and its buffers
 			releaseTimer = window.setTimeout(() => { if (video && enabled) { released = true; video.removeAttribute('src'); video.load(); } }, 5000);
-		} else if (released) playCurrent();
-		else if (!paused) video.play().catch(() => {});
+		// back in front while held (a player is up, or Settings): nothing loads; letting go of the hold starts the clip again
+		} else if (paused) return;
+		else if (released) playCurrent();
+		else video.play().catch(() => {});
 	});
 	return video;
 }
@@ -115,7 +119,13 @@ export function setVideoChoice (places: string[]): void {
 	if (enabled) playCurrent();
 }
 
-export function setVideoPaused (hold: boolean): void {
+/** The screen's hold: true on any screen but home. */
+export function setVideoPaused (hold: boolean): void { screenHold = hold; applyHold(); }
+/** A player's hold, kept apart from the screen's: closing a player over Films & series must not start the clip behind that screen. */
+export function setVideoHeldByPlayer (hold: boolean): void { playerHold = hold; applyHold(); }
+
+function applyHold (): void {
+	const hold = screenHold || playerHold;
 	if (hold === paused) return;
 	paused = hold;
 	if (!video || !enabled || document.hidden) return;
@@ -124,7 +134,7 @@ export function setVideoPaused (hold: boolean): void {
 	else video.play().catch(() => { /* onerror moves on */ });
 }
 
-/** Lets go of the clip and its decoder (the player needs the TV's video hardware); setVideoPaused(false) starts it again. */
+/** Lets go of the clip and its decoder (the player needs the TV's video hardware); letting go of the hold starts it again. */
 export function releaseVideo (): void {
 	if (!video || !enabled) return;
 	video.pause();
