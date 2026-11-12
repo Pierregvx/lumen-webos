@@ -289,12 +289,14 @@ Add new items here, with the branch and what to check. Delete an item once Sam h
       faster did not help. Their lists grow only downward, so the tile's "Sound" or "Picture" text is seen to slide and fade, while Theme
       and Clock grow both ways and their text barely moves. Next: Sam to come back with a direction.
 - [ ] Draw the lower rows one row at a time, not all at once 3.5 s after launch (`docs/research/startup-perf.md`, Still open).
-- [ ] Up and Down between the home screen's lower rows lag (the owner, 2026-11-11): each press rasters 300 to 600 ms on the GPU, several
-      full-screen layers (`docs/research/frame-rate.md` > The Resume row and the rows' Up and Down). Seen with the plugin build, and the
-      cause is older than it: the Resume row's picture (since `films-series`) and layers under the Live TV row. Done: the picture waits
-      700 ms and is decoded first. Next: name the two full-screen layers that raster on Down into the Live TV row
-      (`tools/tv/perf/rows-updown.mjs`, hiding its parts one by one). Done when a row change shows at most 10 % more raster than a move
-      along a row.
+- [ ] Up and Down between the home screen's lower rows lag (the owner, 2026-11-11). **Fixed 2026-11-12** (branch
+      `claude/rows-updown-lag`, installed on the TV with the plugin): `--lower-shift` was inherited by every tile and the glass bar, so each
+      press repainted them all; it is now registered as not inherited (`theme/home.css`). GPU raster per press 497/477 → 188/137 ms (Down/Up),
+      the slide at 28 to 32 frames instead of 5 to 7 (`docs/research/frame-rate.md` > Found 2026-11-12). The owner felt it smoother, live.
+      The goal (a row change at most 10 % more raster than a move along the row): met in one run (Down 188 against Right 179), not in the
+      warm one (239 against 203). Left: Down still repaints the two rows' tiles for the focus change; worth a look only if it is felt.
+- [ ] A setting for the Resume row's picture (the owner's idea, 2026-11-12): Settings > Home Screen > Resume picture, Off / quick (0.3 s)
+      / normal (0.7 s, now). Off saves the picture's decode and full-screen fade on each pause along the row. Try live before building.
 
 ### Spikes (yes/no answers, noted in `docs/research/spikes.md`)
 - [ ] Recents button: rebind it with Input Hook to launch Lumen with `{"view":"recent"}`.
@@ -314,6 +316,11 @@ From `docs/research/prior-art.md` and upstream (ammar027/lumen-webos). Build wit
 
 ## Later
 
+- **The plugin's code after the first frame** (looked at 2026-11-12, not done): the plugin adds about 25 KB of script (the 34 KB contract
+  is already left out by the build, only its revision is kept), read before the first frame (+48 ms measured 2026-11-11). Deferring it
+  needs a second script built apart (esbuild), `lumen-plugin-api` given to it through `window`, registration after its load, and the home
+  screen's reads waiting for it: not simple. Measuring it again needs cold launches, which the Home takeover and `watch.sh` now prevent
+  (they reopen Lumen at once after `closeByAppId`).
 - **Releases from this fork (2026-11-09).** A push to `main` of `Pierregvx/lumen-webos` publishes nothing: its release workflow has
   never run there (0 runs, no release), and the Homebrew Channel's builds come from `samrenfrew/lumen-webos`, which this account cannot push
   to. For now the TV runs dev builds (`npm run deploy:home`), and work is merged into `dev`; `main` waits for a real release. Decided with

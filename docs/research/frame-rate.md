@@ -141,6 +141,30 @@ Measured with `walk.mjs rows` (22 keys at 380 ms) on the plugin build, a still w
 - Tried and dropped: keeping the picture's layer always mounted (two pictures, opacity only, `will-change: opacity`). Up went from 122 to
   40 tiles, but the always-there full-screen layers cost every frame: the walk's raster rose from 3.2 to 4.9 s and the apps row fell from
   13-15 to 6 frames per key. Back to the picture mounted only when it shows.
-- Still unexplained: on Down into the Live TV row, two full-screen layers (no DOM node in the layer map) raster 10 to 13 tiles each, with
-  `.home__backdrop`, `.lowerveil` or `.dockdim` hidden alike. Next: hide the Live TV row's parts one by one (its live picture first).
+- On Down into the Live TV row, two full-screen layers (no DOM node in the layer map) rastered 10 to 13 tiles each, with
+  `.home__backdrop`, `.lowerveil` or `.dockdim` hidden alike: explained on 2026-11-12 below (`--lower-shift`).
 - The dock (glass bar) moves at about 6 frames per 320 ms (19 fps), with a GPU draw of 16.7 ms a frame: the live blur, as above.
+
+### Found 2026-11-12: `--lower-shift` was repainting the whole home screen
+
+- Each Up or Down sets `--lower-shift` on `.rows` (`Home.tsx`), the distance the stack slides. A custom property is inherited, so every
+  tile, text and the glass bar under `.rows` got a new computed style and Chrome repainted them all, even though none of them reads it. The
+  glass bar alone (`.rows > .row:first-child::before`, 1882x356, 16 tiles) was about half of it: hidden live, raster fell from 540 to
+  250 ms. Not the cause, each tried live with the same 540 ms: the Resume row's picture, the slide's transition, `will-change` on
+  `.rows`, a fixed shift (so nothing moved).
+- Fix: `@property --lower-shift { inherits: false; ... }` in `theme/home.css`, so only `.rows` sees the value (Chrome 85 and later;
+  an older Chrome ignores the rule and behaves as before).
+- How it was found: a MutationObserver during one Down listed what changes (the two rows' and tiles' focus classes, the picture, and
+  `.rows`' style attribute); the trace category `disabled-by-default-blink.invalidation` gives each paint invalidation with its object
+  and reason (`InvalidateDisplayItemClient`, reason `subtree`).
+- Measured on the TV, `rows-updown.mjs` between Resume and Live TV, median per key, two runs after (Lumen just installed, then warm):
+
+  | | Before | After | After, warm |
+  |---|---|---|---|
+  | Down: GPU raster | 497 ms | 188 ms | 239 ms |
+  | Up: GPU raster | 477 ms | 137 ms | 176 ms |
+  | Frames in the slide (Down / Up) | 5 / 7 | 28 / 32 | 23 / 28 |
+  | Right, Left along the row (`DIRS=rl`) | 113, 124 ms | 179, 175 ms | 203, 193 ms |
+
+  The slide now runs at about 4 times the frames. A move along the row measured higher after than before (the same code for it):
+  run-to-run spread on this TV is large, so compare runs made in one sitting. The owner felt Up and Down smoother, live, before the build.
