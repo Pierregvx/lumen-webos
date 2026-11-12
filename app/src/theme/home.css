@@ -74,6 +74,9 @@
 /* ---------- the rows: the glass bar, then the app grid and the Live TV row under it ---------- */
 
 /* the glass bar sits low, so the first grid row's tops peek in under it; Down slides the stack up by --lower-shift (Home.tsx) with transform only */
+/* --lower-shift changes at each Up and Down; inherited, it would change every tile's and the glass bar's style and they would all repaint
+   (about 400 ms of GPU raster per press, docs/research/frame-rate.md). Registered as not inherited, only .rows sees it. Chrome 85 and later. */
+@property --lower-shift { syntax: '<length>'; inherits: false; initial-value: 300px; }
 .rows {
 	position: absolute; left: var(--layout-rows-edge); right: var(--layout-rows-edge); top: var(--layout-rows-top);
 	transition: transform var(--dur-up) var(--ease-up), opacity var(--dur-fade) ease;

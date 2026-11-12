@@ -1,5 +1,6 @@
 // Down and Up between two of the home screen's lower rows (from row FROM, default 2: Resume, to the one under it), many pairs after one
-// relaunch, with a trace: updown.mjs's twin for the rows. usage: node rows-updown.mjs <out.json> [pairs] ; env LIVECSS, LIVEJS, CATS, GAPMS, FROM, LMAP
+// relaunch, with a trace: updown.mjs's twin for the rows. usage: node rows-updown.mjs <out.json> [pairs] ; env LIVECSS, LIVEJS, CATS, GAPMS, FROM, LMAP,
+// NORELAUNCH; DIRS=rl presses Right and Left along the row instead, the cost a row change is compared with (updown-report.mjs reads both)
 import {writeFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
 const PORT = 19998;
@@ -25,7 +26,8 @@ ws.onmessage = (m) => {
 const send = (method, params = {}) => new Promise((ok) => { const id = ++seq; waiting.set(id, ok); ws.send(JSON.stringify({id, method, params})); });
 const ev = async (expression) => (await send('Runtime.evaluate', {expression, returnByValue: true, awaitPromise: true})).result?.result?.value;
 const sleep = (ms) => new Promise((ok) => setTimeout(ok, ms));
-const KEYS = {up: [38, 'ArrowUp'], down: [40, 'ArrowDown']};
+const KEYS = {up: [38, 'ArrowUp'], down: [40, 'ArrowDown'], left: [37, 'ArrowLeft'], right: [39, 'ArrowRight']};
+const DIRS = process.env.DIRS === 'rl' ? ['right', 'left'] : ['down', 'up'];
 const key = async (k) => { const [code, name] = KEYS[k]; for (const type of ['rawKeyDown', 'keyUp']) await send('Input.dispatchKeyEvent', {type, windowsVirtualKeyCode: code, nativeVirtualKeyCode: code, key: name, code: name}); };
 const stamp = (name) => ev(`(console.timeStamp(${JSON.stringify(name)}), 1)`);
 
@@ -52,7 +54,7 @@ await send('Tracing.start', {traceConfig: {includedCategories: cats, recordMode:
 await sleep(600);
 let ok = true;
 for (let i = 0; i < PAIRS; i++) {
-	for (const d of ['down', 'up']) {
+	for (const d of DIRS) {
 		await stamp(`k:${i}:${d}`);
 		await key(d);
 		await sleep(GAPMS);

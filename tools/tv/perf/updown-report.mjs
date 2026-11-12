@@ -1,4 +1,4 @@
-// Per-key medians from updown.mjs captures (first Down, later Downs, Ups). usage: node updown-report.mjs a.json [b.json ...] ; prints medians per group per file
+// Per-key medians from updown.mjs captures (first Down, later Downs, Ups; with rows-updown.mjs DIRS=rl, Right counts as Down and Left as Up). usage: node updown-report.mjs a.json [b.json ...] ; prints medians per group per file
 import {readFileSync} from 'node:fs';
 const WIN = 700e3; // µs after a key that belong to it
 const med = (xs) => { const s = xs.filter((x) => !isNaN(x)).sort((a, b) => a - b); return s.length ? s[Math.floor(s.length / 2)] : NaN; };
@@ -35,7 +35,7 @@ export const analyse = (file) => {
 		const mv = sw.filter((s) => s <= sw[0] + 320e3);
 		const mvg = mv.slice(1).map((s, j) => (s - mv[j]) / 1000);
 		rows.push({
-			grp: dir === 'down' ? (idx === '0' ? 'down1' : 'down') : 'up', idx: +idx,
+			grp: dir === 'down' || dir === 'right' ? (idx === '0' ? 'down1' : 'down') : 'up', idx: +idx,
 			'key→first frame': first,
 			'frames in move': mv.length,
 			'worst gap in move': mvg.length ? Math.max(...mvg) : NaN,
