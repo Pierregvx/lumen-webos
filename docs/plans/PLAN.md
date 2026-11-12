@@ -79,6 +79,15 @@ server made from the contract's examples, built in from the draft folder; not on
 
 Add new items here, with the branch and what to check. Delete an item once Sam has seen it work.
 
+- [ ] Review fixes of 2026-11-12 (branch `fix/review-2026-11-12`) **(verify)**. Not installed. Built and type-checked only. To try:
+      with the video wallpaper on, play a film, press Home to another app and come back: the clip does not load behind the player;
+      close a film started from Films & series: no clip starts behind that screen. Control Center's picture button over a film or an
+      IPTV channel: the player closes (Jellyfin keeps the place), the screensaver shows with no sound under it. A film paused for
+      more than 15 s while the NAS is asleep, or the TV in standby during a start: Jellyfin's app does not open by itself. Several
+      episodes in a row, and fast zaps on IPTV: each plays (the old video is let go at once). Cold start, then at once an IPTV channel
+      from the Live TV row that is not a favourite: once the full list has come, the banner still names it and Up/Down go from it.
+      Films & series: move down two rows in Library on opening; the focus stays on its shelf while the others come in.
+
 - [ ] Plugins and Ciné Pierro (branch `claude/tv-v1-parite-6eb48b`, the section above) **(verify)**. Not installed. Built with the plugin:
       Settings > Plugins shows Ciné Pierro on, its Server row says « v1.2 »; turned off, Films & series is Lumen's own again; Discover's rows come in the page's
       order (For you, Watch later, Trending, Platforms, Popular films, Film genres, Popular series, Series genres, the categories, Films and

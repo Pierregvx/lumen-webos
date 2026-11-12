@@ -69,7 +69,8 @@ sous-titres. À la fin d'un épisode : un compte à rebours vers le suivant, qu'
 ## Choix faits (par Claude, à revoir si besoin)
 
 - **Repli** : si la vidéo renvoie une erreur ou ne démarre pas en 10 s, Lumen passe par l'app Jellyfin comme aujourd'hui (le service
-  `media.js` reste) et le dit en une ligne. Un réglage « Lire dans : Lumen / l'app Jellyfin » (Lumen par défaut) garde l'ancien chemin.
+  `media.js` reste) et le dit en une ligne. Ce délai, et celui de 15 s d'une image figée, attendent pendant une pause, en veille ou
+  avec une autre app devant (ils recomptent au retour), pour ne jamais ouvrir Jellyfin par-dessus autre chose. Un réglage « Lire dans : Lumen / l'app Jellyfin » (Lumen par défaut) garde l'ancien chemin.
 - **Déclaration au serveur** : `POST /Sessions/Playing` au début, `/Sessions/Playing/Progress` toutes les 10 s et à chaque pause ou saut,
   `/Sessions/Playing/Stopped` en quittant ou à la fin (avec la position). `PlayMethod: DirectPlay`.
 - **Sous-titres** : le fichier WebVTT de Jellyfin (`/Videos/{id}/{mediaSourceId}/Subtitles/{index}/0/Stream.vtt`), affiché par Lumen
