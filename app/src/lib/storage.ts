@@ -39,6 +39,8 @@ export interface UserConfig {
 	videoPlaces: string[];
 	/** when the dock slides away: off | down | idle | both */
 	dockHide: string;
+	/** the Resume row's picture over the wallpaper, after the focus rests: off | quick (0.3 s) | normal (0.7 s) */
+	resumePicture: string;
 	/** dark glass and a dimmer wallpaper */
 	darkMode: string;
 	/** the last apps opened, newest first */
@@ -158,6 +160,7 @@ export const DEFAULT_CONFIG: UserConfig = {
 	language: 'auto',
 	darkMode: 'on',
 	dockHide: 'down',
+	resumePicture: 'normal',
 	videoClip: '',
 	videoPlaces: [],
 	clockFormat: 'auto',
@@ -245,6 +248,7 @@ export function parseConfig (raw: string): UserConfig {
 		...wallpaperFields(parsed),
 		showAmPm: parsed.showAmPm !== false,
 		dockHide: parsed.dockHide === 'off' || parsed.dockHide === 'idle' || parsed.dockHide === 'both' ? parsed.dockHide : 'down',
+		resumePicture: parsed.resumePicture === 'off' || parsed.resumePicture === 'quick' ? parsed.resumePicture : 'normal',
 		darkMode: parsed.darkMode === 'auto' ? 'auto' : parsed.darkMode === 'off' ? 'off' : 'on',
 		videoClip: typeof parsed.videoClip === 'string' ? parsed.videoClip : '',
 		videoPlaces: Array.isArray(parsed.videoPlaces) ? parsed.videoPlaces : typeof parsed.videoClip === 'string' && parsed.videoClip ? [parsed.videoClip] : [],

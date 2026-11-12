@@ -295,8 +295,10 @@ Add new items here, with the branch and what to check. Delete an item once Sam h
       the slide at 28 to 32 frames instead of 5 to 7 (`docs/research/frame-rate.md` > Found 2026-11-12). The owner felt it smoother, live.
       The goal (a row change at most 10 % more raster than a move along the row): met in one run (Down 188 against Right 179), not in the
       warm one (239 against 203). Left: Down still repaints the two rows' tiles for the focus change; worth a look only if it is felt.
-- [ ] A setting for the Resume row's picture (the owner's idea, 2026-11-12): Settings > Home Screen > Resume picture, Off / quick (0.3 s)
-      / normal (0.7 s, now). Off saves the picture's decode and full-screen fade on each pause along the row. Try live before building.
+- [ ] Settings > Home Screen > Resume picture (the owner's idea, 2026-11-12; branch `claude/rows-updown-lag`) **(verify)**: Off, Quick
+      (0.3 s) or Normal (0.7 s, the default and the old behaviour). Seen in the browser preview: the row, its three choices, the choice
+      kept. On the TV: Off leaves the wallpaper on the Resume row; Quick shows the picture sooner, and may bring back the stall when moving
+      along the row (`docs/research/frame-rate.md` > The Resume row).
 
 ### Spikes (yes/no answers, noted in `docs/research/spikes.md`)
 - [ ] Recents button: rebind it with Input Hook to launch Lumen with `{"view":"recent"}`.

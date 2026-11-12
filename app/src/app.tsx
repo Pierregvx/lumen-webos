@@ -84,7 +84,7 @@ const LIVE_INFO_W = 660;
 /** how much higher the Live TV row sits when focused, so its now/next block fits on screen */
 const LIVE_BELOW = 150;
 const MISC = {lgHome: 'lg-home', settings: 'settings'} as const;
-const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', saverShow: 'saver-show', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', ambientPrint: 'ambient-print', fps: 'fps-counter', guidePreview: 'guide-preview', guideSound: 'guide-sound', homePreview: 'home-preview', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', dockBlur: 'dock-blur', liquidDock: 'liquid-dock', reduceMotion: 'reduce-motion', hideNames: 'hide-names', showRecents: 'show-recents', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', homeCast: 'home-forecast', saverCast: 'saver-forecast', immichUrl: 'immich-url', immichKey: 'immich-key', immichTest: 'immich-test', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', immichDays: 'immich-recent-days', wpType: 'wp-type', wpNew: 'wp-new', nightDim: 'night-dim', dockDim: 'dock-dim', captions: 'wallpaper-captions', darkMode: 'dark-mode', language: 'language', clock: 'clock-format', tvScripts: 'tv-scripts', tvHome: 'tv-home', tvPowerOn: 'tv-power-on', tvRestart: 'tv-restart', pvAgreements: 'privacy-agreements', pvLmt: 'privacy-lmt', pvLivePlus: 'privacy-liveplus', pvHosts: 'privacy-hosts', pvServices: 'privacy-services', pvUpdates: 'privacy-updates', blOn: 'brightness-on', blDayAt: 'brightness-day-at', blDay: 'brightness-day', blEveningAt: 'brightness-evening-at', blEvening: 'brightness-evening', blNightAt: 'brightness-night-at', blNight: 'brightness-night', blRamp: 'brightness-ramp', blEye: 'brightness-eye', jfUrl: 'jf-url', jfQuick: 'jf-quick', jfUser: 'jf-user', jfPass: 'jf-pass', jfSignIn: 'jf-signin', jfOut: 'jf-signout', seerrUrl: 'seerr-url', seerrKey: 'seerr-key', seerrTest: 'seerr-test', homeInputs: 'home-inputs', aiServer: 'ai-server', aiRedo: 'ai-redo', aiRow: 'ai-row', autoSeasons: 'auto-seasons', playIn: 'play-in'} as const;
+const OPTION = {liveTv: 'live-tv-row', ambient: 'ambient', ambientOn: 'ambient-on', saverShow: 'saver-show', ambientSeconds: 'ambient-seconds', ambientBrightness: 'ambient-brightness', ambientPrint: 'ambient-print', fps: 'fps-counter', guidePreview: 'guide-preview', guideSound: 'guide-sound', homePreview: 'home-preview', restore: 'restore-backup', focus: 'focus-strength', firstRow: 'first-row', videoHours: 'video-hours', dockBlur: 'dock-blur', liquidDock: 'liquid-dock', reduceMotion: 'reduce-motion', hideNames: 'hide-names', showRecents: 'show-recents', dockHide: 'dock-hide', showAmPm: 'show-ampm', showAll: 'show-all-apps', weather: 'show-weather', homeCast: 'home-forecast', saverCast: 'saver-forecast', immichUrl: 'immich-url', immichKey: 'immich-key', immichTest: 'immich-test', city: 'weather-city', country: 'weather-country', idle: 'idle-screensaver', wpAuto: 'wp-auto', immichDays: 'immich-recent-days', wpType: 'wp-type', wpNew: 'wp-new', nightDim: 'night-dim', dockDim: 'dock-dim', captions: 'wallpaper-captions', darkMode: 'dark-mode', language: 'language', clock: 'clock-format', tvScripts: 'tv-scripts', tvHome: 'tv-home', tvPowerOn: 'tv-power-on', tvRestart: 'tv-restart', pvAgreements: 'privacy-agreements', pvLmt: 'privacy-lmt', pvLivePlus: 'privacy-liveplus', pvHosts: 'privacy-hosts', pvServices: 'privacy-services', pvUpdates: 'privacy-updates', blOn: 'brightness-on', blDayAt: 'brightness-day-at', blDay: 'brightness-day', blEveningAt: 'brightness-evening-at', blEvening: 'brightness-evening', blNightAt: 'brightness-night-at', blNight: 'brightness-night', blRamp: 'brightness-ramp', blEye: 'brightness-eye', jfUrl: 'jf-url', jfQuick: 'jf-quick', jfUser: 'jf-user', jfPass: 'jf-pass', jfSignIn: 'jf-signin', jfOut: 'jf-signout', seerrUrl: 'seerr-url', seerrKey: 'seerr-key', seerrTest: 'seerr-test', homeInputs: 'home-inputs', aiServer: 'ai-server', aiRedo: 'ai-redo', aiRow: 'ai-row', autoSeasons: 'auto-seasons', playIn: 'play-in', resumePicture: 'resume-picture'} as const;
 const WP_AUTO_CHOICES = [0, 0.5, 1, 5, 15, 30, 60];   // minutes
 /** when the video wallpaper plays (Settings > Wallpaper > Video wallpaper hours): [first hour, hour it stops]; always = no limit */
 const VIDEO_HOURS: Record<string, [number, number]> = {day: [7, 19], evening: [17, 23], night: [19, 7]};
@@ -701,6 +701,7 @@ export function App () {
 			[OPTION.immichDays]: {labels: ['Last month', 'Last 3 months', 'Last 6 months', 'Last year'], values: [30, 90, 180, 365], now: config.immichRecentDays},
 			[OPTION.wpAuto]: {labels: ['Off', '30 sec', '1 min', '5 min', '15 min', '30 min', '60 min'], values: WP_AUTO_CHOICES, now: config.wpAutoMinutes},
 			[OPTION.dockHide]: {labels: ['Off', 'Down arrow', 'After idle', 'Both'], values: ['off', 'down', 'idle', 'both'], now: config.dockHide},
+			[OPTION.resumePicture]: {labels: ['Off', 'Quick', 'Normal'], values: ['off', 'quick', 'normal'], now: config.resumePicture},
 			[OPTION.playIn]: {labels: ['Lumen', 'The Jellyfin app'], values: ['lumen', 'jellyfin'], now: config.playIn},
 			[OPTION.ambientOn]: {labels: ['Enabled', 'Disabled'], values: ['on', 'off'], now: config.ambientOn ? 'on' : 'off'},
 			[OPTION.saverShow]: {labels: ['Wallpaper pictures', 'Immich photos'], values: ['wallpaper', 'immich'], now: config.saverShow},
@@ -785,6 +786,14 @@ export function App () {
 				label: 'Show recents indicator',
 				description: 'A dot over the apps that are open.',
 				value: config.showRecents
+			},
+			{
+				id: OPTION.resumePicture,
+				group: 'home' as const,
+				label: 'Resume picture',
+				description: 'On the Resume row, the title in focus shows its picture in place of the wallpaper once the focus rests. Quick: after 0.3 s. Normal: after 0.7 s, so moving along the row at a normal pace never loads one. Off: the wallpaper stays.',
+				value: config.resumePicture !== 'off',
+				...listed(OPTION.resumePicture)
 			},
 			{
 				id: OPTION.dockHide,
@@ -1587,6 +1596,7 @@ export function App () {
 		else if (optionId === OPTION.homePreview) updateConfig({...c, homePreview: v === 'on'});
 		else if (optionId === OPTION.guideSound) updateConfig({...c, guideSound: v === 'on'});
 		else if (optionId === OPTION.dockHide) updateConfig({...c, dockHide: v});
+		else if (optionId === OPTION.resumePicture) updateConfig({...c, resumePicture: v});
 		else if (optionId === OPTION.playIn) updateConfig({...c, playIn: v});
 		else if (optionId === OPTION.ambientOn) {
 			updateConfig({...c, ambientOn: v === 'on'});
@@ -1631,7 +1641,7 @@ export function App () {
 	return (
 		<>
 			{/* Home stays mounted under Settings so it keeps its focus position. */}
-			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls && !toRateNow && !watching} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} weatherLine={config.showWeather && !(config.homeForecast && config.homeForecastSize === 'large')} forecast={config.homeForecast ? config.homeForecastSize as 'small' | 'large' : undefined} dockHide={config.dockHide} dockDim={config.dockDim} captions={config.wallpaperCaptions} focusRow={focusRow} />
+			<Home rows={rows} tiles={TILES_FOR[firstRow] || TILES_FOR[6]} perRow={firstRow} topItems={TOP_ITEMS} inputs={shownInputs.map(inputTile)} active={screen === 'home' && !controls && !toRateNow && !watching} onActivate={onActivate} showPeriod={config.showAmPm} onEdit={onEdit} folders={folderMap} weather={weather} weatherLine={config.showWeather && !(config.homeForecast && config.homeForecastSize === 'large')} forecast={config.homeForecast ? config.homeForecastSize as 'small' | 'large' : undefined} dockHide={config.dockHide} dockDim={config.dockDim} captions={config.wallpaperCaptions} focusRow={focusRow} resumePicture={config.resumePicture} />
 			{screen === 'ambient' && <Ambient show={config.saverShow} source={config.ambient} pictures={config.wallpaperPicks} seconds={config.ambientSeconds} backlight={AMBIENT_BACKLIGHT[config.ambientBrightness]} weather={weather} weatherLine={config.showWeather && !(config.saverForecast && config.saverForecastSize === 'large')} forecast={config.saverForecast ? config.saverForecastSize as 'small' | 'large' : undefined} showPeriod={config.showAmPm} print={config.ambientPrint} opening={ambientOpening.current} onExit={leaveAmbient} />}
 			{screen === 'guide' && <Guide key={guideOpens} channels={live.channels} groups={live.groups} category={live.category} onCategory={live.setCategory} listings={live.listings} logos={live.logos} now={live.now} schedule={live.schedule} pending={live.pending} full={config.guideFull} preview={__LUMEN_DEV__ && config.guidePreview} sound={config.guideSound} onMode={(full) => { if (configRef.current.guideFull !== full) updateConfig({...configRef.current, guideFull: full}); }} active={!controls && !watching} onOpen={watchChannel} inRow={inRow} onPin={pinChannel} browse={live.browse} onClose={() => setScreen('home')} />}
 			{playing && media.jellyfin && <Player key={playRun} server={media.jellyfin} item={playing} active={!controls} onToast={showToast}
