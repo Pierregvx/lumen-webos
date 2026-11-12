@@ -80,7 +80,8 @@ server made from the contract's examples, built in from the draft folder; not on
 Add new items here, with the branch and what to check. Delete an item once Sam has seen it work.
 
 - [ ] The library through Ciné Pierro (branch `claude/tv-v1-parite-6eb48b`: the plugins' `library()` hook; the plugin and the server on
-      cine-pierro's branch `tv-library`, contract revision 6; not deployed nor installed yet) **(verify)**: with the plugin on and the
+      cine-pierro's main, contract revision 6; deployed and installed 2026-11-12 with the Up/Down fix, and the TV's page was seen reading
+      `/api/tv/v1/library` (200) after its first Resume from Jellyfin) **(verify)**: with the plugin on and the
       server deployed, the home screen's Resume row and Films & series > Library's Recently added, Films and Series look as before (the
       same titles and pictures); an episode resumes where it stopped; a prepared copy still plays from the NVMe; with the server stopped,
       the rows still come (Lumen reads Jellyfin). The genre rows, a series' episodes and the play stay Jellyfin's.
