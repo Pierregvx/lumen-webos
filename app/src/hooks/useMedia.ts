@@ -33,19 +33,23 @@ export function useMedia (autoSeasons: boolean): MediaState {
 	auto.current = autoSeasons;
 	const [lists, setLists] = useState<{resume: MediaItem[]; pending: SeerrTitle[]}>(() => readCache(CACHE_KEY) || {resume: [], pending: []});
 
+	/** the latest read: an older one that answers after it (a slow server, two reads close together) is dropped, so it cannot empty the rows */
+	const seq = useRef(0);
 	const refresh = useCallback(() => {
+		const ask = ++seq.current;
 		const jf = cachedServer();
 		const sr = cachedSeerr();
 		setJellyfin(jf);
 		setSeerr(sr);
 		if (!jf) { setLists({resume: [], pending: []}); setSeasons([]); writeCache(CACHE_KEY, null); return; }
-		if (sr) newSeasons(jf, sr, auto.current).then(setSeasons, () => undefined);
+		if (sr) newSeasons(jf, sr, auto.current).then((list) => { if (ask === seq.current) setSeasons(list); }, () => undefined);
 		else setSeasons([]);
 		Promise.all([
 			resume(jf).catch(() => null),
 			// a plugin's catalog, when one is on, gives the person's requests
 			catalog() ? (catalog() as NonNullable<ReturnType<typeof catalog>>).requestsMine().catch(() => null) : sr ? myPending(sr, jf.userId).catch(() => null) : Promise.resolve([])
 		]).then(([r, p]) => {
+			if (ask !== seq.current) return;
 			// one that forgot the sign-in (401) has cleared it; a server that did not answer takes its row away (the cache only serves the
 			// first paint), so there are no tiles pointing at a server that is off
 			if (!cachedServer()) { setJellyfin(null); setLists({resume: [], pending: []}); writeCache(CACHE_KEY, null); return; }
