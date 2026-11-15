@@ -62,7 +62,7 @@ import {rate, toRate} from './lib/ratings';
 import {RatePanel} from './components/RatePanel';
 import type {MediaItem} from './lib/jellyfin';
 import {pickAgain, recoServer, saveRecoServer, sendRatings} from './lib/recos';
-import {startPlugins, usePlugins} from './plugins';
+import {catalog as pluginCatalog, catalogName, startPlugins, usePlugins} from './plugins';
 import {pluginOption, pluginOptions, pluginText} from './plugins/settings';
 
 /** said when Jellyfin has refused the TV's sign-in */
@@ -759,6 +759,8 @@ export function App () {
 
 	// each page lists its options in this order (Settings.tsx GROUPS sets the order of the pages)
 	const options: OptionItem[] = useMemo(() => {
+		/** the plugin giving Films & series' catalog (Ciné Pierro), which replaces Seerr there */
+		const catalogBy = pluginCatalog() ? catalogName() || 'A plugin' : '';
 		const stills = config.wallpaperType === 'pictures' || config.wallpaperType === 'immich';
 		const saverImmich = immich.ready && config.saverShow === 'immich';
 		return [
@@ -1104,11 +1106,12 @@ export function App () {
 				value: false,
 				valueText: ''
 			}]),
-			{
+			// with a plugin's catalog on, Seerr only shows when it is set (so it can be changed), marked as replaced
+			...(!catalogBy || mediaDraft.seerrUrl || media.seerr ? [{
 				id: OPTION.seerrUrl,
 				group: 'media' as const,
 				label: 'Seerr address',
-				description: 'Your Seerr server, for example http://192.0.2.20:5055. With it, Films & series can find titles you do not have and request them.',
+				description: (catalogBy ? `${catalogBy} (Settings > Plugins) replaces Seerr for Discover, search and requests; Lumen still asks Seerr for the new seasons of the series you follow. ` : '') + 'Your Seerr server, for example http://192.0.2.20:5055. With it, Films & series can find titles you do not have and request them.',
 				value: mediaDraft.seerrUrl !== '',
 				valueText: mediaDraft.seerrUrl || 'Not set',
 				text: {value: mediaDraft.seerrUrl, placeholder: 'http://192.0.2.20:5055'}
@@ -1129,13 +1132,15 @@ export function App () {
 				description: 'Checks the address and the key with your Seerr server. When it passes, Lumen keeps them.',
 				value: !!media.seerr,
 				valueText: mediaTest.seerr === 'testing' ? 'Testing' : mediaTest.seerr === 'failed' ? 'Failed' : media.seerr ? 'Connected' : 'Not connected'
-			},
+			}] : []),
 
 			{
 				id: OPTION.aiServer,
 				group: 'media' as const,
 				label: 'Picks server',
-				description: 'For the For you row in Discover: lumen-recos on your NAS has Claude pick about ten titles a day from what Seerr offers, with a line on why. It keeps the Claude key and your taste profile (server/README.md). Its address, for example http://192.0.2.20:8787.',
+				description: catalogBy
+					? `lumen-recos on your NAS: it marks the copies prepared on the fast disk, and ${catalogBy} uses this address unless Settings > Plugins gives it another. Its address, for example http://192.0.2.20:8787.`
+					: 'For the For you row in Discover: lumen-recos on your NAS has Claude pick about ten titles a day from what Seerr offers, with a line on why. It keeps the Claude key and your taste profile (server/README.md). Its address, for example http://192.0.2.20:8787.',
 				value: aiServer !== '',
 				valueText: aiServer ? aiServer.replace(/^https?:\/\//, '') : 'Not set',
 				text: {value: aiServer, placeholder: 'http://192.0.2.20:8787'}
