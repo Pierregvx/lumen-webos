@@ -378,6 +378,12 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 	};
 
 	const subChoices: (SubTrack | null)[] = ([null] as (SubTrack | null)[]).concat(stream ? stream.subtitles : []);
+	// the subtitle menu's focused row in view: a file with many tracks makes a list taller than the box, which clips it
+	const subList = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		const el = menu !== null && subList.current ? subList.current.children[menu + 1] as HTMLElement | undefined : undefined;
+		if (el) el.scrollIntoView({block: 'nearest'});
+	}, [menu]);
 	const handleKey = useCallback((key: NavKey, e: KeyboardEvent): boolean => {
 		if (picker) {
 			wake();
@@ -580,6 +586,7 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 				<div class="media-ask" onClick={(e) => { e.stopPropagation(); if (e.target === e.currentTarget) setMenu(null); }}>
 					<div class="media-ask__box">
 						<h2 class="media-ask__title">{tr('Subtitles')}</h2>
+						<div class="media-ask__list" ref={subList}>
 						<div class={`media-ask__row${menu === -1 ? ' media-ask__row--focused' : ''}`} onMouseEnter={hover(() => setMenu(-1))}>
 							<span>{tr('Timing')} <span class="player__nudge" onClick={click(() => shiftSubs(-SUB_STEP_S))}>‹</span> <span class="player__nudge" onClick={click(() => shiftSubs(SUB_STEP_S))}>›</span></span>
 							<span>{offset === 0 ? tr('In sync') : `${offset > 0 ? tr('Earlier') : tr('Later')} ${Math.abs(offset).toFixed(2)} s`}</span>
@@ -590,6 +597,7 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 								<span class="media-ask__tick">{(c ? !!sub && sub.index === c.index : !sub) ? '✓' : ''}</span>
 							</div>
 						))}
+						</div>
 					</div>
 				</div>
 			)}
