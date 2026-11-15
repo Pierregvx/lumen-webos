@@ -82,7 +82,7 @@ html.reduce-motion .guide__track, html.reduce-motion .guide__row { transition: n
 .fg__num { flex: 0 0 76px; font-size: 26px; font-weight: 600; text-align: center; }
 .fg__logo {
 	flex: 0 0 84px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden;
-	background: var(--chan-sweep) var(--chan-bg); color: #fff; font-size: 13px; font-weight: 700; line-height: 1.1; text-align: center;
+	background: var(--chan-sweep) var(--chan-bg); color: #fff; font-size: var(--text-small); font-weight: 700; line-height: 1.1; text-align: center;
 }
 .fg__logo img { max-width: 80%; max-height: 66%; object-fit: contain; }
 .fg__logo span { padding: 0 4px; }

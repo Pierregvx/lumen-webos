@@ -47,7 +47,7 @@ html.playing #wpimage, html.playing #root > *:not(.player):not(.panel--cc):not(.
 .player-eps__season { padding: 10px 26px; border-radius: var(--radius-capsule); font-size: 24px; font-weight: 600; opacity: 0.75; white-space: nowrap; transition: transform var(--dur-focus) ease-out; }
 .player-eps__season--on { background: rgba(255, 255, 255, 0.22); opacity: 1; }
 .player-eps__season--quiet::after { content: ''; display: inline-block; width: 10px; height: 10px; margin-left: 10px; border-radius: 5px; background: var(--media-quiet); vertical-align: middle; }
-.player-ep__quiet { position: absolute; left: 0; top: 0; padding: 5px 12px; border-bottom-right-radius: 12px; background: var(--media-quiet); font-size: 16px; font-weight: 700; }
+.player-ep__quiet { position: absolute; left: 0; top: 0; padding: 5px 12px; border-bottom-right-radius: 12px; background: var(--media-quiet); font-size: var(--text-small); font-weight: 700; }
 .player-ep__quiet--busy { background: var(--media-quiet-busy); }
 .player-eps__season--focused { background: var(--player-focus-fill); color: var(--player-focus-ink); transform: scale(var(--lift-pill)); }
 .player-eps__strip { position: absolute; left: 0; top: 500px; display: flex; flex-direction: row; gap: 32px; padding: 0 var(--layout-rows-edge); transition: transform var(--dur-scroll) var(--ease-out); }
@@ -121,7 +121,7 @@ html.playing #bgvideo { visibility: hidden; }
 	background: var(--chan-sweep) var(--chan-bg); overflow: hidden; color: #fff;
 }
 .chpanel__logo img { width: 80%; height: 72%; object-fit: contain; }
-.chpanel__logo span { padding: 0 6px; text-align: center; font-size: 15px; font-weight: 700; line-height: 1.1; }
+.chpanel__logo span { padding: 0 6px; text-align: center; font-size: var(--text-small); font-weight: 700; line-height: 1.1; }
 .chpanel__info { flex: 1 1 auto; min-width: 0; }
 .chpanel__name { font-size: 24px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chpanel__prog { margin-top: 2px; font-size: 20px; opacity: 0.72; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -176,7 +176,7 @@ html:not(.wp-video) .videocap:not(.videocap--pic), html.wp-video .videocap--pic 
 .screen--lower .videocap--pic { opacity: 0; }
 .videocap--pic .videocap__place { font-size: 18px; line-height: 23px; font-weight: 500; }
 /* the credit is the type scale's one exception: below its smallest step, so it never competes with the title */
-.videocap--pic .videocap__text { margin: 0 0 3px; font-size: 15px; line-height: 20px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.videocap--pic .videocap__text { margin: 0 0 3px; font-size: var(--text-small); line-height: 20px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 
 /* ---------- edit mode: a lifted app rises and wobbles while it is moved, as on tvOS (transform only) ---------- */
 
