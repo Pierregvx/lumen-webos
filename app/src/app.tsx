@@ -53,7 +53,7 @@ import {APP_ID} from './config/constants';
 import {bootMark, navMark} from './lib/log';
 import {LANGS, setClockMode, setLang, t as tr} from './lib/i18n';
 import {seasonSource, useMedia} from './hooks/useMedia';
-import {cleanUrl, imageUrl, item, quickConnectCheck, quickConnectStart, saveServer as saveJellyfin, signIn, signOut} from './lib/jellyfin';
+import {cleanUrl, droppedByServer, imageUrl, item, quickConnectCheck, quickConnectStart, saveServer as saveJellyfin, signIn, signOut} from './lib/jellyfin';
 import {saveSeerr, testSeerr} from './lib/seerr';
 import {playAndOpen} from './lib/play';
 import type {SeerrTitle} from './lib/seerr';
@@ -62,9 +62,11 @@ import {rate, toRate} from './lib/ratings';
 import {RatePanel} from './components/RatePanel';
 import type {MediaItem} from './lib/jellyfin';
 import {pickAgain, recoServer, saveRecoServer, sendRatings} from './lib/recos';
-import {startPlugins, usePlugins} from './plugins';
+import {catalog as pluginCatalog, catalogName, startPlugins, usePlugins} from './plugins';
 import {pluginOption, pluginOptions, pluginText} from './plugins/settings';
 
+/** said when Jellyfin has refused the TV's sign-in */
+const JELLYFIN_DROPPED = 'Jellyfin signed this TV out: sign in again in Settings > Films & series';
 type Screen = 'home' | 'settings' | 'ambient' | 'guide' | 'media';
 
 const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock', live: 'livetv', channels: 'channels'} as const;
@@ -260,8 +262,6 @@ export function App () {
 		return isWebOS() ? afterFirstFrame(start, 0) : (start(), () => undefined);
 	}, []);
 	const media = useMedia(config.autoSeasons);
-	/** what is prepared on the NAS's fast disk: the Resume tiles' banners (lib/prepared.ts) */
-	const prepared = usePrepared(!!media.jellyfin);
 	// IPTV channels come from Jellyfin's Live TV (lib/iptv.ts), so Live TV is given the signed-in server
 	const live = useLiveTv(config.liveTvRow, screen === 'guide', config.liveChannels, media.jellyfin);
 	// a rating asked for what was just finished (lib/ratings.ts)
@@ -277,6 +277,15 @@ export function App () {
 	useEffect(() => { if (liveOn && !media.jellyfin) setLiveOn(null); }, [liveOn, media.jellyfin]);
 	/** a film or a channel is playing in Lumen: the screens underneath take no keys, and there is no screensaver */
 	const watching = !!playing || !!liveOn;
+	// Jellyfin refused the sign-in (lib/jellyfin.ts): said once a session, and the Films & series tile stays, leading to Settings
+	const jellyfinDropped = useMemo(() => !media.jellyfin && droppedByServer(), [media.jellyfin]);
+	const toldDropped = useRef(false);
+	useEffect(() => {
+		if (!jellyfinDropped) { toldDropped.current = false; return; }
+		if (!toldDropped.current) { toldDropped.current = true; showToast(tr(JELLYFIN_DROPPED), 'error'); }
+	}, [jellyfinDropped]);
+	/** what is prepared on the NAS's fast disk: the Resume tiles' banners (lib/prepared.ts), read while the home screen shows them */
+	const prepared = usePrepared(!!media.jellyfin && screen === 'home' && !watching);
 	useEffect(() => { if (playing && !media.jellyfin) setPlaying(null); }, [playing, media.jellyfin]);
 	/** plays a title where Settings > Films & series > Play in says: Lumen's player, or the Jellyfin app */
 	const playAsked = useRef({id: '', ticks: 0, seq: 0});
@@ -593,10 +602,11 @@ export function App () {
 		const open = (id: string) => running.indexOf(id) !== -1;
 		// Films & series only once Jellyfin is signed in; then each input with something plugged in, at the end
 		const plugged = config.homeInputs ? inputs.filter((i) => i.connected).map((i): TileModel => ({...inputTile(i), key: INPUT_PREFIX + i.appId})) : [];
-		return shownApps.filter((a) => inFolder.indexOf(a.id) === -1 && (a.id !== BUILTIN.media || !!media.jellyfin)).map((a): TileModel => ({...appTile(a), running: open(a.id)}))
+		// a sign-in Jellyfin refused keeps the tile: it opens Settings, where Lumen signs in again
+		return shownApps.filter((a) => inFolder.indexOf(a.id) === -1 && (a.id !== BUILTIN.media || !!media.jellyfin || jellyfinDropped)).map((a): TileModel => ({...appTile(a), running: open(a.id)}))
 			.concat(folderTiles.map((f): TileModel => ({key: 'folder:' + f.name, label: f.name, color: '#3b4256', children: f.items.map((t) => t.imageUrl), running: f.items.some((t) => open(t.key))})))
 			.concat(plugged);
-	}, [shownApps, folderTiles, config.folders, config.homeInputs, inputs, running, media.jellyfin]);
+	}, [shownApps, folderTiles, config.folders, config.homeInputs, inputs, running, media.jellyfin, jellyfinDropped]);
 
 	/** the Resume row: what is in progress in Jellyfin, then what was requested in Seerr and is not in the library yet */
 	const resumeTiles = useMemo((): TileModel[] => {
@@ -752,6 +762,8 @@ export function App () {
 
 	// each page lists its options in this order (Settings.tsx GROUPS sets the order of the pages)
 	const options: OptionItem[] = useMemo(() => {
+		/** the plugin giving Films & series' catalog (Ciné Pierro), which replaces Seerr there */
+		const catalogBy = pluginCatalog() ? catalogName() || 'A plugin' : '';
 		const stills = config.wallpaperType === 'pictures' || config.wallpaperType === 'immich';
 		const saverImmich = immich.ready && config.saverShow === 'immich';
 		return [
@@ -1097,11 +1109,12 @@ export function App () {
 				value: false,
 				valueText: ''
 			}]),
-			{
+			// with a plugin's catalog on, Seerr only shows when it is set (so it can be changed), marked as replaced
+			...(!catalogBy || mediaDraft.seerrUrl || media.seerr ? [{
 				id: OPTION.seerrUrl,
 				group: 'media' as const,
 				label: 'Seerr address',
-				description: 'Your Seerr server, for example http://192.0.2.20:5055. With it, Films & series can find titles you do not have and request them.',
+				description: (catalogBy ? `${catalogBy} (Settings > Plugins) replaces Seerr for Discover, search and requests; Lumen still asks Seerr for the new seasons of the series you follow. ` : '') + 'Your Seerr server, for example http://192.0.2.20:5055. With it, Films & series can find titles you do not have and request them.',
 				value: mediaDraft.seerrUrl !== '',
 				valueText: mediaDraft.seerrUrl || 'Not set',
 				text: {value: mediaDraft.seerrUrl, placeholder: 'http://192.0.2.20:5055'}
@@ -1122,13 +1135,15 @@ export function App () {
 				description: 'Checks the address and the key with your Seerr server. When it passes, Lumen keeps them.',
 				value: !!media.seerr,
 				valueText: mediaTest.seerr === 'testing' ? 'Testing' : mediaTest.seerr === 'failed' ? 'Failed' : media.seerr ? 'Connected' : 'Not connected'
-			},
+			}] : []),
 
 			{
 				id: OPTION.aiServer,
 				group: 'media' as const,
 				label: 'Picks server',
-				description: 'For the For you row in Discover: lumen-recos on your NAS has Claude pick about ten titles a day from what Seerr offers, with a line on why. It keeps the Claude key and your taste profile (server/README.md). Its address, for example http://192.0.2.20:8787.',
+				description: catalogBy
+					? `lumen-recos on your NAS: it marks the copies prepared on the fast disk, and ${catalogBy} uses this address unless Settings > Plugins gives it another. Its address, for example http://192.0.2.20:8787.`
+					: 'For the For you row in Discover: lumen-recos on your NAS has Claude pick about ten titles a day from what Seerr offers, with a line on why. It keeps the Claude key and your taste profile (server/README.md). Its address, for example http://192.0.2.20:8787.',
 				value: aiServer !== '',
 				valueText: aiServer ? aiServer.replace(/^https?:\/\//, '') : 'Not set',
 				text: {value: aiServer, placeholder: 'http://192.0.2.20:8787'}
@@ -1371,7 +1386,10 @@ export function App () {
 			return;
 		}
 		if (item.key === MISC.settings || item.key === BUILTIN.settings) { setScreen('settings'); return; }
-		if (item.key === BUILTIN.media) { setMediaRequest(null); setScreen('media'); return; }
+		if (item.key === BUILTIN.media) {
+			if (!media.jellyfin && droppedByServer()) { showToast(tr(JELLYFIN_DROPPED), 'error'); setScreen('settings'); return; }
+			setMediaRequest(null); setScreen('media'); return;
+		}
 		if (item.key === 'screensaver') { startScreensaver().catch(() => showToast("Couldn't start the screensaver (it needs the Homebrew Channel)", 'error')); return; }
 		if (item.key === MISC.lgHome) { launchLgHome().catch(() => showToast("Couldn't open LG Home", 'error')); return; }
 		if (item.key === 'controls') { setControls(true); return; }

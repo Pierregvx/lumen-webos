@@ -43,6 +43,8 @@
 .media-btn--focused { background: var(--focus-fill); color: var(--focus-ink); transform: scale(var(--lift-pill)); box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3); }
 
 .media__empty { position: absolute; left: 0; right: 0; top: 640px; text-align: center; font-size: 28px; opacity: 0.8; }
+/* under « … is not answering »: OK reads the tab again */
+.media__retry { margin-top: 14px; font-size: 24px; opacity: 0.85; }
 
 /* rows of posters: the focused row sits at the top of this area, the next one shows under it */
 .media__rows { position: absolute; left: 0; right: 0; top: 600px; bottom: 0; overflow: hidden; }

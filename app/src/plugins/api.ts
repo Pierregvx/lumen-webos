@@ -92,8 +92,9 @@ export interface PageAction { label: string; applies: (t: SeerrTitle) => boolean
 export interface Chip { text: string; tone?: 'ok' | 'busy' | 'asked' | 'none' }
 
 export interface CatalogSource {
-	/** Discover's rows, in order, as they come; `onForYou` the day's picks (null: none) */
-	discover: (onRows: (rows: Row[]) => void, onForYou: (titles: SeerrTitle[] | null) => void) => void;
+	/** Discover's rows, in order, as they come; `onForYou` the day's picks (null: none); `onFail` when the server did not answer (Lumen
+	 *  then says so at once, with OK to try again; without it, Lumen says so after a while with no row) */
+	discover: (onRows: (rows: Row[]) => void, onForYou: (titles: SeerrTitle[] | null) => void, onFail?: () => void) => void;
 	/** titles not in the library matching `text` (the library's are Jellyfin's) */
 	search: (text: string) => Promise<SeerrTitle[]>;
 	/** the full record: cast, seasons, the person's score (`mine`), `later`, `release` */

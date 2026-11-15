@@ -48,6 +48,13 @@ server made from the contract's examples, built in from the draft folder; not on
 
 ## Verify on the TV (built, not yet seen working)
 
+- [ ] The UX review fixes of 2026-11-15 (branch `fix/ux-player`) **(verify)**: in the player, the opening shows the title's picture with
+      a turning ring, a file that will not play asks « Open it in Jellyfin / Close » instead of opening Jellyfin by itself, the subtitle
+      menu scrolls past eight tracks, and an Audio button shows on a film with several audio tracks and switches them (only if webOS
+      gives `video.audioTracks` with as many tracks as Jellyfin lists: if the button never shows on a VO + VF film, it does not).
+      In Films & series: with the NAS off, Library and Discover name the server at once and OK reads again; a search says
+      Searching… then which server did not answer; the focus stays on Cast when Trailer arrives. On home: a refused Jellyfin sign-in
+      keeps the tile and says why. `GET /prepared` stops in standby and while a film plays (the NAS's log).
 - [ ] Upstream 2.2.0 merged into the fork (2026-11-11, branch `claude/merge-upstream-2-2-7857a1`) **(verify)**, installed on the TV
       that evening with the plugin (and Lumen Guide). **Switch-on seen working, 2026-11-11, the owner at home:** TV scripts updated (the
       old ones kept in `/var/lib/homehook/backup-avant-upstream-2-2/`), Home takeover and power-on set to Lumen, then a reboot: Lumen was

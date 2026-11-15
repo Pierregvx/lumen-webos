@@ -31,6 +31,18 @@ export function saveSubtitle (seriesId: string, choice: number | 'off'): void {
 	writeCache(SAVED_KEY, all);
 }
 
+const AUDIO_KEY = 'player-audio';
+/** the audio language picked for a film or a series (ISO 639-2), kept on this TV */
+export function savedAudio (seriesId: string): string | undefined {
+	const all = readCache<Record<string, string>>(AUDIO_KEY) || {};
+	return all[seriesId];
+}
+export function saveAudio (seriesId: string, lang: string): void {
+	const all = readCache<Record<string, string>>(AUDIO_KEY) || {};
+	all[seriesId] = lang;
+	writeCache(AUDIO_KEY, all);
+}
+
 export interface Cue { start: number; end: number; text: string }
 
 /** "01:02:03.500" or "02:03.500" in seconds. */
