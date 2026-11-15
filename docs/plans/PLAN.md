@@ -48,7 +48,7 @@ server made from the contract's examples, built in from the draft folder; not on
 
 ## Verify on the TV (built, not yet seen working)
 
-- [ ] Subtitles while they are taken out of a big file (2026-11-15, branch `claude/subs-live`) **(verify)**: the first time a subtitle of a
+- [ ] Subtitles while they are taken out of a big file (2026-11-15, branch `claude/subs-live-tv` for the TV, `claude/subs-live` on `main`; Ciné Pierro's roadmap has the steps) **(verify)**: the first time a subtitle of a
       big file is asked for, the server's Jellyfin reads the whole file before it answers (minutes). With a plugin that has the
       `subtitles()` hook (Ciné Pierro, feature `subs-live`), the player shows the cues already out, asks again every 15 s, and shows
       « Téléchargement des sous-titres… » (with « Prêts jusqu'à … » once some are out) while the film is past them. Check on a film
