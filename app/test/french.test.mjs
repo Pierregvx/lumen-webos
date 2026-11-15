@@ -7,7 +7,7 @@ import {setLang, t} from '../src/lib/i18n.ts';
 
 const FILES = ['screens/Media.tsx', 'screens/Player.tsx', 'components/RequestPanel.tsx', 'components/RatePanel.tsx', 'components/Poster.tsx', 'components/ControlCenter.tsx', 'app.tsx'];
 // the same word in French
-const SAME = new Set(['Auto', 'Film', 'Films', 'Guide', 'Pause', 'Plugins', 'Settings']);
+const SAME = new Set(['Audio', 'Auto', 'Film', 'Films', 'Guide', 'Pause', 'Plugins', 'Settings']);
 const unescape = (s) => s.replace(/\\'/g, "'").replace(/\\"/g, '"');
 
 test('the texts of the screens and every toast have a French line', () => {
