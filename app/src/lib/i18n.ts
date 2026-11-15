@@ -28,6 +28,11 @@ const TABLE: Record<string, string[]> = {
 	"Next": ["Danach", "Después", "Ensuite", "Dopo", "Depois", "Hierna", "Sonra", "इसके बाद"],
 	"Search": ["Suchen", "Buscar", "Rechercher", "Cerca", "Procurar", "Zoeken", "Ara", "खोजें"],
 	"All categories": ["Alle Kategorien", "Todas las categorías", "Toutes les catégories", "Tutte le categorie", "Todas as categorias", "Alle categorieën", "Tüm kategoriler", "सभी श्रेणियाँ"],
+	// Films & series and the player: a server that does not answer, the search, the opening of a film, the audio track
+	"{name} is not answering": ["{name} antwortet nicht", "{name} no responde", "{name} ne répond pas", "{name} non risponde", "{name} não responde", "{name} reageert niet", "{name} yanıt vermiyor", "{name} जवाब नहीं दे रहा"],
+	"{name} did not answer": ["{name} hat nicht geantwortet", "{name} no respondió", "{name} n'a pas répondu", "{name} non ha risposto", "{name} não respondeu", "{name} gaf geen antwoord", "{name} yanıt vermedi", "{name} ने जवाब नहीं दिया"],
+	"No network: check the TV's connection": ["Kein Netzwerk: Verbindung des Fernsehers prüfen", "Sin red: revisa la conexión del televisor", "Pas de réseau : vérifie la connexion de la TV", "Nessuna rete: controlla la connessione della TV", "Sem rede: verifique a ligação da TV", "Geen netwerk: controleer de verbinding van de tv", "Ağ yok: TV'nin bağlantısını kontrol edin", "नेटवर्क नहीं: टीवी का कनेक्शन जांचें"],
+	"Searching…": ["Suche…", "Buscando…", "Recherche…", "Ricerca…", "A procurar…", "Zoeken…", "Aranıyor…", "खोज रहे हैं…"],
 	"Ready, quiet": ["Bereit, leise", "Listo, sin ruido", "Prêt, sans bruit", "Pronto, senza rumore", "Pronto, sem ruído", "Klaar, stil", "Hazır, sessiz", "तैयार, बिना शोर"],
 	"Copying": ["Kopieren", "Copiando", "Copie", "Copia", "Copiando", "Kopiëren", "Kopyalanıyor", "कॉपी हो रहा है"],
 	"Preparing…": ["Wird vorbereitet…", "Preparando…", "En préparation…", "In preparazione…", "Preparando…", "Wordt voorbereid…", "Hazırlanıyor…", "तैयार हो रहा है…"],

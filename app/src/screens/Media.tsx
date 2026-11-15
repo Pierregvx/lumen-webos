@@ -31,7 +31,7 @@ import {launchApp} from '../lib/launch';
 import {SYSTEM_APP} from '../config/constants';
 import type {MediaState} from '../hooks/useMedia';
 import {cachedPicks, markPickRequested, picks as aiPicks, recoServer, sendRatings} from '../lib/recos';
-import {catalog as pluginCatalog, plugins, usePlugins} from '../plugins';
+import {catalog as pluginCatalog, catalogName, plugins, usePlugins} from '../plugins';
 import type {ActionResult, Chip, ChoiceSpec, FormSpec, Page, PageAction, PageRef, Row, Tile, TitleRef} from '../plugins/api';
 import {ChoicePanel} from '../components/ChoicePanel';
 import {FormPanel} from '../components/FormPanel';
@@ -164,30 +164,38 @@ function rateTarget (e: Entry | null | undefined): MediaItem | null {
 const cache: Record<string, Shelf[]> = {};
 let cacheOwner = '';
 
-function loadLibrary (s: JellyfinServer, onPart: (list: Shelf[]) => void): void {
+/** the TV says it has no network (navigator.onLine is only trusted when false) */
+const offline = () => typeof navigator !== 'undefined' && navigator.onLine === false;
+
+/** `onFail`: Recently added, Films and Series all failed (the server is off, or the network) */
+function loadLibrary (s: JellyfinServer, onPart: (list: Shelf[]) => void, onFail: () => void): void {
 	const list: Shelf[] = [];
+	let fails = 0;
+	const fail = () => { if (++fails === 3) onFail(); };
 	const put = (shelf: Shelf, at: number) => {
 		if (!shelf.items.length) return;
 		list[at] = shelf;
 		onPart(list.filter(Boolean));
 	};
 	const entries = (items: MediaItem[]) => items.map((it) => fromJellyfin(s, it));
-	latest(s).then((items) => put({id: 'latest', label: 'Recently added', items: entries(items)}, 0), () => undefined);
-	byType(s, 'Movie').then((items) => put({id: 'movies', label: 'Films', items: entries(items)}, 1), () => undefined);
-	byType(s, 'Series').then((items) => put({id: 'series', label: 'Series', items: entries(items)}, 2), () => undefined);
+	latest(s).then((items) => put({id: 'latest', label: 'Recently added', items: entries(items)}, 0), fail);
+	byType(s, 'Movie').then((items) => put({id: 'movies', label: 'Films', items: entries(items)}, 1), fail);
+	byType(s, 'Series').then((items) => put({id: 'series', label: 'Series', items: entries(items)}, 2), fail);
 	genres(s).then((names) => names.slice(0, GENRE_ROWS).forEach((g, i) => {
 		byGenre(s, g).then((items) => put({id: 'genre:' + g, label: g, items: entries(items)}, 3 + i), () => undefined);
 	}), () => undefined);
 }
 
-function loadDiscover (sr: SeerrServer, onPart: (list: Shelf[]) => void): void {
+/** `onFail`: Seerr's three lists all failed */
+function loadDiscover (sr: SeerrServer, onPart: (list: Shelf[]) => void, onFail: () => void): void {
 	const list: Shelf[] = [];
+	let fails = 0;
 	const lists: {id: 'trending' | 'popular' | 'upcoming'; label: string}[] = [{id: 'trending', label: 'Trending'}, {id: 'popular', label: 'Popular films'}, {id: 'upcoming', label: 'Coming soon'}];
 	lists.forEach((l, i) => discover(sr, l.id).then((titles) => {
 		if (!titles.length) return;
 		list[i] = {id: l.id, label: l.label, items: titles.map(fromSeerr)};
 		onPart(list.filter(Boolean));
-	}, () => undefined));
+	}, () => { if (++fails === lists.length) onFail(); }));
 	// the categories after Seerr's lists, each in its place whatever order they answer in
 	categories(sr, null, (row, at) => {
 		list[lists.length + at] = {id: 'cat:' + row.id, label: row.label, items: row.titles.map(fromSeerr)};
@@ -247,6 +255,14 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	/** the latest search sent: an older one that answers later is dropped */
 	const searchSeq = useRef(0);
 	const [seerrDown, setSeerrDown] = useState(false);
+	/** bumped by OK on « … is not answering »: the tab is read again */
+	const [retry, setRetry] = useState(0);
+	/** the search: waiting for its answer, or failed (the name of the server that did not answer) */
+	const [searching, setSearching] = useState(false);
+	const [searchDown, setSearchDown] = useState('');
+	/** who Discover, search and requests come from: the plugin's name (Ciné Pierro), or Seerr */
+	const source = (cat && catalogName()) || 'Seerr';
+	const didNotAnswer = () => tr('{name} did not answer').replace('{name}', source);
 	/** the pages opened over the tabs, the last one showing */
 	const [places, setPlaces] = useState<Place[]>([]);
 	const place = places.length ? places[places.length - 1] : null;
@@ -256,15 +272,19 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	/** what the rows' positions are kept under: the tab, or the page over it with its kind */
 	const view = place ? place.key + ':' + kind : tab;
 	const inSearch = tab === 'search' && !place;
+	/** the tab's server did not answer: OK reads it again */
+	const canRetry = !place && ((tab === 'library' && !!s && failed) || (tab === 'discover' && seerrDown));
 
 	const show = useCallback((id: string, list: Shelf[]) => { cache[id] = list; setShelves((all) => ({...all, [id]: list})); }, []);
 
 	useEffect(() => {
 		if (!s) return undefined;
+		// no network: said at once; else after 9 s with no row, or as soon as the first rows all fail
+		if (!cache.library && offline()) setFailed(true);
 		const timer = window.setTimeout(() => { if (!cache.library) setFailed(true); }, 9000);
-		loadLibrary(s, (list) => { show('library', list); setFailed(false); });
+		loadLibrary(s, (list) => { show('library', list); setFailed(false); }, () => { if (!cache.library) setFailed(true); });
 		return () => window.clearTimeout(timer);
-	}, [s && s.token]);
+	}, [s && s.token, retry]);
 	// Discover's first row: the AI picks from the picks server (lib/recos.ts). The last ones kept draw at once; when they are not today's, the
 	// server is asked again (it makes them each morning, so they are usually ready)
 	const [forYou, setForYou] = useState<Shelf | null>(() => {
@@ -289,28 +309,38 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 
 	useEffect(() => {
 		if (!seerrOn || tab !== 'discover' || cache.discover) return undefined;
+		if (offline()) setSeerrDown(true);
 		const timer = window.setTimeout(() => { if (!cache.discover) setSeerrDown(true); }, 9000);
+		const down = () => { if (!cache.discover) setSeerrDown(true); };
 		if (cat) cat.discover((rows) => { show('discover', shelvesOf(rows)); setSeerrDown(false); }, (titles) => {
 			if (!titles || !titles.length || !showForYou) return;
 			if (!forYouShown.current) setRows((all) => ({...all, discover: (all.discover || 0) + 1}));
 			forYouShown.current = true;
 			setForYou({id: 'foryou', label: 'For you', items: titles.map(fromSeerr)});
-		});
-		else if (sr) loadDiscover(sr, (list) => { show('discover', list); setSeerrDown(false); });
+		}, down);
+		else if (sr) loadDiscover(sr, (list) => { show('discover', list); setSeerrDown(false); }, down);
 		return () => window.clearTimeout(timer);
-	}, [sr && sr.key, cat, tab]);
+	}, [sr && sr.key, cat, tab, retry]);
 
 	// search: both servers, a moment after the last key; the library's copy of a title wins
 	useEffect(() => {
 		const text = query.trim();
-		if (text.length < 2) { show('search', []); return undefined; }
+		// « Searching… » from the first key to the answer, not « Nothing found »
+		setSearchDown('');
+		if (text.length < 2) { searchSeq.current++; setSearching(false); show('search', []); return undefined; }
+		setSearching(true);
 		const timer = window.setTimeout(() => {
 			const seq = ++searchSeq.current;
+			let downName = '';
 			Promise.all([
-				s ? searchJellyfin(s, text).catch(() => [] as MediaItem[]) : Promise.resolve([] as MediaItem[]),
-				cat ? cat.search(text).catch(() => [] as SeerrTitle[]) : sr ? searchSeerr(sr, text).catch(() => [] as SeerrTitle[]) : Promise.resolve([] as SeerrTitle[])
+				s ? searchJellyfin(s, text).catch(() => { downName = downName || 'Jellyfin'; return [] as MediaItem[]; }) : Promise.resolve([] as MediaItem[]),
+				cat ? cat.search(text).catch(() => { downName = source; return [] as SeerrTitle[]; })
+					: sr ? searchSeerr(sr, text).catch(() => { downName = source; return [] as SeerrTitle[]; }) : Promise.resolve([] as SeerrTitle[])
 			]).then(([mine, theirs]) => {
 				if (seq !== searchSeq.current) return;
+				setSearching(false);
+				// nothing came and a server failed: say which, not « Nothing found » as if the title did not exist
+				setSearchDown(!mine.length && !theirs.length ? downName : '');
 				const have: Record<string, true> = {};
 				// TMDB numbers films and series apart: match on both
 				mine.forEach((it) => { if (it.tmdbId) have[(it.type === 'Movie' ? 'movie' : 'tv') + it.tmdbId] = true; });
@@ -469,7 +499,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	const askSeasons = (title: SeerrTitle) => {
 		if (title.seasons) { setAsking(title); return; }
 		const read = cat ? cat.title({type: title.type, title: title.title, tmdbId: title.tmdbId, here: false}) : sr ? details(sr, title) : null;
-		if (read) read.then((d) => setAsking(d), () => onToast(tr('Seerr did not answer'), 'error'));
+		if (read) read.then((d) => setAsking(d), () => onToast(didNotAnswer(), 'error'));
 	};
 
 	/** a page over the tabs: shown at once (its shelves, or Loading…), filled when they come */
@@ -499,7 +529,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		setHero(null);
 		setButton(0);
 		if (later) later.then((list) => setPlaces((all) => all.map((p) => (p.key === key ? {...p, shelves: list} : p))), () => {
-			onToast(tr('Seerr did not answer'), 'error');
+			onToast(didNotAnswer(), 'error');
 			setPlaces((all) => all.filter((p) => p.key !== key));
 		});
 	};
@@ -611,6 +641,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		if (asking || rating || form || choice || typing) return;
 		if (zone === 'field') startTyping();
 		else if (zone === 'buttons') press(buttons[button], hero);
+		else if (zone === 'rows' && !list.length && canRetry) { setFailed(false); setSeerrDown(false); setRetry((n) => n + 1); }
 		else if (zone === 'rows' && item && (item.brand || item.person || item.tile)) openEntry(item);
 		else if (zone === 'rows' && item) {
 			// OK on a poster, in any row: its buttons in the hero (Play first, so OK twice plays); Back returns to the row
@@ -637,8 +668,11 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		: b === 'play' ? '▶ ' + tr(hero && hero.jf && hero.jf.progress ? 'Resume' : 'Play')
 		: b === 'trailer' ? tr('Trailer') : b === 'cast' ? tr('Cast') : b === 'rate' ? (typeof heroMine === 'number' ? `★ ${heroMine}/10` : '☆ ' + tr('Rate'))
 		: b === 'request' ? '+ ' + tr('Request') : t ? statusText(t.availability, t.percent) : '';
-	const empty = place ? (place.shelves ? 'Nothing found' : 'Loading…') : tab === 'library' ? (!s ? 'Sign in to Jellyfin in Settings > Films & series' : failed ? 'Jellyfin is not answering' : 'Loading…')
-		: tab === 'discover' ? (seerrDown ? 'Seerr is not answering' : 'Loading…') : query.trim().length < 2 ? 'Type a title' : 'Nothing found';
+	/** « Ciné Pierro is not answering », or that the TV has no network */
+	const notAnswering = (name: string) => (offline() ? tr('No network: check the TV\'s connection') : tr('{name} is not answering').replace('{name}', name));
+	const emptyText = place ? tr(place.shelves ? 'Nothing found' : 'Loading…') : tab === 'library' ? (!s ? tr('Sign in to Jellyfin in Settings > Films & series') : failed ? notAnswering('Jellyfin') : tr('Loading…'))
+		: tab === 'discover' ? (seerrDown ? notAnswering(source) : tr('Loading…'))
+		: query.trim().length < 2 ? tr('Type a title') : searching ? tr('Searching…') : searchDown ? notAnswering(searchDown) : tr('Nothing found');
 
 	return (
 		<div class={`screen screen--media screen--media-${tab}`}>
@@ -682,7 +716,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 					</div>
 				</div>
 			)}
-			{!list.length && <div class="media__empty">{tr(empty)}</div>}
+			{!list.length && <div class="media__empty">{emptyText}{canRetry && <div class="media__retry">{tr('OK to try again')}</div>}</div>}
 			{tab === 'discover' && !place && showForYou && forYouNote && <div class="media__note">{tr(forYouNote)}</div>}
 			<div class="media__rows">
 				<div class="media__track" style={{transform: `translateY(${-r * ROW_STEP}px)`}}>

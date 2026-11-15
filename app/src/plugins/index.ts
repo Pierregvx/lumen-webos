@@ -40,6 +40,14 @@ plugins.subscribe(() => { cachedCatalog = undefined; cachedChoices = undefined; 
 
 /** Films & series' catalog from a plugin, or null (Lumen's own Seerr calls) */
 export const catalog = (): CatalogSource | null => (cachedCatalog === undefined ? (cachedCatalog = plugins.first('catalog')) : cachedCatalog);
+/** the name of the plugin whose catalog is on (for « Ciné Pierro is not answering »), or '' */
+export function catalogName (): string {
+	for (const p of plugins.active()) {
+		const fn = p.catalog;
+		if (fn && plugins.guard(p, 'catalog', () => !!fn(), false)) return p.name;
+	}
+	return '';
+}
 /** the player's choice store from a plugin, or null (Lumen's own copy alone) */
 export const choiceStore = (): ChoiceStore | null => (cachedChoices === undefined ? (cachedChoices = plugins.first('choices')) : cachedChoices);
 
