@@ -600,7 +600,7 @@ export function App () {
 		const watching = media.resume.map((it): TileModel => ({
 			key: MEDIA.item + it.id,
 			label: it.title,
-			resume: {title: it.title, subtitle: it.subtitle || (it.year ? String(it.year) : undefined), imageUrl: imageUrl(jf, it, 'Thumb', 640) || undefined, backdrop: imageUrl(jf, it, 'Backdrop', 1280) || undefined, progress: it.progress, ...quietTile(it)}
+			resume: {title: it.title, subtitle: it.subtitle || (it.year ? String(it.year) : undefined), imageUrl: imageUrl(jf, it, 'Thumb', 640) || (it.stillOf ? imageUrl(jf, it, 'Still', 640) : '') || undefined, backdrop: imageUrl(jf, it, 'Backdrop', 1280) || undefined, progress: it.progress, ...quietTile(it)}
 		}));
 		const asked = media.pending.map((t): TileModel => ({
 			key: MEDIA.req + t.tmdbId,

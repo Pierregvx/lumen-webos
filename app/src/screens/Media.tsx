@@ -101,7 +101,7 @@ const HERO_AFTER_MS = 250;
 const SEARCH_AFTER_MS = 400;
 
 const fromJellyfin = (s: JellyfinServer, it: MediaItem): Entry => ({
-	key: 'jf:' + it.id, title: it.title, posterUrl: imageUrl(s, it, 'Primary', 300) || undefined, backdropUrl: imageUrl(s, it, 'Backdrop', 1280) || undefined,
+	key: 'jf:' + it.id, title: it.title, posterUrl: imageUrl(s, it, 'Primary', 300) || undefined, backdropUrl: imageUrl(s, it, 'Backdrop', 1280) || (it.stillOf ? imageUrl(s, it, 'Still', 1280) : '') || undefined,
 	year: it.year, minutes: it.minutes, genres: it.genres, rating: it.rating, overview: it.overview, jf: it
 });
 /** A library title's banner and bar: a film or an episode prepared (or being copied), a series with episodes ready, and how far through. */
@@ -620,10 +620,10 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		}
 	}, onLongPress: () => undefined}, active && !asking && !rating && !form && !choice && !typing);
 
-	// the hero picture: the new one fades in over the last one
+	// the hero picture: the new one fades in over the last one; a title with no picture clears it, so it never shows the one before's
 	const heroUrl = hero && hero.backdropUrl || '';
 	const [pictures, setPictures] = useState({now: '', under: ''});
-	if (pictures.now !== heroUrl) setPictures({now: heroUrl, under: pictures.now});
+	if (pictures.now !== heroUrl) setPictures({now: heroUrl, under: heroUrl ? pictures.now : ''});
 	const under = pictures.under;
 
 	const release = hero ? hero.date || (heroMore ? heroMore.release : undefined) : undefined;
