@@ -40,7 +40,7 @@ Lumen is signed in to), `store` (its own storage) and `t` (Lumen's translation).
 
 | Hook | Where Lumen uses it | Shape |
 |---|---|---|
-| `catalog()` | Films & series: Discover, search, a title's record, the pages (a platform, a person, a tile), requests, the home screen's requests row. The first plugin that gives one replaces Lumen's own Seerr calls. | `CatalogSource` |
+| `catalog()` | Films & series: Discover, search, a title's record, the pages (a platform, a person, a tile), requests, the home screen's requests row and its new seasons. The first plugin that gives one replaces Lumen's own Seerr calls. A request may carry `RequestOptions` (the picture, « Right now »): a catalog with `requestOffer` gets the request panel's pictures, and `requestFacts` fills in each one's sources as they come. | `CatalogSource` |
 | `choices()` | The player: where the subtitle choice and timing are kept (Lumen keeps its own copy too, used when the plugin fails). | `ChoiceStore` |
 | `titleActions(title)` | Films & series: buttons after Lumen's own on the title in focus. Each returns an `ActionResult`: a toast or an error, a page, a form (`FormPanel`), a short list (`ChoicePanel`), or « read the title again ». | `TitleAction[]` |
 | `rated(title, score)` | A score was given with Rate. | |

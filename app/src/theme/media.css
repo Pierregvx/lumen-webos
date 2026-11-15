@@ -66,6 +66,8 @@
 .poster__badge { position: absolute; right: 10px; top: 10px; padding: 3px 10px; border-radius: var(--radius-capsule); background: var(--media-badge); font-size: 16px; font-weight: 700; }
 .poster__badge--available { background: var(--media-badge-ok); }
 .poster__badge--downloading { background: var(--media-badge-dl); }
+/* a request the administrator declined: said plainly, in the warning colour */
+.poster__badge--declined, .resume__badge--declined { background: var(--media-badge-no); }
 /* on the NAS's fast disk: a banner across the poster's foot; a title in progress has its bar above it */
 .poster__quiet { position: absolute; left: 0; right: 0; bottom: 0; padding: 7px 8px 8px; background: var(--media-quiet); font-size: 16px; font-weight: 700; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .poster__quiet--busy { background: var(--media-quiet-busy); }
@@ -97,6 +99,10 @@
 }
 .media-ask__row--focused { background: var(--focus-fill); color: var(--focus-ink); transform: scale(1.02); }
 .media-ask__tick { font-weight: 700; }
+/* the request panel's pictures (QualityPanel): what each can expect, quieter; one not found for now is fainter still */
+.media-ask__facts { font-size: 22px; font-weight: 500; opacity: 0.75; }
+.media-ask__facts--none { opacity: 0.5; }
+.media-ask__row--off { opacity: 0.6; }
 /* the rows under the title: a long list of seasons scrolls here (RequestPanel), the focused row kept in view; the padding leaves room for its lift */
 .media-ask__list { max-height: 700px; overflow: hidden; padding: 6px 14px; margin: -6px -14px; }
 

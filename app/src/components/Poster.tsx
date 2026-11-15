@@ -11,6 +11,9 @@ export interface PosterModel {
 	/** a Seerr title's status: a badge in the corner (none for a title already in the library) */
 	availability?: Availability;
 	percent?: number;
+	/** this person's request was declined (« Declined »), or waits for the administrator (« To approve ») */
+	declined?: boolean;
+	waiting?: boolean;
 	/** the picture is a platform's logo: drawn whole on the poster's colour, not cropped */
 	logo?: boolean;
 	/** 0..1, how far through a title in progress: a bar at its foot */
@@ -49,14 +52,14 @@ const BADGE: Record<Availability, string> = {none: '', requested: 'Requested', d
 export function Poster ({model, focused, load, onHover, onActivate}: Props) {
 	const [broken, setBroken] = useState('');
 	const a = model.availability;
-	const badge = !a ? '' : a === 'downloading' ? `${model.percent || 0} %` : tr(BADGE[a]);
+	const badge = !a ? '' : model.declined && a === 'none' ? tr('Declined') : a === 'downloading' ? `${model.percent || 0} %` : model.waiting && a === 'requested' ? tr('To approve') : tr(BADGE[a]);
 	return (
 		<div class={`poster${model.logo ? ' poster--logo' : ''}${model.tile ? ' poster--tile' : ''}${focused ? ' poster--focused' : ''}`} onMouseEnter={onHover} onClick={onActivate}
 			aria-label={model.mine ? `${model.title}, ${tr('your rating')} ${model.mine} / 10` : undefined}>
 			{model.imageUrl && load && broken !== model.imageUrl
 				? <img class="poster__image" src={model.imageUrl} alt="" decoding="async" onLoad={model.logo ? sized : undefined} onError={() => setBroken(model.imageUrl || '')} />
 				: <div class="poster__name">{model.title}</div>}
-			{badge && <div class={`poster__badge poster__badge--${a}`}>{badge}</div>}
+			{badge && <div class={`poster__badge poster__badge--${model.declined && a === 'none' ? 'declined' : a}`}>{badge}</div>}
 			{model.quiet && <div class={`poster__quiet${model.quietBusy ? ' poster__quiet--busy' : ''}`}>{model.quiet}</div>}
 			{model.tile && model.imageUrl && load && broken !== model.imageUrl && <div class="poster__tile">{model.title}</div>}
 			{model.date && <div class="poster__date">{model.date}</div>}
