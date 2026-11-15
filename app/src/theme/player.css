@@ -13,7 +13,11 @@ html.playing #wpimage, html.playing #root > *:not(.player):not(.panel--cc):not(.
 .player__subs--raised { transform: translateY(-260px); }
 /* beside the next-episode card, the line is centred in the space to its left so it never runs under the card */
 .player__subs--card { right: calc(var(--player-card-width) + var(--layout-rows-edge) + 48px); }
-.player__subs, .player__loading, .player__jump { pointer-events: none; }
+.player__subs, .player__loading, .player__jump, .player__subload { pointer-events: none; }
+/* a subtitle still taken out of its file: a small note above the subtitles' place, raised with them over the bar */
+.player__subload { position: absolute; left: 50%; bottom: 220px; display: flex; flex-direction: column; align-items: center; padding: 14px 30px; border-radius: var(--radius-card); background: var(--player-pill); font-size: 26px; font-weight: 600; transform: translateX(-50%); }
+.player__subload--raised { transform: translate(-50%, -260px); }
+.player__subload-until { margin-top: 4px; font-size: 20px; font-weight: 500; opacity: 0.75; }
 /* the subtitle timing's ‹ and ›, a wider target for the pointer */
 .player__nudge { display: inline-block; padding: 0 12px; }
 .player__loading { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-size: 40px; font-weight: 600; opacity: 0.8; }

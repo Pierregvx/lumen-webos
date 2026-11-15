@@ -48,6 +48,13 @@ server made from the contract's examples, built in from the draft folder; not on
 
 ## Verify on the TV (built, not yet seen working)
 
+- [ ] Subtitles while they are taken out of a big file (2026-11-15, branch `claude/subs-live`) **(verify)**: the first time a subtitle of a
+      big file is asked for, the server's Jellyfin reads the whole file before it answers (minutes). With a plugin that has the
+      `subtitles()` hook (Ciné Pierro, feature `subs-live`), the player shows the cues already out, asks again every 15 s, and shows
+      « Téléchargement des sous-titres… » (with « Prêts jusqu'à … » once some are out) while the film is past them. Check on a film
+      whose subtitles were never taken out: the note shows, the subtitles come within a minute from the start, the note goes once they
+      are whole; and that a film whose subtitles are already out shows no note at all. Built and type-checked with the plugin, not run.
+
 - [ ] Upstream 2.2.0 merged into the fork (2026-11-11, branch `claude/merge-upstream-2-2-7857a1`) **(verify)**, installed on the TV
       that evening with the plugin (and Lumen Guide). **Switch-on seen working, 2026-11-11, the owner at home:** TV scripts updated (the
       old ones kept in `/var/lib/homehook/backup-avant-upstream-2-2/`), Home takeover and power-on set to Lumen, then a reboot: Lumen was

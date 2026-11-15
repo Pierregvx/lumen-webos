@@ -19,7 +19,7 @@ export interface RegistryOptions {
 const ID = /^[a-z0-9-]{1,40}$/;
 const ON_KEY = 'lumen-plugins-v1';
 
-type HookName = 'catalog' | 'library' | 'choices' | 'titleActions' | 'rated' | 'foreground';
+type HookName = 'catalog' | 'library' | 'choices' | 'subtitles' | 'titleActions' | 'rated' | 'foreground';
 
 export type Registry = ReturnType<typeof createRegistry>;
 
@@ -125,8 +125,8 @@ export function createRegistry (o: RegistryOptions) {
 		guard,
 		shield,
 
-		/** The first active plugin's answer to a hook that gives one object (a catalog, a choice store), shielded; null when none gives one. */
-		first<K extends 'catalog' | 'library' | 'choices'> (hook: K): ReturnType<NonNullable<LumenPlugin[K]>> | null {
+		/** The first active plugin's answer to a hook that gives one object (a catalog, a choice store, a subtitle source), shielded; null when none gives one. */
+		first<K extends 'catalog' | 'library' | 'choices' | 'subtitles'> (hook: K): ReturnType<NonNullable<LumenPlugin[K]>> | null {
 			for (const p of active()) {
 				const fn = p[hook];
 				if (!fn) continue;

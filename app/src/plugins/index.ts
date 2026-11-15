@@ -6,7 +6,7 @@ import {readCache, writeCache} from '../lib/boot';
 import {addStrings, t} from '../lib/i18n';
 import {cachedServer} from '../lib/jellyfin';
 import {logError} from '../lib/log';
-import type {CatalogSource, ChoiceStore, LibrarySource, LumenPlugin} from './api';
+import type {CatalogSource, ChoiceStore, LibrarySource, LumenPlugin, SubtitleSource} from './api';
 import {createRegistry} from './registry';
 
 export const plugins = createRegistry({
@@ -36,8 +36,9 @@ export function startPlugins (toast: (text: string, kind?: 'info' | 'error') => 
 let cachedCatalog: CatalogSource | null | undefined;
 let cachedChoices: ChoiceStore | null | undefined;
 let cachedLibrary: LibrarySource | null | undefined;
+let cachedSubtitles: SubtitleSource | null | undefined;
 let version = 0;
-plugins.subscribe(() => { cachedCatalog = undefined; cachedChoices = undefined; cachedLibrary = undefined; version++; });
+plugins.subscribe(() => { cachedCatalog = undefined; cachedChoices = undefined; cachedLibrary = undefined; cachedSubtitles = undefined; version++; });
 
 /** Films & series' catalog from a plugin, or null (Lumen's own Seerr calls) */
 export const catalog = (): CatalogSource | null => (cachedCatalog === undefined ? (cachedCatalog = plugins.first('catalog')) : cachedCatalog);
@@ -45,6 +46,8 @@ export const catalog = (): CatalogSource | null => (cachedCatalog === undefined 
 export const library = (): LibrarySource | null => (cachedLibrary === undefined ? (cachedLibrary = plugins.first('library')) : cachedLibrary);
 /** the player's choice store from a plugin, or null (Lumen's own copy alone) */
 export const choiceStore = (): ChoiceStore | null => (cachedChoices === undefined ? (cachedChoices = plugins.first('choices')) : cachedChoices);
+/** the player's subtitles from a plugin while they are still taken out of the file, or null (Lumen fetches them from Jellyfin) */
+export const subtitleSource = (): SubtitleSource | null => (cachedSubtitles === undefined ? (cachedSubtitles = plugins.first('subtitles')) : cachedSubtitles);
 
 /** Draws the component again when a plugin is turned on or off, set aside, or says its data changed. Returns a number that changes then. */
 export function usePlugins (): number {

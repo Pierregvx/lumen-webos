@@ -42,6 +42,8 @@ export interface LumenPlugin {
 	library?: () => LibrarySource | null;
 	/** where the player keeps the subtitle choice and timing (Lumen keeps its own copy too, used when this one fails) */
 	choices?: () => ChoiceStore | null;
+	/** where the player gets a subtitle that may still be on its way (taken out of a big file as it plays); null: Lumen fetches it from Jellyfin */
+	subtitles?: () => SubtitleSource | null;
 	/** extra buttons on a title in Films & series, after Lumen's own */
 	titleActions?: (t: TitleRef) => TitleAction[];
 	/** a score was given to a title (Films & series' Rate) */
@@ -143,6 +145,13 @@ export interface ChoiceSpec { title: string; note?: string; rows: string[]; pick
 export interface RatedTitle { id: string; type: 'Movie' | 'Series'; title: string; year?: number }
 
 // ---------- the player ----------
+
+/** A subtitle as far as it is ready: the cues so far (WebVTT), whole once `state` is 'ready'; `until` is the film's second the cues reach.
+ *  The player asks again while it is not ready. Null: not this source's to give (Lumen fetches it from Jellyfin). */
+export interface SubtitleLoad { state: 'ready' | 'partial' | 'pending'; until: number; vtt: string }
+export interface SubtitleSource {
+	load: (itemId: string, mediaSourceId: string, index: number) => Promise<SubtitleLoad | null>;
+}
 
 export interface SavedChoice { subtitle?: {index: number; lang?: string} | 'off'; offset?: number }
 export interface ChoiceStore {
