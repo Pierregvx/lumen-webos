@@ -54,6 +54,10 @@
 	--rain-pill: rgba(124, 196, 255, 0.6);
 	--rain-pill-wet: #7cc4ff;
 	--danger: #e0564f;
+	/* the messages at the foot of the screen: opaque and dark in both looks, so they read over any wallpaper */
+	--toast-bg: rgba(20, 21, 27, 0.96);
+	--toast-ink: #fff;
+	--toast-error: #ff9a94;
 	--warn: rgb(255, 92, 82);
 	--star: #ffd60a;
 	/* a channel with no brand colour of its own; lib/livetv.ts channelColor lays the same sweep over a brand colour */
@@ -79,6 +83,12 @@
 	--player-meter-fill: #fff;
 	--player-focus-fill: #fff;
 	--player-focus-ink: #111;
+	/* Films & series is always dark, so its focus keeps the dark look's colours in the light look too (the focus-fill of themes.css is dark there) */
+	--media-focus-fill: #fff;
+	--media-focus-ink: #111;
+	/* the smallest text and the running text, for a screen read from 3 m (1080p): nothing under 20px */
+	--text-small: 20px;
+	--text-body: 24px;
 	/* the player's subtitles: an outline, so white text reads on any picture */
 	--player-subs-shadow: 0 0 4px #000, 0 0 4px #000, 0 2px 6px rgba(0, 0, 0, 0.8);
 	/* the player's episode list: the veil over the picture (darkest at the bottom, where the cards are), and the episode playing's label.

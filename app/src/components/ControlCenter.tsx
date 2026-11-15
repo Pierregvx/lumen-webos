@@ -172,7 +172,7 @@ export function ControlCenter ({onClose, onCloseDown, onError, onAction, darkMod
 	};
 
 	// Home Assistant: each change shows at once, then the state the server sends back once done
-	const homeFail = (e: Error) => { setHome(lastHome()); onError(`Couldn't reach Home Assistant (${e.message})`); };
+	const homeFail = () => { setHome(lastHome()); onError("Couldn't reach Home Assistant"); };
 	const patchHome = (p: Partial<Home>) => setHome((h) => (h ? {...h, ...p} : h));
 	const pendingVolume = useRef<{id: number; level: number} | null>(null);
 	const sendVolume = () => {

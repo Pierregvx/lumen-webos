@@ -320,8 +320,10 @@ export function App () {
 
 	const showToast = useCallback((text: string, kind: ToastMessage['kind'] = 'info') => {
 		window.clearTimeout(toastTimer.current);
-		setToast({text, kind});
-		toastTimer.current = window.setTimeout(() => setToast(null), TIMING.toastMs);
+		const said = tr(text);
+		setToast({text: said, kind});
+		// long enough to read from the sofa: 2.2 s at the least, 4.5 s for an error, and more for a long line (about 14 characters a second)
+		toastTimer.current = window.setTimeout(() => setToast(null), Math.max(kind === 'error' ? TIMING.toastErrorMs : TIMING.toastMs, said.length * 70));
 	}, []);
 	pluginToast.current = showToast;
 	// the plugins the build has (plugins/index.ts): started once; Settings > Plugins follows them
@@ -679,7 +681,7 @@ export function App () {
 			const lines = out.split('\n').map((l) => l.trim()).filter(Boolean);
 			const last = lines[lines.length - 1] || 'Done';
 			showToast(last.length > 160 ? last.slice(0, 157) + '...' : last, /refused|could not|cannot|not ours|no node|failed|left .* on/i.test(last) ? 'error' : 'info');
-		}, (e: unknown) => showToast(e instanceof Error ? e.message : String(e), 'error')).then(done, done);
+		}, () => showToast('The TV script failed', 'error')).then(done, done);
 	}, [showToast]);
 	const tabs: SettingsTab[] = useMemo(() => {
 		if (!inSettings) return [];

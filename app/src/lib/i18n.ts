@@ -746,6 +746,52 @@ const TABLE: Record<string, string[]> = {
 	],
 };
 
+/** French for the screens added after the nine-language table above (Films & series, the player, the messages). Used when the table has no row. */
+const FR_MORE: Record<string, string> = {
+	'Season': 'Saison', 'New season': 'Nouvelle saison', 'Starts at': 'Début à', 'Sound': 'Son', 'Send': 'Envoyer', 'No picture': 'Pas d\'image', 'Live': 'En direct',
+	'your rating': 'ta note', 'All seasons': 'Toutes les saisons', 'Request': 'Demander', 'Request all': 'Tout demander', 'Full guide': 'Guide complet', 'Guide': 'Guide',
+	'No channels yet. Open Live TV once, then come back.': 'Pas encore de chaîne. Ouvre la TV en direct une fois, puis reviens.', 'No guide data': 'Pas de guide',
+	'Off air': 'Hors antenne', 'Only now and next in the guide data': 'Le guide ne donne que maintenant et ensuite', 'Now and Next': 'Maintenant et ensuite',
+	'Downloading': 'Téléchargement', 'Available': 'Disponible', 'Out on': 'Sortie le', 'Already rated': 'Déjà noté', 'Trailer': 'Bande-annonce', 'Cast': 'Distribution',
+	'Play': 'Lecture', 'Pause': 'Pause', 'Next episode': 'Épisode suivant', 'Next episode in': 'Épisode suivant dans', 'Episodes': 'Épisodes', 'Subtitles': 'Sous-titres',
+	'Still there?': 'Tu es toujours là ?', 'Keep watching': 'Continuer', 'Play now': 'Lire maintenant', 'Cancel': 'Annuler', 'Specials': 'Épisodes spéciaux', 'Watched': 'Vu',
+	'In progress': 'En cours', 'Timing': 'Décalage', 'In sync': 'Synchronisés', 'Earlier': 'Plus tôt', 'Later': 'Plus tard', 'Waiting for Jellyfin…': 'En attente de Jellyfin…',
+	'Library': 'Bibliothèque', 'Discover': 'Découvrir', 'Platforms': 'Plateformes', 'Recently added': 'Ajoutés récemment', 'For you': 'Pour toi', 'Coming soon': 'Bientôt',
+	'Trending': 'Tendances', 'Popular films': 'Films populaires', 'Results': 'Résultats', 'Films': 'Films', 'Series': 'Séries', 'Film': 'Film', 'All': 'Tout',
+	'Loading…': 'Chargement…', 'Nothing found': 'Rien trouvé', 'Type a title': 'Tape un titre', 'Jellyfin is not answering': 'Jellyfin ne répond pas',
+	'Seerr is not answering': 'Seerr ne répond pas', 'Sign in to Jellyfin in Settings > Films & series': 'Connecte-toi à Jellyfin dans Réglages > Films et séries',
+	'Films and series, yours or to request': 'Films et séries, à toi ou à demander', 'You finished': 'Tu viens de finir',
+	'OK rates it out of 10 for your picks · Back skips': 'OK pour noter sur 10 et affiner tes suggestions · Retour pour passer',
+	'Seerr did not answer': 'Seerr n\'a pas répondu', 'The plugin did not answer': 'Le plugin n\'a pas répondu', 'Couldn\'t open YouTube': 'Impossible d\'ouvrir YouTube',
+	'The TV could not keep the rating (storage full?)': 'La TV n\'a pas pu garder la note (mémoire pleine ?)', 'Couldn\'t play it here: opening Jellyfin': 'Lecture impossible ici : ouverture de Jellyfin',
+	'The server answered, but it refused the API key': 'Le serveur a répondu mais a refusé la clé API', 'Seerr refused the API key': 'Seerr a refusé la clé API', 'The server did not answer': 'Le serveur ne répond pas', 'Seerr did not take the request': 'Seerr n\'a pas pris la demande',
+	'Already requested': 'Déjà demandé', 'Wrong user name or password': 'Nom d\'utilisateur ou mot de passe incorrect',
+	'Quick Connect is off on this server, or it did not answer': 'Quick Connect est coupé sur ce serveur, ou il ne répond pas', 'The picks server did not answer': 'Le serveur de suggestions ne répond pas',
+	'Settings restored from the TV': 'Réglages retrouvés depuis la TV', 'Homebrew Channel not available, using the built-in app list': 'Homebrew Channel absent : liste d\'applications de base',
+	'Could not read the app list': 'Impossible de lire la liste des applications', 'Could not read the inputs': 'Impossible de lire les entrées',
+	'Couldn\'t start the screensaver (it needs the Homebrew Channel)': 'Impossible de lancer l\'écran de veille (il faut Homebrew Channel)',
+	'Set up Immich first, in Settings > Immich': 'Règle d\'abord Immich, dans Réglages > Immich', 'Keep at least one source': 'Garde au moins une source',
+	'Sign in to Jellyfin in Settings to watch IPTV channels': 'Connecte-toi à Jellyfin dans Réglages pour regarder les chaînes IPTV', 'Couldn\'t open LG Home': 'Impossible d\'ouvrir LG Home',
+	'Connected to Immich': 'Connecté à Immich', 'Couldn\'t save the Immich settings on the TV': 'Impossible d\'enregistrer les réglages Immich sur la TV',
+	'The address should look like http://192.0.2.20:8787, with no path': 'L\'adresse doit ressembler à http://192.0.2.20:8787, sans chemin',
+	'No settings backup found on the TV': 'Aucune sauvegarde de réglages trouvée sur la TV',
+	'Claude is picking again: Discover shows the new picks in a minute or two': 'Claude refait ses choix : Découvrir montrera les nouveaux dans une minute ou deux',
+	'The picks server did not answer.': 'Le serveur de suggestions ne répond pas', 'Still checking the TV': 'Vérification de la TV en cours', 'Only on the TV': 'Seulement sur la TV',
+	'This build has no TV scripts in it': 'Cette version n\'a pas les scripts de la TV', 'TV scripts installed': 'Scripts de la TV installés', 'Could not install the TV scripts': 'Impossible d\'installer les scripts de la TV',
+	'Restarting the TV': 'Redémarrage de la TV', 'This TV has no such setting': 'Cette TV n\'a pas ce réglage', 'The TV script failed': 'Le script de la TV a échoué',
+	'Couldn\'t change the backlight': 'Impossible de changer le rétroéclairage', 'Couldn\'t change the picture mode': 'Impossible de changer le mode image', 'Couldn\'t change Eye Comfort': 'Impossible de changer Eye Comfort',
+	'Couldn\'t turn the screen off (it needs the Homebrew Channel)': 'Impossible d\'éteindre l\'écran (il faut Homebrew Channel)',
+	'Couldn\'t restart the TV (it needs the Homebrew Channel)': 'Impossible de redémarrer la TV (il faut Homebrew Channel)', 'This TV didn\'t accept that sound mode': 'La TV n\'a pas accepté ce mode son',
+	'Couldn\'t reach Home Assistant': 'Impossible de joindre Home Assistant', 'Already withdrawn. LG\'s own menus can give them again.': 'Déjà retiré. Les menus de LG peuvent le redonner.'
+};
+/** French for messages with a name or a number in them: [pattern, answer with $1, $2] */
+const FR_PATTERNS: [RegExp, string][] = [
+	[/^Couldn't open (.+)$/, 'Impossible d\'ouvrir $1'], [/^Couldn't change (.+)$/, 'Impossible de changer $1'], [/^Couldn't uninstall (.+)$/, 'Impossible de désinstaller $1'],
+	[/^Uninstalling (.+)…$/, 'Désinstallation de $1…'], [/^(.+) uninstalled$/, '$1 désinstallé'], [/^(.+) is still installed$/, '$1 est toujours installé'],
+	[/^Quick Connect code (\S+): type it in Jellyfin, avatar > Quick Connect$/, 'Code Quick Connect $1 : tape-le dans Jellyfin, avatar > Quick Connect'],
+	[/^No answer from (.+)$/, 'Pas de réponse de $1']
+];
+
 let current = 'en';
 let clockMode = 'auto';
 
@@ -773,7 +819,13 @@ export function addStrings (table: Record<string, Record<string, string>>): void
 export function t (text: string, vars?: {n: number}): string {
 	const row = TABLE[text];
 	const at = ORDER.indexOf(current);
-	let out = row && at >= 0 && row[at] ? row[at] : (EXTRA[current] && EXTRA[current][text]) || text;
+	let out = row && at >= 0 && row[at] ? row[at] : (EXTRA[current] && EXTRA[current][text]) || (current === 'fr' ? frMore(text) : text);
 	if (vars) out = out.replace('{n}', String(vars.n));
 	return out;
+}
+
+function frMore (text: string): string {
+	if (FR_MORE[text]) return FR_MORE[text];
+	for (const [re, to] of FR_PATTERNS) if (re.test(text)) return text.replace(re, to);
+	return text;
 }
