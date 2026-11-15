@@ -163,6 +163,17 @@ function rateTarget (e: Entry | null | undefined): MediaItem | null {
 /** what each tab read last, kept while Lumen runs so the screen opens at once the second time; for one sign-in only */
 const cache: Record<string, Shelf[]> = {};
 let cacheOwner = '';
+/** the titles' full records already read (by entry key: the record and the plugin's chips), so a poster the focus comes back to asks the
+ *  server nothing for a while; emptied when a title's state changes (a request, a plugin's button) */
+const RECORD_MS = 5 * 60000;
+const RECORD_MAX = 50;
+const records = new Map<string, {at: number; more: SeerrTitle; chips?: Chip[]}>();
+function keepRecord (key: string, more: SeerrTitle): void {
+	records.delete(key);
+	records.set(key, {at: Date.now(), more});
+	// the oldest go first (a Map keeps the order things were set in)
+	while (records.size > RECORD_MAX) { const first = records.keys().next(); if (first.done) break; records.delete(first.value); }
+}
 
 /** the TV says it has no network (navigator.onLine is only trusted when false) */
 const offline = () => typeof navigator !== 'undefined' && navigator.onLine === false;
@@ -218,14 +229,16 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	const tabs = useMemo((): MediaTab[] => (seerrOn ? ['library', 'discover', 'search'] : ['library', 'search']), [seerrOn]);
 	const [tab, setTab] = useState<MediaTab>('library');
 	const owner = (s ? s.url + s.token : '') + '|' + (cat ? 'plugin' + pluginsNow : sr ? sr.url + sr.key : '');
-	if (owner !== cacheOwner) { Object.keys(cache).forEach((k) => { delete cache[k]; }); cacheOwner = owner; }
+	if (owner !== cacheOwner) { Object.keys(cache).forEach((k) => { delete cache[k]; }); records.clear(); cacheOwner = owner; }
 	const [shelves, setShelves] = useState<Record<string, Shelf[]>>(() => ({...cache}));
 	const [zone, setZone] = useState<'tabs' | 'field' | 'buttons' | 'rows'>('rows');
 	const [rows, setRows] = useState<Record<string, number>>({});
 	// a poster drawn under a resting pointer (Discover opening, a row scrolling in) is not a hover
 	const realPointer = useRealPointer();
 	const [cols, setCols] = useState<Record<string, number>>({});
-	const [button, setButton] = useState(0);
+	/** the focused button, kept by what it is (a button arriving late, Trailer with the full record, does not move the focus onto it); its
+	 *  place stands in when it is gone, and an empty id keeps the place (the first button) */
+	const [focusBtn, setFocusBtn] = useState<{id: string; at: number}>({id: '', at: 0});
 	const [hero, setHero] = useState<Entry | null>(null);
 	/** Seerr's full record of the hero (seasons, trailer, fresh status) */
 	const [more, setMore] = useState<SeerrTitle | null>(null);
@@ -393,23 +406,41 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	const item = shelf ? shelf.items[c] : undefined;
 
 	// the large picture and its text follow the focus once it stops moving; a Seerr title then reads its full record
+	// A record read in the last few minutes is used as it is, with no request; a plugin's button asking to read the title again (reread)
+	// keeps what shows until the new record comes, so its buttons do not go and come back under the focus.
+	const readFor = useRef({key: '', reread: 0});
 	useEffect(() => {
 		const timer = window.setTimeout(() => {
+			const key = item ? item.key : '';
+			const again = readFor.current.key === key && readFor.current.reread !== reread;
+			readFor.current = {key, reread};
 			setHero(item || null);
-			setMore(null);
-			setChips(null);
+			if (again) records.delete(key);
+			else { setMore(null); setChips(null); }
+			const kept = key ? records.get(key) : undefined;
+			if (kept && Date.now() - kept.at < RECORD_MS) {
+				setMore(kept.more); setMoreKey(key);
+				if (kept.chips) setChips({key, list: kept.chips});
+				return;
+			}
 			// a library title is read too, for its cast
 			const asked = tmdbOf(item);
-			const key = item ? item.key : '';
 			const ref = refOf(item, null);
 			if (cat && ref) cat.title(ref).then((d) => {
+				keepRecord(key, d);
 				setMore(d); setMoreKey(key);
-				if (cat.chips) cat.chips({...ref, tmdbId: ref.tmdbId || d.tmdbId, details: d}, d).then((list) => setChips({key, list}), () => undefined);
+				if (cat.chips) cat.chips({...ref, tmdbId: ref.tmdbId || d.tmdbId, details: d}, d).then((list) => {
+					const k = records.get(key);
+					if (k && k.more === d) k.chips = list;
+					setChips({key, list});
+				}, () => undefined);
 			}, () => undefined);
-			else if (asked && sr) details(sr, asked).then((d) => { if (d.tmdbId === asked.tmdbId && d.type === asked.type) { setMore(d); setMoreKey(key); } }, () => undefined);
+			else if (asked && sr) details(sr, asked).then((d) => { if (d.tmdbId === asked.tmdbId && d.type === asked.type) { keepRecord(key, d); setMore(d); setMoreKey(key); } }, () => undefined);
 		}, hero ? HERO_AFTER_MS : 0);
 		return () => window.clearTimeout(timer);
 	}, [item && item.key, reread]);
+	// a plugin said its data changed: the records it gave may be old
+	useEffect(() => { records.clear(); }, [pluginsNow]);
 
 	const t = hero && hero.sr ? (more && more.tmdbId === hero.sr.tmdbId ? more : hero.sr) : null;
 	const trailer = hero ? (hero.jf ? hero.jf.trailerYoutubeId : t && t.trailerYoutubeId) : undefined;
@@ -435,6 +466,12 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		const withCast = tmdbOf(hero) ? list.concat('cast') : list;
 		return (rateTarget(hero) ? withCast.concat('rate') : withCast).concat(actions.map((_, i) => i));
 	}, [hero, t, trailer, actions, pageAction]);
+	/** what each button is, apart from its place: a plugin's by its plugin and id */
+	const buttonIds = buttons.map((b) => (typeof b === 'number' ? 'a:' + (actions[b] ? actions[b].plugin + '/' + actions[b].id : b) : b));
+	const foundBtn = focusBtn.id ? buttonIds.indexOf(focusBtn.id) : -1;
+	const button = foundBtn >= 0 ? foundBtn : clamp(focusBtn.at, 0, Math.max(0, buttons.length - 1));
+	/** the focus on the button at this place (0: the first, whatever it becomes) */
+	const setButton = (i: number) => setFocusBtn({id: i > 0 ? buttonIds[i] || '' : '', at: i});
 	/** the score already given to the hero (null: skipped, undefined: none) */
 	const heroTarget = rateTarget(hero);
 	const heroScore = useMemo(() => {
@@ -478,6 +515,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		const asked = (sh: Shelf): Shelf => ({...sh, items: sh.items.map((e) => (e.sr && e.sr.type === type && e.sr.tmdbId === tmdbId && e.sr.availability === 'none' ? {...e, sr: {...e.sr, availability: 'requested' as Availability}} : e))});
 		setPlaces((all) => all.map((p) => ({...p, shelves: p.shelves ? p.shelves.map(asked) : null, more: p.more ? p.more.map(asked) : undefined})));
 		markPickRequested(type, tmdbId);
+		records.clear();
 		setForYou((f) => (f ? {...f, items: f.items.map((e) => (e.sr && e.sr.type === type && e.sr.tmdbId === tmdbId && e.sr.availability === 'none' ? {...e, sr: {...e.sr, availability: 'requested' as Availability}} : e))} : f));
 		setMore((m) => (m && m.type === type && m.tmdbId === tmdbId ? {...m, availability: 'requested'} : m));
 		setHero((h) => (h && h.sr && h.sr.type === type && h.sr.tmdbId === tmdbId ? {...h, sr: {...h.sr, availability: 'requested'}} : h));
@@ -626,7 +664,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		if (zone === 'buttons') {
 			if (key === 'up') setZone(inSearch ? 'field' : 'tabs');
 			else if (key === 'down') setZone(list.length ? 'rows' : 'buttons');
-			else if (key === 'left' || key === 'right') setButton((b) => clamp(b + (key === 'right' ? 1 : -1), 0, buttons.length - 1));
+			else if (key === 'left' || key === 'right') setButton(clamp(button + (key === 'right' ? 1 : -1), 0, buttons.length - 1));
 			return true;
 		}
 		if (!shelf) { if (key === 'up') setZone(inSearch ? 'field' : 'tabs'); return true; }
@@ -634,7 +672,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		else if (key === 'down') setRows((all) => ({...all, [view]: clamp(r + 1, 0, list.length - 1)}));
 		else if (key === 'left' || key === 'right') setCols((all) => ({...all, [colKey(shelf)]: clamp(c + (key === 'right' ? 1 : -1), 0, shelf.items.length - 1)}));
 		return true;
-	}, [asking, rating, form, choice, typing, zone, tab, tabs, hero, buttons, list.length, shelf, r, c, onClose, place, view, inSearch, both, kind]);
+	}, [asking, rating, form, choice, typing, zone, tab, tabs, hero, buttons, button, buttonIds.join(), list.length, shelf, r, c, onClose, place, view, inSearch, both, kind]);
 	useKeys(handleKey, active);
 
 	useOkPress({onPress: () => {
