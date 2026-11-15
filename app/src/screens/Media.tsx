@@ -620,6 +620,14 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		}
 	}, onLongPress: () => undefined}, active && !asking && !rating && !form && !choice && !typing);
 
+	// the buttons are a row that scrolls: the one in focus is kept in view (many plugin actions do not fit the screen)
+	useEffect(() => {
+		const row = document.querySelector('.media__buttons') as HTMLElement | null;
+		const on = row && row.querySelector('.media-btn--focused') as HTMLElement | null;
+		if (!row || !on) return;
+		if (on.offsetLeft < row.scrollLeft + 20) row.scrollLeft = Math.max(0, on.offsetLeft - 20);
+		else if (on.offsetLeft + on.offsetWidth > row.scrollLeft + row.clientWidth - 20) row.scrollLeft = on.offsetLeft + on.offsetWidth - row.clientWidth + 20;
+	}, [zone, button, buttons]);
 	// the hero picture: the new one fades in over the last one
 	const heroUrl = hero && hero.backdropUrl || '';
 	const [pictures, setPictures] = useState({now: '', under: ''});
