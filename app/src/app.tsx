@@ -260,8 +260,6 @@ export function App () {
 		return isWebOS() ? afterFirstFrame(start, 0) : (start(), () => undefined);
 	}, []);
 	const media = useMedia(config.autoSeasons);
-	/** what is prepared on the NAS's fast disk: the Resume tiles' banners (lib/prepared.ts) */
-	const prepared = usePrepared(!!media.jellyfin);
 	// IPTV channels come from Jellyfin's Live TV (lib/iptv.ts), so Live TV is given the signed-in server
 	const live = useLiveTv(config.liveTvRow, screen === 'guide', config.liveChannels, media.jellyfin);
 	// a rating asked for what was just finished (lib/ratings.ts)
@@ -275,6 +273,8 @@ export function App () {
 	useEffect(() => { if (liveOn && !media.jellyfin) setLiveOn(null); }, [liveOn, media.jellyfin]);
 	/** a film or a channel is playing in Lumen: the screens underneath take no keys, and there is no screensaver */
 	const watching = !!playing || !!liveOn;
+	/** what is prepared on the NAS's fast disk: the Resume tiles' banners (lib/prepared.ts), read while the home screen shows them */
+	const prepared = usePrepared(!!media.jellyfin && screen === 'home' && !watching);
 	useEffect(() => { if (playing && !media.jellyfin) setPlaying(null); }, [playing, media.jellyfin]);
 	/** plays a title where Settings > Films & series > Play in says: Lumen's player, or the Jellyfin app */
 	const playAsked = useRef({id: '', ticks: 0, seq: 0});
