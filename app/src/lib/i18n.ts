@@ -33,6 +33,7 @@ const TABLE: Record<string, string[]> = {
 	"{name} did not answer": ["{name} hat nicht geantwortet", "{name} no respondió", "{name} n'a pas répondu", "{name} non ha risposto", "{name} não respondeu", "{name} gaf geen antwoord", "{name} yanıt vermedi", "{name} ने जवाब नहीं दिया"],
 	"No network: check the TV's connection": ["Kein Netzwerk: Verbindung des Fernsehers prüfen", "Sin red: revisa la conexión del televisor", "Pas de réseau : vérifie la connexion de la TV", "Nessuna rete: controlla la connessione della TV", "Sem rede: verifique a ligação da TV", "Geen netwerk: controleer de verbinding van de tv", "Ağ yok: TV'nin bağlantısını kontrol edin", "नेटवर्क नहीं: टीवी का कनेक्शन जांचें"],
 	"Searching…": ["Suche…", "Buscando…", "Recherche…", "Ricerca…", "A procurar…", "Zoeken…", "Aranıyor…", "खोज रहे हैं…"],
+	"Audio": ["Audio", "Audio", "Audio", "Audio", "Áudio", "Audio", "Ses", "ऑडियो"],
 	"Opening…": ["Wird geöffnet…", "Abriendo…", "Ouverture…", "Apertura…", "A abrir…", "Openen…", "Açılıyor…", "खुल रहा है…"],
 	"Couldn't play it here": ["Hier nicht abspielbar", "No se puede reproducir aquí", "Lecture impossible ici", "Impossibile riprodurlo qui", "Não é possível reproduzir aqui", "Kan hier niet afspelen", "Burada oynatılamıyor", "यहां नहीं चल सका"],
 	"Open it in Jellyfin": ["In Jellyfin öffnen", "Abrir en Jellyfin", "L'ouvrir dans Jellyfin", "Aprilo in Jellyfin", "Abrir no Jellyfin", "Openen in Jellyfin", "Jellyfin'de aç", "Jellyfin में खोलें"],
