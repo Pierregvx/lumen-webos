@@ -57,7 +57,12 @@ const BASE = /^https?:\/\/[A-Za-z0-9.-]+(:\d{1,5})?$/;
 /** The server as last signed in, or null. */
 export function cachedServer (): JellyfinServer | null { return readCache<JellyfinServer>(SERVER_KEY); }
 
-export function saveServer (s: JellyfinServer | null): void { writeCache(SERVER_KEY, s); }
+export function saveServer (s: JellyfinServer | null): void { writeCache(SERVER_KEY, s); if (s) writeCache(DROPPED_KEY, null); }
+
+/** Jellyfin refused the saved sign-in (a 401: the token was ended, or the device removed in its dashboard): kept until the next sign-in, so
+ *  the home screen can say why Films & series and the Resume row went, and keep the tile that leads to Settings. */
+const DROPPED_KEY = 'jellyfin-dropped';
+export function droppedByServer (): boolean { return !!readCache<boolean>(DROPPED_KEY); }
 
 /** Signs out: the server ends the token (best effort, the server may be off), and Lumen forgets it. */
 export function signOut (): Promise<void> {
@@ -95,7 +100,7 @@ function call<T> (url: string, path: string, opts: {token?: string; device?: str
 		.then((r) => {
 			if (r.status === 401 && opts.token) {
 				const s = cachedServer();
-				if (s && s.token === opts.token) saveServer(null);
+				if (s && s.token === opts.token) { saveServer(null); writeCache(DROPPED_KEY, true); }
 			}
 			if (!r.ok) throw new Error(`Jellyfin ${r.status}`);
 			return r.status === 204 ? (undefined as unknown as T) : r.json() as Promise<T>;

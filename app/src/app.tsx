@@ -53,7 +53,7 @@ import {APP_ID} from './config/constants';
 import {bootMark, navMark} from './lib/log';
 import {LANGS, setClockMode, setLang, t as tr} from './lib/i18n';
 import {useMedia} from './hooks/useMedia';
-import {cleanUrl, imageUrl, item, quickConnectCheck, quickConnectStart, saveServer as saveJellyfin, signIn, signOut} from './lib/jellyfin';
+import {cleanUrl, droppedByServer, imageUrl, item, quickConnectCheck, quickConnectStart, saveServer as saveJellyfin, signIn, signOut} from './lib/jellyfin';
 import {saveSeerr, testSeerr} from './lib/seerr';
 import {playAndOpen} from './lib/play';
 import {request as requestSeerr} from './lib/seerr';
@@ -65,6 +65,8 @@ import {pickAgain, recoServer, saveRecoServer, sendRatings} from './lib/recos';
 import {startPlugins, usePlugins} from './plugins';
 import {pluginOption, pluginOptions, pluginText} from './plugins/settings';
 
+/** said when Jellyfin has refused the TV's sign-in */
+const JELLYFIN_DROPPED = 'Jellyfin signed this TV out: sign in again in Settings > Films & series';
 type Screen = 'home' | 'settings' | 'ambient' | 'guide' | 'media';
 
 const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock', live: 'livetv', channels: 'channels'} as const;
@@ -273,6 +275,13 @@ export function App () {
 	useEffect(() => { if (liveOn && !media.jellyfin) setLiveOn(null); }, [liveOn, media.jellyfin]);
 	/** a film or a channel is playing in Lumen: the screens underneath take no keys, and there is no screensaver */
 	const watching = !!playing || !!liveOn;
+	// Jellyfin refused the sign-in (lib/jellyfin.ts): said once a session, and the Films & series tile stays, leading to Settings
+	const jellyfinDropped = useMemo(() => !media.jellyfin && droppedByServer(), [media.jellyfin]);
+	const toldDropped = useRef(false);
+	useEffect(() => {
+		if (!jellyfinDropped) { toldDropped.current = false; return; }
+		if (!toldDropped.current) { toldDropped.current = true; showToast(tr(JELLYFIN_DROPPED), 'error'); }
+	}, [jellyfinDropped]);
 	/** what is prepared on the NAS's fast disk: the Resume tiles' banners (lib/prepared.ts), read while the home screen shows them */
 	const prepared = usePrepared(!!media.jellyfin && screen === 'home' && !watching);
 	useEffect(() => { if (playing && !media.jellyfin) setPlaying(null); }, [playing, media.jellyfin]);
@@ -591,10 +600,11 @@ export function App () {
 		const open = (id: string) => running.indexOf(id) !== -1;
 		// Films & series only once Jellyfin is signed in; then each input with something plugged in, at the end
 		const plugged = config.homeInputs ? inputs.filter((i) => i.connected).map((i): TileModel => ({...inputTile(i), key: INPUT_PREFIX + i.appId})) : [];
-		return shownApps.filter((a) => inFolder.indexOf(a.id) === -1 && (a.id !== BUILTIN.media || !!media.jellyfin)).map((a): TileModel => ({...appTile(a), running: open(a.id)}))
+		// a sign-in Jellyfin refused keeps the tile: it opens Settings, where Lumen signs in again
+		return shownApps.filter((a) => inFolder.indexOf(a.id) === -1 && (a.id !== BUILTIN.media || !!media.jellyfin || jellyfinDropped)).map((a): TileModel => ({...appTile(a), running: open(a.id)}))
 			.concat(folderTiles.map((f): TileModel => ({key: 'folder:' + f.name, label: f.name, color: '#3b4256', children: f.items.map((t) => t.imageUrl), running: f.items.some((t) => open(t.key))})))
 			.concat(plugged);
-	}, [shownApps, folderTiles, config.folders, config.homeInputs, inputs, running, media.jellyfin]);
+	}, [shownApps, folderTiles, config.folders, config.homeInputs, inputs, running, media.jellyfin, jellyfinDropped]);
 
 	/** the Resume row: what is in progress in Jellyfin, then what was requested in Seerr and is not in the library yet */
 	const resumeTiles = useMemo((): TileModel[] => {
@@ -1361,7 +1371,10 @@ export function App () {
 			return;
 		}
 		if (item.key === MISC.settings || item.key === BUILTIN.settings) { setScreen('settings'); return; }
-		if (item.key === BUILTIN.media) { setScreen('media'); return; }
+		if (item.key === BUILTIN.media) {
+			if (!media.jellyfin && droppedByServer()) { showToast(tr(JELLYFIN_DROPPED), 'error'); setScreen('settings'); return; }
+			setScreen('media'); return;
+		}
 		if (item.key === 'screensaver') { startScreensaver().catch(() => showToast("Couldn't start the screensaver (it needs the Homebrew Channel)", 'error')); return; }
 		if (item.key === MISC.lgHome) { launchLgHome().catch(() => showToast("Couldn't open LG Home", 'error')); return; }
 		if (item.key === 'controls') { setControls(true); return; }
