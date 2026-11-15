@@ -52,6 +52,8 @@ html.playing #wpimage, html.playing #root > *:not(.player):not(.panel--cc):not(.
 .player__buttons { display: flex; flex-direction: row; gap: 18px; margin-top: 22px; }
 .player__btn { padding: 12px 30px; border-radius: var(--radius-capsule); background: rgba(255, 255, 255, 0.18); font-size: 24px; font-weight: 600; transition: transform var(--dur-focus) ease-out; }
 .player__btn--focused { background: var(--player-focus-fill); color: var(--player-focus-ink); transform: scale(var(--lift-pill)); }
+/* Skip intro, where the next-episode card goes; focused already: OK presses it */
+.player__skip { position: absolute; right: var(--layout-rows-edge); bottom: 80px; }
 .player__next { position: absolute; right: var(--layout-rows-edge); bottom: 80px; width: var(--player-card-width); padding: 28px; border-radius: var(--radius-card); background: var(--player-card); }
 .player__next-when { font-size: 22px; opacity: 0.8; }
 .player__next-title { margin-top: 6px; font-size: 32px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -20,6 +20,8 @@ export interface Stream {
 	audios: AudioTrack[];
 	/** where the end credits start, when Jellyfin knows (an Outro media segment) */
 	outroStartTicks?: number;
+	/** the intro, in seconds, when Jellyfin knows (an Intro media segment, from the Intro Skipper plugin): Skip intro */
+	intro?: {start: number; end: number};
 	/** a copy on the NAS's quiet disk plays (lib/prepared.ts): the original's id, which gets the resume point and the played mark */
 	origId?: string;
 	runtimeTicks?: number;
@@ -58,7 +60,7 @@ export function openStream (s: JellyfinServer, item: MediaItem): Promise<Stream>
 function openFrom (s: JellyfinServer, item: MediaItem, id: string): Promise<Stream> {
 	return Promise.all([
 		call<{MediaSources?: RawSource[]; PlaySessionId?: string}>(s, `/Items/${id}/PlaybackInfo?userId=${s.userId}`),
-		call<{Items?: {Type?: string; StartTicks?: number}[]}>(s, `/MediaSegments/${item.id}`).catch(() => ({Items: []})),
+		call<{Items?: {Type?: string; StartTicks?: number; EndTicks?: number}[]}>(s, `/MediaSegments/${item.id}`).catch(() => ({Items: []})),
 		// where it was left, as the server has it now: the Resume row Lumen drew may be older than the last time it was stopped
 		call<{PlaybackPositionTicks?: number}>(s, `/UserItems/${item.id}/UserData?userId=${s.userId}`).catch(() => null)
 	]).then(([info, segments, userData]) => {
@@ -68,6 +70,7 @@ function openFrom (s: JellyfinServer, item: MediaItem, id: string): Promise<Stre
 		const audios = streams.filter((x) => x.Type === 'Audio');
 		const audio = audios.filter((x) => x.Index === src.DefaultAudioStreamIndex)[0] || audios.filter((x) => x.IsDefault)[0] || audios[0];
 		const outro = (segments.Items || []).filter((x) => x.Type === 'Outro' && x.StartTicks)[0];
+		const intro = (segments.Items || []).filter((x) => x.Type === 'Intro' && x.EndTicks && x.EndTicks > (x.StartTicks || 0))[0];
 		return {
 			url: `${s.url}/Videos/${id}/stream?static=true&mediaSourceId=${src.Id}&api_key=${s.token}`,
 			itemId: id,
@@ -79,6 +82,7 @@ function openFrom (s: JellyfinServer, item: MediaItem, id: string): Promise<Stre
 			audioLang: audio && audio.Language,
 			audios: audios.map((x) => ({index: x.Index, lang: x.Language, title: x.DisplayTitle || x.Title})),
 			outroStartTicks: outro && outro.StartTicks,
+			intro: intro ? {start: (intro.StartTicks || 0) / 1e7, end: (intro.EndTicks as number) / 1e7} : undefined,
 			subtitles: streams.filter((x) => x.Type === 'Subtitle' && x.IsTextSubtitleStream !== false).map((x) => ({
 				index: x.Index,
 				lang: x.Language,

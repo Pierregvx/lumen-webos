@@ -79,6 +79,13 @@ const CARD_BEFORE_END_S = 15;
 /** with one, the next episode starts this long after the credits begin */
 const AFTER_CREDITS_S = 8;
 
+/** Skip intro shows from the intro's start until this long before its end (a press then would skip almost nothing). */
+const INTRO_TAIL_S = 2;
+/** Whether Skip intro shows at this time (seconds into the video). */
+export function inIntro (intro: {start: number; end: number} | undefined, t: number): boolean {
+	return !!intro && t >= intro.start && t < intro.end - INTRO_TAIL_S;
+}
+
 /** When the next-episode card shows and when the next episode starts, in seconds into this one. */
 export function countdownStart (durationS: number, outroStartS: number | undefined): {cardAt: number; nextAt: number} {
 	if (outroStartS !== undefined && outroStartS > 0 && outroStartS < durationS) return {cardAt: outroStartS, nextAt: Math.min(durationS, outroStartS + AFTER_CREDITS_S)};

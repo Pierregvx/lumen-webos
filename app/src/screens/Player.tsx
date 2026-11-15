@@ -14,7 +14,7 @@ import {useRealPointer} from '../hooks/useRealPointer';
 import {releaseVideo, setVideoHeldByPlayer} from '../lib/wallpaperVideo';
 import {imageUrl} from '../lib/jellyfin';
 import {episodeAfter, openStream, reportProgress, reportStart, reportStopped, type Stream, type SubTrack} from '../lib/player';
-import {countdownStart, cueAt, parseVtt, pickSubtitle, saveAudio, savedAudio, savedSubtitle, saveSubtitle, saveSubOffset, STILL_THERE_AFTER, subOffset, type Cue} from '../lib/playerLogic';
+import {countdownStart, cueAt, inIntro, parseVtt, pickSubtitle, saveAudio, savedAudio, savedSubtitle, saveSubtitle, saveSubOffset, STILL_THERE_AFTER, subOffset, type Cue} from '../lib/playerLogic';
 import {loggedFetch} from '../lib/log';
 import {episodesOf, nextEpisode, type JellyfinServer, type MediaItem} from '../lib/jellyfin';
 import {prepLabel, prepOf, usePrepared} from '../lib/prepared';
@@ -433,6 +433,17 @@ export function Player ({server, item, active, onClose, onFallback}: Props) {
 	// the card waits while the episode list is open: what is picked there wins
 	const card = !!nextEp && !cancelled && !picker && duration > 0 && time >= cd.cardAt;
 	const stillThere = chain.current >= STILL_THERE_AFTER;
+	// Skip intro: while the intro plays (Jellyfin's Intro Skipper found it), with nothing else open; OK presses it
+	const [introOn, setIntroOn] = useState(false);
+	const skipShown = introOn && !card && !picker && menu === null && audioMenu === null && !stuck && zone !== 'buttons';
+	const skipIntro = () => {
+		const v = video.current;
+		if (!v || !stream || !stream.intro) return;
+		v.currentTime = stream.intro.end;
+		setIntroOn(false);
+		setTime(v.currentTime);
+		reportProgress(server, stream, pos(), v.paused);
+	};
 	const advancing = useRef('');
 	const autoNext = () => {
 		if (nextEp && advancing.current === nextEp.id) return true;    // already on its way: the old video's 'ended' must not close the player
@@ -513,6 +524,7 @@ export function Player ({server, item, active, onClose, onFallback}: Props) {
 		else if (menu !== null) { if (menu >= 0) chooseSub(subChoices[menu] || null); }
 		else if (card) cardPress(cardButton);
 		else if (zone === 'buttons') press(buttons[button]);
+		else if (skipShown) skipIntro();
 		else togglePause();
 	}), onLongPress: () => undefined}, active);
 
@@ -558,6 +570,8 @@ export function Player ({server, item, active, onClose, onFallback}: Props) {
 		if (v.currentTime > 0) lastTicks.current = v.currentTime * 1e7;
 		const text = cueAt(cues, v.currentTime + offset);
 		if (text !== line) setLine(text);
+		const io = inIntro(stream ? stream.intro : undefined, v.currentTime);
+		if (io !== introOn) setIntroOn(io);
 		if (card && !picker && v.currentTime >= cd.nextAt) autoNext();
 	};
 	const onEnded = () => { if (!autoNext()) onClose(); };
@@ -642,6 +656,9 @@ export function Player ({server, item, active, onClose, onFallback}: Props) {
 					))}
 				</div>
 			</div>
+			{skipShown && (
+				<span class="player__skip player__btn player__btn--focused" onClick={(e) => { e.stopPropagation(); wake(); skipIntro(); }}>{tr('Skip intro')}</span>
+			)}
 			{card && nextEp && (
 				<div class="player__next" onClick={(e) => e.stopPropagation()}>
 					<div class="player__next-when">{stillThere ? tr('Still there?') : `${tr('Next episode in')} ${Math.max(0, Math.ceil(cd.nextAt - time))} s`}</div>

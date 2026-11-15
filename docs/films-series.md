@@ -131,6 +131,8 @@ the video wallpaper pauses.
   French; a choice made with the button sticks for the series (`player-subs`). Jellyfin's WebVTT, drawn by Lumen over the picture.
 - **Next episode**: a card, with the episode's own picture, from the start of the end credits when Jellyfin has an Outro segment (next episode 8 s later), else 15 s
   before the end (next at the end). Play now, Cancel or Back. After 3 episodes in a row with no key pressed it asks "Still there?".
+- **Skip intro**: while the intro plays, when Jellyfin has an Intro segment, a pill where the card goes; OK jumps to the intro's end (with the
+  bar's buttons open, OK stays theirs). Both segments come from the Intro Skipper plugin on the NAS's Jellyfin, which analyses each night.
 - **Jellyfin keeps the place**: start, progress every 10 s, pauses, jumps and stop are reported (`/Sessions/Playing…`), as a "Lumen"
   session.
 - **Fallback**: a stream that errors, or does not start within 10 s, closes the player and opens the Jellyfin app on the title, as below.

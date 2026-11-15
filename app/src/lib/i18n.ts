@@ -759,7 +759,7 @@ const FR_MORE: Record<string, string> = {
 	'Off air': 'Hors antenne', 'Only now and next in the guide data': 'Le guide ne donne que maintenant et ensuite', 'Now and Next': 'Maintenant et ensuite',
 	'Downloading': 'Téléchargement', 'Available': 'Disponible', 'Out on': 'Sortie le', 'Already rated': 'Déjà noté', 'Trailer': 'Bande-annonce', 'Cast': 'Distribution',
 	'Play': 'Lecture', 'Pause': 'Pause', 'Next episode': 'Épisode suivant', 'Next episode in': 'Épisode suivant dans', 'Episodes': 'Épisodes', 'Subtitles': 'Sous-titres',
-	'Still there?': 'Tu es toujours là ?', 'Keep watching': 'Continuer', 'Play now': 'Lire maintenant', 'Cancel': 'Annuler', 'Specials': 'Épisodes spéciaux', 'Watched': 'Vu',
+	'Still there?': 'Tu es toujours là ?', 'Keep watching': 'Continuer', 'Play now': 'Lire maintenant', 'Skip intro': 'Passer l’intro', 'Cancel': 'Annuler', 'Specials': 'Épisodes spéciaux', 'Watched': 'Vu',
 	'In progress': 'En cours', 'Timing': 'Décalage', 'In sync': 'Synchronisés', 'Earlier': 'Plus tôt', 'Later': 'Plus tard', 'Waiting for Jellyfin…': 'En attente de Jellyfin…',
 	'Library': 'Bibliothèque', 'Discover': 'Découvrir', 'Platforms': 'Plateformes', 'Recently added': 'Ajoutés récemment', 'For you': 'Pour toi', 'Coming soon': 'Bientôt',
 	'Trending': 'Tendances', 'Popular films': 'Films populaires', 'Results': 'Résultats', 'Films': 'Films', 'Series': 'Séries', 'Film': 'Film', 'All': 'Tout',
