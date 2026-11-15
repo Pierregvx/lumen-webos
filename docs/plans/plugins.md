@@ -42,6 +42,7 @@ Lumen is signed in to), `store` (its own storage) and `t` (Lumen's translation).
 |---|---|---|
 | `catalog()` | Films & series: Discover, search, a title's record, the pages (a platform, a person, a tile), requests, the home screen's requests row. The first plugin that gives one replaces Lumen's own Seerr calls. | `CatalogSource` |
 | `choices()` | The player: where the subtitle choice and timing are kept (Lumen keeps its own copy too, used when the plugin fails). | `ChoiceStore` |
+| `subtitles()` | The player: a subtitle that may still be on its way, taken out of a big file as it plays. `load(itemId, mediaSourceId, index)` gives the cues so far (`{state, until, vtt}`); the player asks again every 15 s until `ready`, shows « Downloading subtitles… » while nothing is out or the film is past `until`, and fetches Jellyfin's track itself when the plugin gives none (null) or fails. | `SubtitleSource` |
 | `titleActions(title)` | Films & series: buttons after Lumen's own on the title in focus. Each returns an `ActionResult`: a toast or an error, a page, a form (`FormPanel`), a short list (`ChoicePanel`), or « read the title again ». | `TitleAction[]` |
 | `rated(title, score)` | A score was given with Rate. | |
 

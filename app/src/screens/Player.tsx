@@ -18,7 +18,7 @@ import {countdownStart, cueAt, parseVtt, pickSubtitle, savedSubtitle, saveSubtit
 import {loggedFetch} from '../lib/log';
 import {episodesOf, nextEpisode, type JellyfinServer, type MediaItem} from '../lib/jellyfin';
 import {prepLabel, prepOf, usePrepared} from '../lib/prepared';
-import {choiceStore} from '../plugins';
+import {choiceStore, subtitleSource} from '../plugins';
 
 interface Props {
 	server: JellyfinServer;
@@ -40,6 +40,8 @@ const REPORT_EVERY_MS = 10000;
 const START_LIMIT_MS = 10000;
 /** waiting for data this long once playing: Jellyfin's app takes over */
 const STALL_LIMIT_MS = 15000;
+/** a subtitle still taken out of its file is asked for again this often */
+const SUB_POLL_MS = 15000;
 /** a subtitle timing step (Left/Right on the timing row of the subtitle menu) */
 const SUB_STEP_S = 0.25;
 /** a click and an OK this close together are one press: with the pointer showing, the TV may send both for one press of OK */
@@ -236,12 +238,30 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 		const chosen = same && (!lang || !same.lang || same.lang.toLowerCase() === lang) ? same : byLang || same;
 		if (chosen) setSub(chosen);
 	}, [stream, kept]);
+	// a plugin may give the subtitle while it is still taken out of a big file (plugins/api.ts SubtitleSource): the cues so far, asked
+	// again every 15 s until whole, the film playing meanwhile; without one, or when it gives none, Jellyfin's whole track as before
+	const [subLoad, setSubLoad] = useState<{state: string; until: number} | null>(null);
 	useEffect(() => {
-		setCues([]); setLine('');
-		if (!sub) return undefined;
+		setCues([]); setLine(''); setSubLoad(null);
+		if (!sub || !stream) return undefined;
 		let live = true;
-		loggedFetch(sub.vttUrl).then((r) => r.text()).then((text) => { if (live) setCues(parseVtt(text)); }, () => undefined);
-		return () => { live = false; };
+		let timer = 0;
+		const whole = () => loggedFetch(sub.vttUrl).then((r) => r.text()).then((text) => { if (live) setCues(parseVtt(text)); }, () => undefined);
+		const source = subtitleSource();
+		if (!source) { whole(); return () => { live = false; }; }
+		let seen = -1;
+		const ask = () => {
+			source.load(stream.itemId, stream.mediaSourceId, sub.index).then((got) => {
+				if (!live) return;
+				if (!got) { setSubLoad(null); whole(); return; }
+				const reach = got.state === 'ready' ? Infinity : got.until;
+				if (reach > seen || got.state === 'ready') { seen = reach; setCues(parseVtt(got.vtt)); }
+				setSubLoad(got.state === 'ready' ? null : {state: got.state, until: got.until});
+				if (got.state !== 'ready') timer = window.setTimeout(ask, SUB_POLL_MS);
+			}, () => { if (live) { setSubLoad(null); whole(); } });
+		};
+		ask();
+		return () => { live = false; window.clearTimeout(timer); };
 	}, [sub && sub.vttUrl]);
 	const chooseSub = (choice: SubTrack | null) => {
 		setSub(choice);
@@ -492,6 +512,12 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 				onPause={onPause} onTimeUpdate={onTime} onEnded={onEnded} onWaiting={() => { if (startedRef.current) setStalled(true); }} onError={() => { if (now) fallBack(now); }} />}
 			{!started && <div class="player__loading">{now ? now.title : ''}</div>}
 			{stalled && <div class="player__loading">{tr('Waiting for Jellyfin…')}</div>}
+			{subLoad && !picker && (subLoad.state === 'pending' || lastTicks.current / 1e7 > subLoad.until) && (
+				<div class={`player__subload${bar ? ' player__subload--raised' : ''}`}>
+					{tr('Downloading subtitles…')}
+					{subLoad.until > 0 && <span class="player__subload-until">{tr('Ready up to %s').replace('%s', clock(subLoad.until))}</span>}
+				</div>
+			)}
 			{line && !picker && <div class={`player__subs${bar ? ' player__subs--raised' : ''}${card ? ' player__subs--card' : ''}`}>{line.split('\n').map((l, i) => <span key={i}>{l}</span>)}</div>}
 			{jump !== 0 && <div class="player__jump">{(jump > 0 ? '+' : '−') + Math.abs(jump) + ' s'}</div>}
 			<div class={`player__bar${(bar || jump) && !picker ? ' player__bar--shown' : ''}`} onClick={(e) => e.stopPropagation()}
