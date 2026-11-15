@@ -2,7 +2,7 @@ import {useCallback, useEffect, useRef, useState} from 'preact/hooks';
 import {afterFirstFrame, readCache, writeCache} from '../lib/boot';
 import {cachedServer, resume, type JellyfinServer, type MediaItem} from '../lib/jellyfin';
 import {cachedSeerr, myPending, type SeerrServer, type SeerrTitle} from '../lib/seerr';
-import {newSeasons, type NewSeason} from '../lib/seasons';
+import {newSeasons, seerrSource, type NewSeason, type SeasonSource} from '../lib/seasons';
 import {isWebOS} from '../lib/luna';
 import {catalog, plugins} from '../plugins';
 
@@ -23,6 +23,17 @@ export interface MediaState {
 
 const CACHE_KEY = 'lumen-boot-media-v1';
 
+/** Where the new seasons are read and asked: a plugin's catalog when one is on (as the person, in their own account), else Seerr with
+ *  Lumen's key; null with neither. */
+export function seasonSource (sr: SeerrServer | null): SeasonSource | null {
+	const cat = catalog();
+	if (cat) return {
+		details: (x) => cat.title({type: 'tv', title: x.title, tmdbId: x.tmdbId, jellyfinId: x.jellyfinId, here: true}),
+		request: (t, season) => cat.request(t, [season])
+	};
+	return sr ? seerrSource(sr) : null;
+}
+
 /** The Resume row's titles. The last read is drawn at once on a cold start; the servers are asked again after the first frame, and each time
  *  Lumen comes back to the front (a film may have been watched since). Nothing is asked with no server set up. */
 export function useMedia (autoSeasons: boolean): MediaState {
@@ -42,7 +53,8 @@ export function useMedia (autoSeasons: boolean): MediaState {
 		setJellyfin(jf);
 		setSeerr(sr);
 		if (!jf) { setLists({resume: [], pending: []}); setSeasons([]); writeCache(CACHE_KEY, null); return; }
-		if (sr) newSeasons(jf, sr, auto.current).then((list) => { if (ask === seq.current) setSeasons(list); }, () => undefined);
+		const source = seasonSource(sr);
+		if (source) newSeasons(jf, source, auto.current).then((list) => { if (ask === seq.current) setSeasons(list); }, () => undefined);
 		else setSeasons([]);
 		Promise.all([
 			resume(jf).catch(() => null),

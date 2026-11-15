@@ -52,11 +52,11 @@ import {appDir, nativeWhy, powerOnPending, powerOnWhy, readTvState, scriptsReady
 import {APP_ID} from './config/constants';
 import {bootMark, navMark} from './lib/log';
 import {LANGS, setClockMode, setLang, t as tr} from './lib/i18n';
-import {useMedia} from './hooks/useMedia';
+import {seasonSource, useMedia} from './hooks/useMedia';
 import {cleanUrl, imageUrl, item, quickConnectCheck, quickConnectStart, saveServer as saveJellyfin, signIn, signOut} from './lib/jellyfin';
 import {saveSeerr, testSeerr} from './lib/seerr';
 import {playAndOpen} from './lib/play';
-import {request as requestSeerr} from './lib/seerr';
+import type {SeerrTitle} from './lib/seerr';
 import {forgetNewSeason, lookAgain} from './lib/seasons';
 import {rate, toRate} from './lib/ratings';
 import {RatePanel} from './components/RatePanel';
@@ -266,6 +266,8 @@ export function App () {
 	const live = useLiveTv(config.liveTvRow, screen === 'guide', config.liveChannels, media.jellyfin);
 	// a rating asked for what was just finished (lib/ratings.ts)
 	const [toRateNow, setToRateNow] = useState<MediaItem | null>(null);
+	/** Films & series opened on a request of the home row (OK on its tile) */
+	const [mediaRequest, setMediaRequest] = useState<{title: SeerrTitle; seq: number} | null>(null);
 	/** looks for something just finished to rate (set by the effect below); the player calls it when it closes */
 	const lookForRating = useRef<() => void>(() => undefined);
 	// the player, over whatever screen started it (that screen stays mounted and keeps its place)
@@ -608,7 +610,8 @@ export function App () {
 		const asked = media.pending.map((t): TileModel => ({
 			key: MEDIA.req + t.tmdbId,
 			label: t.title,
-			resume: {title: t.title, subtitle: t.year ? String(t.year) : undefined, imageUrl: t.backdropUrl, backdrop: t.backdropUrl, requested: true, percent: t.availability === 'downloading' ? t.percent : undefined}
+			resume: {title: t.title, subtitle: t.year ? String(t.year) : undefined, imageUrl: t.backdropUrl, backdrop: t.backdropUrl, requested: true, percent: t.availability === 'downloading' ? t.percent : undefined,
+				declined: !!t.declined, waiting: !!t.pendingApproval}
 		}));
 		// new seasons of the series followed lead the row
 		const fresh = media.seasons.map((n): TileModel => ({
@@ -1339,11 +1342,13 @@ export function App () {
 		}
 		if (item.key.indexOf(MEDIA.season) === 0) {
 			const n = media.seasons.filter((x) => MEDIA.season + x.title.tmdbId === item.key)[0];
-			if (!n || !media.seerr || seasonSending.current === item.key) return;
+			// through the plugin's catalog when one is on (the person's own request), else Seerr
+			const source = seasonSource(media.seerr);
+			if (!n || !source || seasonSending.current === item.key) return;
 			seasonSending.current = item.key;
-			requestSeerr(media.seerr, n.title, [n.season]).then((r) => {
+			source.request(n.title, n.season).catch(() => 'Seerr did not take the request').then((r) => {
 				seasonSending.current = '';
-				if (r !== true) { showToast(r, 'error'); return; }
+				if (r !== true) { showToast(tr(r), 'error'); return; }
 				showToast(`${tr('Requested')} · ${n.title.title} · ${tr('Season')} ${n.season}`);
 				forgetNewSeason(n.title.tmdbId);
 				media.dropSeason(n.title.tmdbId);
@@ -1351,7 +1356,12 @@ export function App () {
 			});
 			return;
 		}
-		if (item.key.indexOf(MEDIA.req) === 0) { showToast('Requested: it will be here once it is in your library'); return; }
+		// a request: its sheet in Films & series, among the person's other requests (its trailer, its cast, where it is)
+		if (item.key.indexOf(MEDIA.req) === 0) {
+			const t = media.pending.filter((x) => MEDIA.req + x.tmdbId === item.key)[0];
+			if (t) { setMediaRequest({title: t, seq: Date.now()}); setScreen('media'); }
+			return;
+		}
 		if (item.key.indexOf(INPUT_PREFIX) === 0) { open(item.key.slice(INPUT_PREFIX.length), item.label); return; }
 		if (item.key.indexOf(LIVE.prefix) === 0) {
 			const id = item.key.slice(LIVE.prefix.length);
@@ -1361,7 +1371,7 @@ export function App () {
 			return;
 		}
 		if (item.key === MISC.settings || item.key === BUILTIN.settings) { setScreen('settings'); return; }
-		if (item.key === BUILTIN.media) { setScreen('media'); return; }
+		if (item.key === BUILTIN.media) { setMediaRequest(null); setScreen('media'); return; }
 		if (item.key === 'screensaver') { startScreensaver().catch(() => showToast("Couldn't start the screensaver (it needs the Homebrew Channel)", 'error')); return; }
 		if (item.key === MISC.lgHome) { launchLgHome().catch(() => showToast("Couldn't open LG Home", 'error')); return; }
 		if (item.key === 'controls') { setControls(true); return; }
@@ -1642,12 +1652,13 @@ export function App () {
 				onFallback={(it) => { setPlaying(null); const jf = media.jellyfin; if (jf) playAndOpen(jf, it, () => Promise.resolve()); }} />}
 			{liveOn && media.jellyfin && <LivePlayer server={media.jellyfin} channels={iptvChannels} groups={live.groups} category={live.category} onCategory={live.setCategory} start={liveOn} listings={live.listings} logos={live.logos} now={live.now} pending={live.pending} browse={live.browse}
 				active={!controls} onToast={showToast} onClose={() => setLiveOn(null)} />}
-			{toRateNow && screen === 'home' && !watching && <RatePanel title={toRateNow.title} active={!controls && !watching} onDone={(score) => {
+			{/* over Films & series too: a film finished from there is rated as its sheet comes back */}
+			{toRateNow && (screen === 'home' || screen === 'media') && !watching && <RatePanel title={toRateNow.title} active={!controls && !watching} onDone={(score) => {
 				if (!rate(toRateNow, score)) showToast('The TV could not keep the rating (storage full?)', 'error');
 				else { sendRatings(); if (score !== null) showToast(`${toRateNow.title} · ${score}/10`); }
 				setToRateNow(null);
 			}} />}
-			{screen === 'media' && <Media state={media} forYou={config.aiRow} active={!controls && !watching} onPlay={startPlay} onClose={() => setScreen('home')} onToast={showToast} />}
+			{screen === 'media' && <Media state={media} openRequest={mediaRequest} forYou={config.aiRow} active={!controls && !watching && !toRateNow} onPlay={startPlay} onClose={() => { setMediaRequest(null); setScreen('home'); }} onToast={showToast} />}
 			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onChoose={onChoose} onText={onText} onClose={() => setScreen('home')} />}
 			{controls && <ControlCenter
 				darkMode={config.darkMode}

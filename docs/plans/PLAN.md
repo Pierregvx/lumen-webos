@@ -275,6 +275,16 @@ Add new items here, with the branch and what to check. Delete an item once Sam h
       dimming looks the same as before.
 - [ ] App names drop a store tagline (2026-11-02, from juanrusch's fork): "Spotify - Music and Podcasts" reads "Spotify", and a long name
       in the dock ends in "…" inside the focused glass.
+- [ ] Requests from the TV (2026-11-15, branch `fix/ux-requests`, with the Ciné Pierro plugin of cine-pierro `fix/ux-tv-requests`,
+      contract revision 12) **(verify)**. Request on a film opens « Quelle qualité ? » (`components/QualityPanel.tsx`): 4K, 1080p, 720p and
+      Meilleure dispo, each with its sources once the server has looked (a few seconds), the focus on the sharpest that comes; OK on one asks
+      in that picture (Seerr shows the profile, HD-1080p for 1080p); « Tout de suite » is a row ticked with OK when Ciné Pierro's `/me` says
+      `now`. A series: its seasons first, the focus on the first season (never on a row that sends), « Toutes les saisons manquantes » ticks
+      them all, « Demander (n) » then the pictures. Lumen without a plugin: a film's Request asks « Le demander ? » first. A series partly
+      here has « + Saisons manquantes » beside Play. The New season tile asks through the plugin (the person's own request) when it is on.
+      Badges: « Refusée », « À approuver », « 37 % » on the home row and the posters. OK on a request of the home row opens Films & series on
+      it (« Tes demandes »). « Noter » starts from the score shown. A film finished from Films & series asks its score over that screen
+      (check the panel is above it, and that Films & series takes no keys meanwhile).
 
 ---
 

@@ -14,6 +14,9 @@ export interface ResumeInfo {
 	requested?: boolean;
 	/** how far its download is, 0..100 */
 	percent?: number;
+	/** the request was declined, or waits for the administrator: said on the badge in place of « Requested » */
+	declined?: boolean;
+	waiting?: boolean;
 	/** a large picture for the home screen's background while this tile is focused */
 	backdrop?: string;
 	/** a badge of its own (New season) */
@@ -34,7 +37,7 @@ interface Props {
  *  tile. A requested title shows a badge instead of the bar. */
 export function ResumeTile ({info, classes, onHover, onActivate}: Props) {
 	const [broken, setBroken] = useState('');
-	const badge = info.badge ? info.badge : info.percent !== undefined ? `${info.percent} %` : info.requested ? tr('Requested') : '';
+	const badge = info.badge ? info.badge : info.declined ? tr('Declined') : info.percent !== undefined ? `${info.percent} %` : info.waiting ? tr('To approve') : info.requested ? tr('Requested') : '';
 	return (
 		<div class={`${classes} tile--resume`} onMouseEnter={onHover} onClick={onActivate}>
 			<div class="tile__box">
@@ -43,7 +46,7 @@ export function ResumeTile ({info, classes, onHover, onActivate}: Props) {
 					: <div class="resume__name">{info.title}</div>}
 				{info.quiet && <div class={`resume__quiet${info.quietBusy ? ' resume__quiet--busy' : ''}`}>{info.quiet}</div>}
 				{badge
-					? <div class="resume__badge">{badge}</div>
+					? <div class={`resume__badge${info.declined ? ' resume__badge--declined' : ''}`}>{badge}</div>
 					: <div class="chan__bar"><span style={{transform: `scaleX(${info.progress || 0})`}} /></div>}
 			</div>
 			<div class="chan__info">
