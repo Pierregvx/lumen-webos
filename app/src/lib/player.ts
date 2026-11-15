@@ -5,6 +5,7 @@ import {loggedFetch} from './log';
 import {type JellyfinServer, type MediaItem} from './jellyfin';
 import {copyOf} from './prepared';
 
+export interface AudioTrack { index: number; lang?: string; title?: string }
 export interface SubTrack { index: number; lang?: string; title?: string; isDefault: boolean; vttUrl: string }
 export interface Stream {
 	url: string;
@@ -15,6 +16,8 @@ export interface Stream {
 	subtitles: SubTrack[];
 	/** the default audio track's language (ISO 639-2, as Jellyfin gives it) */
 	audioLang?: string;
+	/** the file's audio tracks, in the file's order (the order of the video's audioTracks) */
+	audios: AudioTrack[];
 	/** where the end credits start, when Jellyfin knows (an Outro media segment) */
 	outroStartTicks?: number;
 	/** a copy on the NAS's quiet disk plays (lib/prepared.ts): the original's id, which gets the resume point and the played mark */
@@ -74,6 +77,7 @@ function openFrom (s: JellyfinServer, item: MediaItem, id: string): Promise<Stre
 			playSessionId: info.PlaySessionId || '',
 			startTicks: item.startAt !== undefined ? item.startAt : userData ? userData.PlaybackPositionTicks || 0 : item.resumeTicks || 0,
 			audioLang: audio && audio.Language,
+			audios: audios.map((x) => ({index: x.Index, lang: x.Language, title: x.DisplayTitle || x.Title})),
 			outroStartTicks: outro && outro.StartTicks,
 			subtitles: streams.filter((x) => x.Type === 'Subtitle' && x.IsTextSubtitleStream !== false).map((x) => ({
 				index: x.Index,

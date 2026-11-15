@@ -34,6 +34,7 @@ export const KEY = {
 export const TIMING = {
 	lunaTimeoutMs: 4000,
 	toastMs: 2200,
+	toastErrorMs: 4500,
 	longPressMs: 600,       // OK held this long enters/leaves re-order mode
 	lateRowsMs: 1500,       // from page start: the rows past the first two begin to be drawn, one per idle moment
 	lateRowIdleMs: 400,     // each of those rows waits at most this long for an idle moment

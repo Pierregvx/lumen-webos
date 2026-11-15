@@ -30,6 +30,17 @@ const TABLE: Record<string, string[]> = {
 	"Next": ["Danach", "Después", "Ensuite", "Dopo", "Depois", "Hierna", "Sonra", "इसके बाद"],
 	"Search": ["Suchen", "Buscar", "Rechercher", "Cerca", "Procurar", "Zoeken", "Ara", "खोजें"],
 	"All categories": ["Alle Kategorien", "Todas las categorías", "Toutes les catégories", "Tutte le categorie", "Todas as categorias", "Alle categorieën", "Tüm kategoriler", "सभी श्रेणियाँ"],
+	// Films & series and the player: a server that does not answer, the search, the opening of a film, the audio track
+	"{name} is not answering": ["{name} antwortet nicht", "{name} no responde", "{name} ne répond pas", "{name} non risponde", "{name} não responde", "{name} reageert niet", "{name} yanıt vermiyor", "{name} जवाब नहीं दे रहा"],
+	"{name} did not answer": ["{name} hat nicht geantwortet", "{name} no respondió", "{name} n'a pas répondu", "{name} non ha risposto", "{name} não respondeu", "{name} gaf geen antwoord", "{name} yanıt vermedi", "{name} ने जवाब नहीं दिया"],
+	"No network: check the TV's connection": ["Kein Netzwerk: Verbindung des Fernsehers prüfen", "Sin red: revisa la conexión del televisor", "Pas de réseau : vérifie la connexion de la TV", "Nessuna rete: controlla la connessione della TV", "Sem rede: verifique a ligação da TV", "Geen netwerk: controleer de verbinding van de tv", "Ağ yok: TV'nin bağlantısını kontrol edin", "नेटवर्क नहीं: टीवी का कनेक्शन जांचें"],
+	"Searching…": ["Suche…", "Buscando…", "Recherche…", "Ricerca…", "A procurar…", "Zoeken…", "Aranıyor…", "खोज रहे हैं…"],
+	"Audio": ["Audio", "Audio", "Audio", "Audio", "Áudio", "Audio", "Ses", "ऑडियो"],
+	"Opening…": ["Wird geöffnet…", "Abriendo…", "Ouverture…", "Apertura…", "A abrir…", "Openen…", "Açılıyor…", "खुल रहा है…"],
+	"Couldn't play it here": ["Hier nicht abspielbar", "No se puede reproducir aquí", "Lecture impossible ici", "Impossibile riprodurlo qui", "Não é possível reproduzir aqui", "Kan hier niet afspelen", "Burada oynatılamıyor", "यहां नहीं चल सका"],
+	"Open it in Jellyfin": ["In Jellyfin öffnen", "Abrir en Jellyfin", "L'ouvrir dans Jellyfin", "Aprilo in Jellyfin", "Abrir no Jellyfin", "Openen in Jellyfin", "Jellyfin'de aç", "Jellyfin में खोलें"],
+	"Close": ["Schließen", "Cerrar", "Fermer", "Chiudi", "Fechar", "Sluiten", "Kapat", "बंद करें"],
+	"Jellyfin signed this TV out: sign in again in Settings > Films & series": ["Jellyfin hat diesen Fernseher abgemeldet: in Einstellungen > Filme & Serien neu anmelden", "Jellyfin cerró la sesión de este televisor: vuelve a iniciarla en Ajustes > Películas y series", "Jellyfin a déconnecté la TV : reconnecte-la dans Réglages > Films et séries", "Jellyfin ha disconnesso questa TV: accedi di nuovo in Impostazioni > Film e serie", "O Jellyfin desligou esta TV: inicie sessão de novo em Definições > Filmes e séries", "Jellyfin heeft deze tv afgemeld: meld opnieuw aan in Instellingen > Films en series", "Jellyfin bu TV'nin oturumunu kapattı: Ayarlar > Filmler ve diziler'den yeniden giriş yapın", "Jellyfin ने इस टीवी को साइन आउट कर दिया: सेटिंग्स > फ़िल्में और सीरीज़ में फिर से साइन इन करें"],
 	"Ready, quiet": ["Bereit, leise", "Listo, sin ruido", "Prêt, sans bruit", "Pronto, senza rumore", "Pronto, sem ruído", "Klaar, stil", "Hazır, sessiz", "तैयार, बिना शोर"],
 	"Copying": ["Kopieren", "Copiando", "Copie", "Copia", "Copiando", "Kopiëren", "Kopyalanıyor", "कॉपी हो रहा है"],
 	"Preparing…": ["Wird vorbereitet…", "Preparando…", "En préparation…", "In preparazione…", "Preparando…", "Wordt voorbereid…", "Hazırlanıyor…", "तैयार हो रहा है…"],
@@ -684,6 +695,27 @@ const TABLE: Record<string, string[]> = {
 	"Your rating": ["Deine Bewertung", "Tu valoración", "Ta note", "Il tuo voto", "A tua avaliação", "Jouw beoordeling", "Puanın", "आपकी रेटिंग"],
 	"OK keeps it for your picks · Back cancels": ["OK speichert sie für deine Empfehlungen · Zurück bricht ab", "OK la guarda para tus recomendaciones · Atrás cancela", "OK la garde pour tes suggestions · Retour annule", "OK lo salva per i tuoi consigli · Indietro annulla", "OK guarda-a para as tuas sugestões · Voltar cancela", "OK bewaart het voor je tips · Terug annuleert", "OK önerilerin için kaydeder · Geri iptal eder", "OK आपके सुझावों के लिए सहेजता है · वापस रद्द करता है"],
 	"Requested": ["Angefragt", "Solicitado", "Demandé", "Richiesto", "Pedido", "Aangevraagd", "İstendi", "अनुरोधित"],
+	// the requests from the TV (QualityPanel, RequestPanel, the badges): French only for now, the other languages show the English
+	"Which picture?": ["", "", "Quelle qualité ?"],
+	"Request it?": ["", "", "Le demander ?"],
+	"Best available": ["", "", "Meilleure dispo"],
+	"Fast download": ["", "", "Téléchargement rapide"],
+	"Downloadable": ["", "", "Téléchargeable"],
+	"Slow: few sources": ["", "", "Lent : peu de sources"],
+	"Not found for now": ["", "", "Introuvable pour l'instant"],
+	"Looking…": ["", "", "Recherche…"],
+	"sources": ["", "", "sources"],
+	"seasons": ["", "", "saisons"],
+	"Right now": ["", "", "Tout de suite"],
+	"Off-peak hours": ["", "", "Heures creuses"],
+	"Request": ["", "", "Demander"],
+	"Season": ["", "", "Saison"],
+	"Every missing season": ["", "", "Toutes les saisons manquantes"],
+	"Tick the seasons to request": ["", "", "Coche les saisons à demander"],
+	"Missing seasons": ["", "", "Saisons manquantes"],
+	"To approve": ["", "", "À approuver"],
+	"Declined": ["", "", "Refusée"],
+	"Your requests": ["", "", "Tes demandes"],
 	"Films & series": ["Filme & Serien", "Películas y series", "Films & séries", "Film e serie", "Filmes e séries", "Films & series", "Filmler ve diziler", "फ़िल्में और सीरीज़"],
 	"Plugged-in inputs": ["Angeschlossene Eingänge", "Entradas conectadas", "Entrées branchées", "Ingressi collegati", "Entradas ligadas", "Aangesloten ingangen", "Bağlı girişler", "जुड़े इनपुट"],
 	"Jellyfin address": ["Jellyfin-Adresse", "Dirección de Jellyfin", "Adresse Jellyfin", "Indirizzo Jellyfin", "Endereço Jellyfin", "Jellyfin-adres", "Jellyfin adresi", "Jellyfin पता"],
@@ -719,6 +751,52 @@ const TABLE: Record<string, string[]> = {
 	],
 };
 
+/** French for the screens added after the nine-language table above (Films & series, the player, the messages). Used when the table has no row. */
+const FR_MORE: Record<string, string> = {
+	'Season': 'Saison', 'New season': 'Nouvelle saison', 'Starts at': 'Début à', 'Sound': 'Son', 'Send': 'Envoyer', 'No picture': 'Pas d\'image', 'Live': 'En direct',
+	'your rating': 'ta note', 'All seasons': 'Toutes les saisons', 'Request': 'Demander', 'Request all': 'Tout demander', 'Full guide': 'Guide complet', 'Guide': 'Guide',
+	'No channels yet. Open Live TV once, then come back.': 'Pas encore de chaîne. Ouvre la TV en direct une fois, puis reviens.', 'No guide data': 'Pas de guide',
+	'Off air': 'Hors antenne', 'Only now and next in the guide data': 'Le guide ne donne que maintenant et ensuite', 'Now and Next': 'Maintenant et ensuite',
+	'Downloading': 'Téléchargement', 'Available': 'Disponible', 'Out on': 'Sortie le', 'Already rated': 'Déjà noté', 'Trailer': 'Bande-annonce', 'Cast': 'Distribution',
+	'Play': 'Lecture', 'Pause': 'Pause', 'Next episode': 'Épisode suivant', 'Next episode in': 'Épisode suivant dans', 'Episodes': 'Épisodes', 'Subtitles': 'Sous-titres',
+	'Still there?': 'Tu es toujours là ?', 'Keep watching': 'Continuer', 'Play now': 'Lire maintenant', 'Cancel': 'Annuler', 'Specials': 'Épisodes spéciaux', 'Watched': 'Vu',
+	'In progress': 'En cours', 'Timing': 'Décalage', 'In sync': 'Synchronisés', 'Earlier': 'Plus tôt', 'Later': 'Plus tard', 'Waiting for Jellyfin…': 'En attente de Jellyfin…',
+	'Library': 'Bibliothèque', 'Discover': 'Découvrir', 'Platforms': 'Plateformes', 'Recently added': 'Ajoutés récemment', 'For you': 'Pour toi', 'Coming soon': 'Bientôt',
+	'Trending': 'Tendances', 'Popular films': 'Films populaires', 'Results': 'Résultats', 'Films': 'Films', 'Series': 'Séries', 'Film': 'Film', 'All': 'Tout',
+	'Loading…': 'Chargement…', 'Nothing found': 'Rien trouvé', 'Type a title': 'Tape un titre', 'Jellyfin is not answering': 'Jellyfin ne répond pas',
+	'Seerr is not answering': 'Seerr ne répond pas', 'Sign in to Jellyfin in Settings > Films & series': 'Connecte-toi à Jellyfin dans Réglages > Films et séries',
+	'Films and series, yours or to request': 'Films et séries, à toi ou à demander', 'You finished': 'Tu viens de finir',
+	'OK rates it out of 10 for your picks · Back skips': 'OK pour noter sur 10 et affiner tes suggestions · Retour pour passer',
+	'Seerr did not answer': 'Seerr n\'a pas répondu', 'The plugin did not answer': 'Le plugin n\'a pas répondu', 'Couldn\'t open YouTube': 'Impossible d\'ouvrir YouTube',
+	'The TV could not keep the rating (storage full?)': 'La TV n\'a pas pu garder la note (mémoire pleine ?)', 'Couldn\'t play it here: opening Jellyfin': 'Lecture impossible ici : ouverture de Jellyfin',
+	'The server answered, but it refused the API key': 'Le serveur a répondu mais a refusé la clé API', 'Seerr refused the API key': 'Seerr a refusé la clé API', 'The server did not answer': 'Le serveur ne répond pas', 'Seerr did not take the request': 'Seerr n\'a pas pris la demande',
+	'Already requested': 'Déjà demandé', 'Wrong user name or password': 'Nom d\'utilisateur ou mot de passe incorrect',
+	'Quick Connect is off on this server, or it did not answer': 'Quick Connect est coupé sur ce serveur, ou il ne répond pas', 'The picks server did not answer': 'Le serveur de suggestions ne répond pas',
+	'Settings restored from the TV': 'Réglages retrouvés depuis la TV', 'Homebrew Channel not available, using the built-in app list': 'Homebrew Channel absent : liste d\'applications de base',
+	'Could not read the app list': 'Impossible de lire la liste des applications', 'Could not read the inputs': 'Impossible de lire les entrées',
+	'Couldn\'t start the screensaver (it needs the Homebrew Channel)': 'Impossible de lancer l\'écran de veille (il faut Homebrew Channel)',
+	'Set up Immich first, in Settings > Immich': 'Règle d\'abord Immich, dans Réglages > Immich', 'Keep at least one source': 'Garde au moins une source',
+	'Sign in to Jellyfin in Settings to watch IPTV channels': 'Connecte-toi à Jellyfin dans Réglages pour regarder les chaînes IPTV', 'Couldn\'t open LG Home': 'Impossible d\'ouvrir LG Home',
+	'Connected to Immich': 'Connecté à Immich', 'Couldn\'t save the Immich settings on the TV': 'Impossible d\'enregistrer les réglages Immich sur la TV',
+	'The address should look like http://192.0.2.20:8787, with no path': 'L\'adresse doit ressembler à http://192.0.2.20:8787, sans chemin',
+	'No settings backup found on the TV': 'Aucune sauvegarde de réglages trouvée sur la TV',
+	'Claude is picking again: Discover shows the new picks in a minute or two': 'Claude refait ses choix : Découvrir montrera les nouveaux dans une minute ou deux',
+	'The picks server did not answer.': 'Le serveur de suggestions ne répond pas', 'Still checking the TV': 'Vérification de la TV en cours', 'Only on the TV': 'Seulement sur la TV',
+	'This build has no TV scripts in it': 'Cette version n\'a pas les scripts de la TV', 'TV scripts installed': 'Scripts de la TV installés', 'Could not install the TV scripts': 'Impossible d\'installer les scripts de la TV',
+	'Restarting the TV': 'Redémarrage de la TV', 'This TV has no such setting': 'Cette TV n\'a pas ce réglage', 'The TV script failed': 'Le script de la TV a échoué',
+	'Couldn\'t change the backlight': 'Impossible de changer le rétroéclairage', 'Couldn\'t change the picture mode': 'Impossible de changer le mode image', 'Couldn\'t change Eye Comfort': 'Impossible de changer Eye Comfort',
+	'Couldn\'t turn the screen off (it needs the Homebrew Channel)': 'Impossible d\'éteindre l\'écran (il faut Homebrew Channel)',
+	'Couldn\'t restart the TV (it needs the Homebrew Channel)': 'Impossible de redémarrer la TV (il faut Homebrew Channel)', 'This TV didn\'t accept that sound mode': 'La TV n\'a pas accepté ce mode son',
+	'Couldn\'t reach Home Assistant': 'Impossible de joindre Home Assistant', 'Already withdrawn. LG\'s own menus can give them again.': 'Déjà retiré. Les menus de LG peuvent le redonner.'
+};
+/** French for messages with a name or a number in them: [pattern, answer with $1, $2] */
+const FR_PATTERNS: [RegExp, string][] = [
+	[/^Couldn't open (.+)$/, 'Impossible d\'ouvrir $1'], [/^Couldn't change (.+)$/, 'Impossible de changer $1'], [/^Couldn't uninstall (.+)$/, 'Impossible de désinstaller $1'],
+	[/^Uninstalling (.+)…$/, 'Désinstallation de $1…'], [/^(.+) uninstalled$/, '$1 désinstallé'], [/^(.+) is still installed$/, '$1 est toujours installé'],
+	[/^Quick Connect code (\S+): type it in Jellyfin, avatar > Quick Connect$/, 'Code Quick Connect $1 : tape-le dans Jellyfin, avatar > Quick Connect'],
+	[/^No answer from (.+)$/, 'Pas de réponse de $1']
+];
+
 let current = 'en';
 let clockMode = 'auto';
 
@@ -746,7 +824,13 @@ export function addStrings (table: Record<string, Record<string, string>>): void
 export function t (text: string, vars?: {n: number}): string {
 	const row = TABLE[text];
 	const at = ORDER.indexOf(current);
-	let out = row && at >= 0 && row[at] ? row[at] : (EXTRA[current] && EXTRA[current][text]) || text;
+	let out = row && at >= 0 && row[at] ? row[at] : (EXTRA[current] && EXTRA[current][text]) || (current === 'fr' ? frMore(text) : text);
 	if (vars) out = out.replace('{n}', String(vars.n));
 	return out;
+}
+
+function frMore (text: string): string {
+	if (FR_MORE[text]) return FR_MORE[text];
+	for (const [re, to] of FR_PATTERNS) if (re.test(text)) return text.replace(re, to);
+	return text;
 }

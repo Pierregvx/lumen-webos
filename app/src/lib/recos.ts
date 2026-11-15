@@ -61,15 +61,22 @@ export function sendRatings (): Promise<void> {
 	return call('/ratings', SEND_TIMEOUT_MS, ratings()).then(() => undefined, () => undefined);
 }
 
+/** the ask under way: Discover opened again while the server makes the picks (up to 200 s) shares it rather than asking again */
+let asking: Promise<AiPick[]> | null = null;
+
 /** Today's picks from the server (or the last ones, while it makes today's). Rejects with a message to show when it cannot. */
 export function picks (): Promise<AiPick[]> {
-	return sendRatings().then(() => call('/picks', PICKS_TIMEOUT_MS)).then(
+	if (asking) return asking;
+	const done = () => { asking = null; };
+	asking = sendRatings().then(() => call('/picks', PICKS_TIMEOUT_MS)).then(
 		(r) => r.json().then((v: {day?: string; picks?: AiPick[]; error?: string}) => {
 			if (!r.ok || !v.picks || !v.picks.length) throw new Error(v.error || 'The picks server gave no picks');
 			writeCache(CACHE_KEY, {day: v.day || '', picks: v.picks});
 			return v.picks;
 		}),
 		(e: Error) => { throw new Error(/Set the picks server/.test(e.message) ? e.message : 'The picks server did not answer'); });
+	asking.then(done, done);
+	return asking;
 }
 
 /** Settings > Pick again today: the server makes new picks now; Discover shows them once they are made. */

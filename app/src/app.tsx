@@ -52,19 +52,21 @@ import {appDir, nativeWhy, powerOnPending, powerOnWhy, readTvState, scriptsReady
 import {APP_ID} from './config/constants';
 import {bootMark, navMark} from './lib/log';
 import {LANGS, setClockMode, setLang, t as tr} from './lib/i18n';
-import {useMedia} from './hooks/useMedia';
-import {cleanUrl, imageUrl, item, quickConnectCheck, quickConnectStart, saveServer as saveJellyfin, signIn, signOut} from './lib/jellyfin';
+import {seasonSource, useMedia} from './hooks/useMedia';
+import {cleanUrl, droppedByServer, imageUrl, item, quickConnectCheck, quickConnectStart, saveServer as saveJellyfin, signIn, signOut} from './lib/jellyfin';
 import {saveSeerr, testSeerr} from './lib/seerr';
 import {playAndOpen} from './lib/play';
-import {request as requestSeerr} from './lib/seerr';
+import type {SeerrTitle} from './lib/seerr';
 import {forgetNewSeason, lookAgain} from './lib/seasons';
 import {rate, toRate} from './lib/ratings';
 import {RatePanel} from './components/RatePanel';
 import type {MediaItem} from './lib/jellyfin';
 import {pickAgain, recoServer, saveRecoServer, sendRatings} from './lib/recos';
-import {startPlugins, usePlugins} from './plugins';
+import {catalog as pluginCatalog, catalogName, startPlugins, usePlugins} from './plugins';
 import {pluginOption, pluginOptions, pluginText} from './plugins/settings';
 
+/** said when Jellyfin has refused the TV's sign-in */
+const JELLYFIN_DROPPED = 'Jellyfin signed this TV out: sign in again in Settings > Films & series';
 type Screen = 'home' | 'settings' | 'ambient' | 'guide' | 'media';
 
 const ROW = {apps: 'apps', sources: 'sources', misc: 'misc', dock: 'dock', live: 'livetv', channels: 'channels'} as const;
@@ -260,12 +262,12 @@ export function App () {
 		return isWebOS() ? afterFirstFrame(start, 0) : (start(), () => undefined);
 	}, []);
 	const media = useMedia(config.autoSeasons);
-	/** what is prepared on the NAS's fast disk: the Resume tiles' banners (lib/prepared.ts) */
-	const prepared = usePrepared(!!media.jellyfin);
 	// IPTV channels come from Jellyfin's Live TV (lib/iptv.ts), so Live TV is given the signed-in server
 	const live = useLiveTv(config.liveTvRow, screen === 'guide', config.liveChannels, media.jellyfin);
 	// a rating asked for what was just finished (lib/ratings.ts)
 	const [toRateNow, setToRateNow] = useState<MediaItem | null>(null);
+	/** Films & series opened on a request of the home row (OK on its tile) */
+	const [mediaRequest, setMediaRequest] = useState<{title: SeerrTitle; seq: number} | null>(null);
 	/** looks for something just finished to rate (set by the effect below); the player calls it when it closes */
 	const lookForRating = useRef<() => void>(() => undefined);
 	// the player, over whatever screen started it (that screen stays mounted and keeps its place)
@@ -275,6 +277,15 @@ export function App () {
 	useEffect(() => { if (liveOn && !media.jellyfin) setLiveOn(null); }, [liveOn, media.jellyfin]);
 	/** a film or a channel is playing in Lumen: the screens underneath take no keys, and there is no screensaver */
 	const watching = !!playing || !!liveOn;
+	// Jellyfin refused the sign-in (lib/jellyfin.ts): said once a session, and the Films & series tile stays, leading to Settings
+	const jellyfinDropped = useMemo(() => !media.jellyfin && droppedByServer(), [media.jellyfin]);
+	const toldDropped = useRef(false);
+	useEffect(() => {
+		if (!jellyfinDropped) { toldDropped.current = false; return; }
+		if (!toldDropped.current) { toldDropped.current = true; showToast(tr(JELLYFIN_DROPPED), 'error'); }
+	}, [jellyfinDropped]);
+	/** what is prepared on the NAS's fast disk: the Resume tiles' banners (lib/prepared.ts), read while the home screen shows them */
+	const prepared = usePrepared(!!media.jellyfin && screen === 'home' && !watching);
 	useEffect(() => { if (playing && !media.jellyfin) setPlaying(null); }, [playing, media.jellyfin]);
 	/** plays a title where Settings > Films & series > Play in says: Lumen's player, or the Jellyfin app */
 	const playAsked = useRef({id: '', ticks: 0, seq: 0});
@@ -309,8 +320,10 @@ export function App () {
 
 	const showToast = useCallback((text: string, kind: ToastMessage['kind'] = 'info') => {
 		window.clearTimeout(toastTimer.current);
-		setToast({text, kind});
-		toastTimer.current = window.setTimeout(() => setToast(null), TIMING.toastMs);
+		const said = tr(text);
+		setToast({text: said, kind});
+		// long enough to read from the sofa: 2.2 s at the least, 4.5 s for an error, and more for a long line (about 14 characters a second)
+		toastTimer.current = window.setTimeout(() => setToast(null), Math.max(kind === 'error' ? TIMING.toastErrorMs : TIMING.toastMs, said.length * 70));
 	}, []);
 	pluginToast.current = showToast;
 	// the plugins the build has (plugins/index.ts): started once; Settings > Plugins follows them
@@ -533,6 +546,9 @@ export function App () {
 
 	/** Lumen's screensaver straight away, without LG's showing first; LG's own when Lumen's is not chosen (unless forced, from Control Center). */
 	const showScreensaver = (lumen = configRef.current.ambientOn) => {
+		// a film or a channel playing in Lumen stops first (Control Center's picture button can be pressed over one): it would play on, with
+		// its sound, under the screensaver
+		setPlaying(null); setLiveOn(null);
 		if (lumen) { ambientOpening.current = videoOnRef.current ? null : shownWallpaper(); saverFrom.current = ''; setScreen('ambient'); return; }
 		startScreensaver().catch(() => showToast("Couldn't start the screensaver (it needs the Homebrew Channel)", 'error'));
 	};
@@ -588,10 +604,11 @@ export function App () {
 		const open = (id: string) => running.indexOf(id) !== -1;
 		// Films & series only once Jellyfin is signed in; then each input with something plugged in, at the end
 		const plugged = config.homeInputs ? inputs.filter((i) => i.connected).map((i): TileModel => ({...inputTile(i), key: INPUT_PREFIX + i.appId})) : [];
-		return shownApps.filter((a) => inFolder.indexOf(a.id) === -1 && (a.id !== BUILTIN.media || !!media.jellyfin)).map((a): TileModel => ({...appTile(a), running: open(a.id)}))
+		// a sign-in Jellyfin refused keeps the tile: it opens Settings, where Lumen signs in again
+		return shownApps.filter((a) => inFolder.indexOf(a.id) === -1 && (a.id !== BUILTIN.media || !!media.jellyfin || jellyfinDropped)).map((a): TileModel => ({...appTile(a), running: open(a.id)}))
 			.concat(folderTiles.map((f): TileModel => ({key: 'folder:' + f.name, label: f.name, color: '#3b4256', children: f.items.map((t) => t.imageUrl), running: f.items.some((t) => open(t.key))})))
 			.concat(plugged);
-	}, [shownApps, folderTiles, config.folders, config.homeInputs, inputs, running, media.jellyfin]);
+	}, [shownApps, folderTiles, config.folders, config.homeInputs, inputs, running, media.jellyfin, jellyfinDropped]);
 
 	/** the Resume row: what is in progress in Jellyfin, then what was requested in Seerr and is not in the library yet */
 	const resumeTiles = useMemo((): TileModel[] => {
@@ -605,7 +622,8 @@ export function App () {
 		const asked = media.pending.map((t): TileModel => ({
 			key: MEDIA.req + t.tmdbId,
 			label: t.title,
-			resume: {title: t.title, subtitle: t.year ? String(t.year) : undefined, imageUrl: t.backdropUrl, backdrop: t.backdropUrl, requested: true, percent: t.availability === 'downloading' ? t.percent : undefined}
+			resume: {title: t.title, subtitle: t.year ? String(t.year) : undefined, imageUrl: t.backdropUrl, backdrop: t.backdropUrl, requested: true, percent: t.availability === 'downloading' ? t.percent : undefined,
+				declined: !!t.declined, waiting: !!t.pendingApproval}
 		}));
 		// new seasons of the series followed lead the row
 		const fresh = media.seasons.map((n): TileModel => ({
@@ -663,7 +681,7 @@ export function App () {
 			const lines = out.split('\n').map((l) => l.trim()).filter(Boolean);
 			const last = lines[lines.length - 1] || 'Done';
 			showToast(last.length > 160 ? last.slice(0, 157) + '...' : last, /refused|could not|cannot|not ours|no node|failed|left .* on/i.test(last) ? 'error' : 'info');
-		}, (e: unknown) => showToast(e instanceof Error ? e.message : String(e), 'error')).then(done, done);
+		}, () => showToast('The TV script failed', 'error')).then(done, done);
 	}, [showToast]);
 	const tabs: SettingsTab[] = useMemo(() => {
 		if (!inSettings) return [];
@@ -747,6 +765,8 @@ export function App () {
 
 	// each page lists its options in this order (Settings.tsx GROUPS sets the order of the pages)
 	const options: OptionItem[] = useMemo(() => {
+		/** the plugin giving Films & series' catalog (Ciné Pierro), which replaces Seerr there */
+		const catalogBy = pluginCatalog() ? catalogName() || 'A plugin' : '';
 		const stills = config.wallpaperType === 'pictures' || config.wallpaperType === 'immich';
 		const saverImmich = immich.ready && config.saverShow === 'immich';
 		return [
@@ -1100,11 +1120,12 @@ export function App () {
 				value: false,
 				valueText: ''
 			}]),
-			{
+			// with a plugin's catalog on, Seerr only shows when it is set (so it can be changed), marked as replaced
+			...(!catalogBy || mediaDraft.seerrUrl || media.seerr ? [{
 				id: OPTION.seerrUrl,
 				group: 'media' as const,
 				label: 'Seerr address',
-				description: 'Your Seerr server, for example http://192.0.2.20:5055. With it, Films & series can find titles you do not have and request them.',
+				description: (catalogBy ? `${catalogBy} (Settings > Plugins) replaces Seerr for Discover, search and requests; Lumen still asks Seerr for the new seasons of the series you follow. ` : '') + 'Your Seerr server, for example http://192.0.2.20:5055. With it, Films & series can find titles you do not have and request them.',
 				value: mediaDraft.seerrUrl !== '',
 				valueText: mediaDraft.seerrUrl || 'Not set',
 				text: {value: mediaDraft.seerrUrl, placeholder: 'http://192.0.2.20:5055'}
@@ -1125,13 +1146,15 @@ export function App () {
 				description: 'Checks the address and the key with your Seerr server. When it passes, Lumen keeps them.',
 				value: !!media.seerr,
 				valueText: mediaTest.seerr === 'testing' ? 'Testing' : mediaTest.seerr === 'failed' ? 'Failed' : media.seerr ? 'Connected' : 'Not connected'
-			},
+			}] : []),
 
 			{
 				id: OPTION.aiServer,
 				group: 'media' as const,
 				label: 'Picks server',
-				description: 'For the For you row in Discover: lumen-recos on your NAS has Claude pick about ten titles a day from what Seerr offers, with a line on why. It keeps the Claude key and your taste profile (server/README.md). Its address, for example http://192.0.2.20:8787.',
+				description: catalogBy
+					? `lumen-recos on your NAS: it marks the copies prepared on the fast disk, and ${catalogBy} uses this address unless Settings > Plugins gives it another. Its address, for example http://192.0.2.20:8787.`
+					: 'For the For you row in Discover: lumen-recos on your NAS has Claude pick about ten titles a day from what Seerr offers, with a line on why. It keeps the Claude key and your taste profile (server/README.md). Its address, for example http://192.0.2.20:8787.',
 				value: aiServer !== '',
 				valueText: aiServer ? aiServer.replace(/^https?:\/\//, '') : 'Not set',
 				text: {value: aiServer, placeholder: 'http://192.0.2.20:8787'}
@@ -1345,11 +1368,13 @@ export function App () {
 		}
 		if (item.key.indexOf(MEDIA.season) === 0) {
 			const n = media.seasons.filter((x) => MEDIA.season + x.title.tmdbId === item.key)[0];
-			if (!n || !media.seerr || seasonSending.current === item.key) return;
+			// through the plugin's catalog when one is on (the person's own request), else Seerr
+			const source = seasonSource(media.seerr);
+			if (!n || !source || seasonSending.current === item.key) return;
 			seasonSending.current = item.key;
-			requestSeerr(media.seerr, n.title, [n.season]).then((r) => {
+			source.request(n.title, n.season).catch(() => 'Seerr did not take the request').then((r) => {
 				seasonSending.current = '';
-				if (r !== true) { showToast(r, 'error'); return; }
+				if (r !== true) { showToast(tr(r), 'error'); return; }
 				showToast(`${tr('Requested')} · ${n.title.title} · ${tr('Season')} ${n.season}`);
 				forgetNewSeason(n.title.tmdbId);
 				media.dropSeason(n.title.tmdbId);
@@ -1357,7 +1382,12 @@ export function App () {
 			});
 			return;
 		}
-		if (item.key.indexOf(MEDIA.req) === 0) { showToast('Requested: it will be here once it is in your library'); return; }
+		// a request: its sheet in Films & series, among the person's other requests (its trailer, its cast, where it is)
+		if (item.key.indexOf(MEDIA.req) === 0) {
+			const t = media.pending.filter((x) => MEDIA.req + x.tmdbId === item.key)[0];
+			if (t) { setMediaRequest({title: t, seq: Date.now()}); setScreen('media'); }
+			return;
+		}
 		if (item.key.indexOf(INPUT_PREFIX) === 0) { open(item.key.slice(INPUT_PREFIX.length), item.label); return; }
 		if (item.key.indexOf(LIVE.prefix) === 0) {
 			const id = item.key.slice(LIVE.prefix.length);
@@ -1367,7 +1397,10 @@ export function App () {
 			return;
 		}
 		if (item.key === MISC.settings || item.key === BUILTIN.settings) { setScreen('settings'); return; }
-		if (item.key === BUILTIN.media) { setScreen('media'); return; }
+		if (item.key === BUILTIN.media) {
+			if (!media.jellyfin && droppedByServer()) { showToast(tr(JELLYFIN_DROPPED), 'error'); setScreen('settings'); return; }
+			setMediaRequest(null); setScreen('media'); return;
+		}
 		if (item.key === 'screensaver') { startScreensaver().catch(() => showToast("Couldn't start the screensaver (it needs the Homebrew Channel)", 'error')); return; }
 		if (item.key === MISC.lgHome) { launchLgHome().catch(() => showToast("Couldn't open LG Home", 'error')); return; }
 		if (item.key === 'controls') { setControls(true); return; }
@@ -1649,12 +1682,13 @@ export function App () {
 				onFallback={(it) => { setPlaying(null); const jf = media.jellyfin; if (jf) playAndOpen(jf, it, () => Promise.resolve()); }} />}
 			{liveOn && media.jellyfin && <LivePlayer server={media.jellyfin} channels={iptvChannels} groups={live.groups} category={live.category} onCategory={live.setCategory} start={liveOn} listings={live.listings} logos={live.logos} now={live.now} pending={live.pending} browse={live.browse}
 				active={!controls} onToast={showToast} onClose={() => setLiveOn(null)} />}
-			{toRateNow && screen === 'home' && !watching && <RatePanel title={toRateNow.title} active={!controls && !watching} onDone={(score) => {
+			{/* over Films & series too: a film finished from there is rated as its sheet comes back */}
+			{toRateNow && (screen === 'home' || screen === 'media') && !watching && <RatePanel title={toRateNow.title} active={!controls && !watching} onDone={(score) => {
 				if (!rate(toRateNow, score)) showToast('The TV could not keep the rating (storage full?)', 'error');
 				else { sendRatings(); if (score !== null) showToast(`${toRateNow.title} · ${score}/10`); }
 				setToRateNow(null);
 			}} />}
-			{screen === 'media' && <Media state={media} forYou={config.aiRow} active={!controls && !watching} onPlay={startPlay} onClose={() => setScreen('home')} onToast={showToast} />}
+			{screen === 'media' && <Media state={media} openRequest={mediaRequest} forYou={config.aiRow} active={!controls && !watching && !toRateNow} onPlay={startPlay} onClose={() => { setMediaRequest(null); setScreen('home'); }} onToast={showToast} />}
 			{screen === 'settings' && <Settings tabs={tabs} wallpaper={wallpaper} options={options} active onToggle={onToggle} onReorder={onReorder} onOption={onOption} onChoose={onChoose} onText={onText} onClose={() => setScreen('home')} />}
 			{controls && <ControlCenter
 				darkMode={config.darkMode}

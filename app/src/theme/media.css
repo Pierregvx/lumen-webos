@@ -11,7 +11,7 @@
 }
 .resume__badge {
 	position: absolute; right: 14px; top: 14px; z-index: 2; padding: 4px 12px; border-radius: var(--radius-capsule);
-	background: var(--media-badge); color: #fff; font-size: 18px; font-weight: 700;
+	background: var(--media-badge); color: #fff; font-size: var(--text-small); font-weight: 700;
 }
 
 /* ---------- the Films & series screen (screens/Media.tsx) ---------- */
@@ -26,7 +26,7 @@
 .media-tab { padding: 12px 30px; border-radius: 34px; font-size: 26px; font-weight: 500; opacity: 0.75; white-space: nowrap; }
 .media-tab--name { font-weight: 600; opacity: 1; }
 .media-tab--on { background: rgba(255, 255, 255, 0.22); font-weight: 600; opacity: 1; }
-.media-tab--focused { background: var(--focus-fill); color: var(--focus-ink); transform: scale(var(--lift-pill)); transition: transform var(--dur-focus) ease-out; }
+.media-tab--focused { background: var(--media-focus-fill); color: var(--media-focus-ink); transform: scale(var(--lift-pill)); transition: transform var(--dur-focus) ease-out; }
 
 .media__info { position: absolute; left: var(--layout-rows-edge); top: 150px; width: 820px; text-shadow: var(--chan-info-shadow); }
 /* a platform's logo above the title in focus: one height, its width from its shape */
@@ -34,15 +34,17 @@
 .media__title { margin: 0; font-size: 80px; font-weight: 700; line-height: 1.02; letter-spacing: -0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .media__meta { margin-top: 14px; font-size: 26px; font-weight: 500; opacity: 0.85; }
 .media__overview {
-	margin: 16px 0 0; font-size: 22px; line-height: 1.4; opacity: 0.85;
+	margin: 16px 0 0; font-size: var(--text-body); line-height: 1.4; opacity: 0.85;
 	display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
-.media__buttons { display: flex; flex-direction: row; gap: 20px; margin-top: 28px; }
+.media__buttons { display: flex; flex-direction: row; gap: 20px; width: calc(100vw - 2 * var(--layout-rows-edge) + 40px); box-sizing: border-box; padding: 14px 20px 34px; margin: 14px -20px -20px; overflow: hidden; }
 .media-btn { flex: none; white-space: nowrap; padding: 14px 34px; border-radius: var(--radius-capsule); font-size: 26px; font-weight: 600; background: rgba(255, 255, 255, 0.18); text-shadow: none; transition: transform var(--dur-focus) ease-out; }
-.media-btn--primary { background: rgba(255, 255, 255, 0.9); color: var(--focus-ink); }
-.media-btn--focused { background: var(--focus-fill); color: var(--focus-ink); transform: scale(var(--lift-pill)); box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3); }
+.media-btn--primary { background: rgba(255, 255, 255, 0.9); color: var(--media-focus-ink); }
+.media-btn--focused { background: var(--media-focus-fill); color: var(--media-focus-ink); transform: scale(var(--lift-pill)); box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3); }
 
 .media__empty { position: absolute; left: 0; right: 0; top: 640px; text-align: center; font-size: 28px; opacity: 0.8; }
+/* under « … is not answering »: OK reads the tab again */
+.media__retry { margin-top: 14px; font-size: 24px; opacity: 0.85; }
 
 /* rows of posters: the focused row sits at the top of this area, the next one shows under it */
 .media__rows { position: absolute; left: 0; right: 0; top: 600px; bottom: 0; overflow: hidden; }
@@ -63,16 +65,18 @@
 }
 /* a platform: its white logo whole, in the middle of the poster; its width is set from its shape when it loads (Poster.tsx, sized) */
 .poster--logo .poster__image { left: 0; top: 0; right: 0; bottom: 0; width: 72%; height: auto; margin: auto; }
-.poster__badge { position: absolute; right: 10px; top: 10px; padding: 3px 10px; border-radius: var(--radius-capsule); background: var(--media-badge); font-size: 16px; font-weight: 700; }
+.poster__badge { position: absolute; right: 10px; top: 10px; padding: 3px 10px; border-radius: var(--radius-capsule); background: var(--media-badge); font-size: var(--text-small); font-weight: 700; }
 .poster__badge--available { background: var(--media-badge-ok); }
 .poster__badge--downloading { background: var(--media-badge-dl); }
+/* a request the administrator declined: said plainly, in the warning colour */
+.poster__badge--declined, .resume__badge--declined { background: var(--media-badge-no); }
 /* on the NAS's fast disk: a banner across the poster's foot; a title in progress has its bar above it */
-.poster__quiet { position: absolute; left: 0; right: 0; bottom: 0; padding: 7px 8px 8px; background: var(--media-quiet); font-size: 16px; font-weight: 700; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.poster__quiet { position: absolute; left: 0; right: 0; bottom: 0; padding: 7px 8px 8px; background: var(--media-quiet); font-size: var(--text-small); font-weight: 700; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .poster__quiet--busy { background: var(--media-quiet-busy); }
 .poster__bar { position: absolute; left: 12px; right: 12px; bottom: 12px; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.3); overflow: hidden; }
 .poster__quiet ~ .poster__bar { bottom: 44px; }
 .poster__bar span { display: block; height: 100%; background: #fff; transform-origin: left; }
-.resume__quiet { position: absolute; left: 0; right: 0; top: 0; padding: 6px 12px; background: var(--media-quiet); font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.resume__quiet { position: absolute; left: 0; right: 0; top: 0; padding: 6px 12px; background: var(--media-quiet); font-size: var(--text-small); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .resume__quiet--busy { background: var(--media-quiet-busy); }
 
 /* Search: one field under the tabs; the focused result's text sits under it */
@@ -80,9 +84,9 @@
 	position: absolute; left: var(--layout-rows-edge); top: 140px; width: 1100px; height: 76px; box-sizing: border-box; padding: 0 34px;
 	display: flex; align-items: center; border-radius: 38px; background: var(--glass-row-switch); transition: transform var(--dur-focus) ease-out;
 }
-.media-field--focused { background: var(--focus-fill); transform: scale(1.02); }
+.media-field--focused { background: var(--media-focus-fill); transform: scale(1.02); }
 .media-field__input { width: 100%; border: 0; outline: 0; background: transparent; color: #fff; font: inherit; font-size: 30px; }
-.media-field--focused .media-field__input { color: var(--focus-ink); }
+.media-field--focused .media-field__input { color: var(--media-focus-ink); }
 .screen--media-search .media__info { top: 250px; }
 .screen--media-search .media__title { font-size: 56px; }
 .screen--media-search .media__overview { -webkit-line-clamp: 2; }
@@ -95,8 +99,12 @@
 	display: flex; flex-direction: row; justify-content: space-between; align-items: center; height: 68px; margin-bottom: 12px; padding: 0 30px;
 	border-radius: 34px; background: var(--glass-row-switch); font-size: 26px; font-weight: 500; transition: transform var(--dur-focus) ease-out;
 }
-.media-ask__row--focused { background: var(--focus-fill); color: var(--focus-ink); transform: scale(1.02); }
+.media-ask__row--focused { background: var(--media-focus-fill); color: var(--media-focus-ink); transform: scale(1.02); }
 .media-ask__tick { font-weight: 700; }
+/* the request panel's pictures (QualityPanel): what each can expect, quieter; one not found for now is fainter still */
+.media-ask__facts { font-size: 22px; font-weight: 500; opacity: 0.75; }
+.media-ask__facts--none { opacity: 0.5; }
+.media-ask__row--off { opacity: 0.6; }
 /* the rows under the title: a long list of seasons scrolls here (RequestPanel), the focused row kept in view; the padding leaves room for its lift */
 .media-ask__list { max-height: 700px; overflow: hidden; padding: 6px 14px; margin: -6px -14px; }
 
@@ -111,7 +119,7 @@
 	flex: 1; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 30px;
 	background: var(--glass-row-switch); font-size: 26px; font-weight: 600; transition: transform var(--dur-focus) ease-out;
 }
-.media-rate__n--focused { background: var(--focus-fill); color: var(--focus-ink); transform: scale(1.12); }
+.media-rate__n--focused { background: var(--media-focus-fill); color: var(--media-focus-ink); transform: scale(1.12); }
 .media-rate__hint { margin: 22px 0 0; font-size: 20px; opacity: 0.7; }
 
 /* the home screen on the Resume row: the focused title's picture over the wallpaper, shaded like the Films & series screen (opacity fade only) */
@@ -121,21 +129,24 @@
 
 /* ---------- what a plugin's catalog brings (plugins/api.ts; docs/plans/plugins.md) ---------- */
 /* the score already given: « ★ 8 » in a poster's bottom right corner, and « ★ Already rated : 8 / 10 » under the facts */
-.poster__mine { position: absolute; right: 10px; bottom: 10px; padding: 3px 10px; border-radius: var(--radius-capsule); background: var(--media-mine-bg); color: var(--media-mine); font-size: 18px; font-weight: 700; }
+.poster__mine { position: absolute; right: 10px; bottom: 10px; padding: 3px 10px; border-radius: var(--radius-capsule); background: var(--media-mine-bg); color: var(--media-mine); font-size: var(--text-small); font-weight: 700; }
 .poster__quiet ~ .poster__mine { bottom: 44px; }
 /* a title not out yet: its date in the bottom left corner */
-.poster__date { position: absolute; left: 10px; bottom: 10px; padding: 3px 10px; border-radius: var(--radius-capsule); background: var(--media-mine-bg); font-size: 18px; font-weight: 700; }
+.poster__date { position: absolute; left: 10px; bottom: 10px; padding: 3px 10px; border-radius: var(--radius-capsule); background: var(--media-mine-bg); font-size: var(--text-small); font-weight: 700; }
 /* a tile (a genre): its picture under a tint, its name at its foot */
 .poster--tile::after { content: ''; position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: var(--media-tile-tint); }
 .poster__tile { position: absolute; left: 12px; right: 12px; bottom: 16px; z-index: 1; font-size: 26px; font-weight: 700; line-height: 1.1; }
 .media__mine { margin-top: 10px; font-size: 24px; font-weight: 600; color: var(--media-mine); }
 /* chips under the facts (a series' seasons): ok, busy, asked, none */
-.media__chips { display: flex; flex-direction: row; flex-wrap: wrap; gap: 10px; margin-top: 14px; max-height: 84px; overflow: hidden; }
-.media-chip { padding: 5px 14px; border-radius: var(--radius-capsule); background: var(--media-chip); font-size: 18px; font-weight: 600; white-space: nowrap; }
+.media__chips { display: flex; flex-direction: row; flex-wrap: wrap; gap: 10px; margin-top: 14px; max-height: 90px; overflow: hidden; }
+.media-chip { padding: 5px 14px; border-radius: var(--radius-capsule); background: var(--media-chip); font-size: var(--text-small); font-weight: 600; white-space: nowrap; }
 .media-chip--ok { background: var(--media-chip-ok); }
 .media-chip--busy { background: var(--media-chip-busy); }
 .media-chip--asked { background: var(--media-chip-asked); }
 .media__overview--short { -webkit-line-clamp: 2; }
+/* the facts, the reason, the chips, the summary and the buttons share 150px to 600px: when the reason is there too, the chips keep one line */
+.media__why ~ .media__chips { max-height: 45px; }
+.media__why { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 /* a plugin's form (components/FormPanel.tsx) and short list (ChoicePanel.tsx), in the request panel's box */
 .media-ask__note { margin-bottom: 18px; }
 .media-form__hint { font-style: normal; font-size: 20px; opacity: 0.65; margin-left: 10px; }

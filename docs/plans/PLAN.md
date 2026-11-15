@@ -54,7 +54,13 @@ server made from the contract's examples, built in from the draft folder; not on
       « Téléchargement des sous-titres… » (with « Prêts jusqu'à … » once some are out) while the film is past them. Check on a film
       whose subtitles were never taken out: the note shows, the subtitles come within a minute from the start, the note goes once they
       are whole; and that a film whose subtitles are already out shows no note at all. Built and type-checked with the plugin, not run.
-
+- [ ] The UX review fixes of 2026-11-15 (branch `fix/ux-player`) **(verify)**: in the player, the opening shows the title's picture with
+      a turning ring, a file that will not play asks « Open it in Jellyfin / Close » instead of opening Jellyfin by itself, the subtitle
+      menu scrolls past eight tracks, and an Audio button shows on a film with several audio tracks and switches them (only if webOS
+      gives `video.audioTracks` with as many tracks as Jellyfin lists: if the button never shows on a VO + VF film, it does not).
+      In Films & series: with the NAS off, Library and Discover name the server at once and OK reads again; a search says
+      Searching… then which server did not answer; the focus stays on Cast when Trailer arrives. On home: a refused Jellyfin sign-in
+      keeps the tile and says why. `GET /prepared` stops in standby and while a film plays (the NAS's log).
 - [ ] Upstream 2.2.0 merged into the fork (2026-11-11, branch `claude/merge-upstream-2-2-7857a1`) **(verify)**, installed on the TV
       that evening with the plugin (and Lumen Guide). **Switch-on seen working, 2026-11-11, the owner at home:** TV scripts updated (the
       old ones kept in `/var/lib/homehook/backup-avant-upstream-2-2/`), Home takeover and power-on set to Lumen, then a reboot: Lumen was
@@ -95,6 +101,15 @@ Add new items here, with the branch and what to check. Delete an item once Sam h
 - [ ] Pairing with Ciné Pierro (in the plugin; server deployed and plugin build installed 2026-11-11). Pairing seen on 2026-11-12: Pair
       showed a code, typed in Réglages > TV it paired the TV as the main account. **(verify)** what is left: a request from the TV still
       approved at once; unpairing there makes the next Films & series call fall back to the TV's Jellyfin sign-in, and Pair shows again.
+- [ ] Review fixes of 2026-11-12 (branch `fix/review-2026-11-12`) **(verify)**. Not installed. Built and type-checked only. To try:
+      with the video wallpaper on, play a film, press Home to another app and come back: the clip does not load behind the player;
+      close a film started from Films & series: no clip starts behind that screen. Control Center's picture button over a film or an
+      IPTV channel: the player closes (Jellyfin keeps the place), the screensaver shows with no sound under it. A film paused for
+      more than 15 s while the NAS is asleep, or the TV in standby during a start: Jellyfin's app does not open by itself. Several
+      episodes in a row, and fast zaps on IPTV: each plays (the old video is let go at once). Cold start, then at once an IPTV channel
+      from the Live TV row that is not a favourite: once the full list has come, the banner still names it and Up/Down go from it.
+      Films & series: move down two rows in Library on opening; the focus stays on its shelf while the others come in.
+
 - [ ] Plugins and Ciné Pierro (branch `claude/tv-v1-parite-6eb48b`, the section above) **(verify)**. Not installed. Built with the plugin:
       Settings > Plugins shows Ciné Pierro on, its Server row says « v1.2 »; turned off, Films & series is Lumen's own again; Discover's rows come in the page's
       order (For you, Watch later, Trending, Platforms, Popular films, Film genres, Popular series, Series genres, the categories, Films and
@@ -285,6 +300,16 @@ Add new items here, with the branch and what to check. Delete an item once Sam h
       dimming looks the same as before.
 - [ ] App names drop a store tagline (2026-11-02, from juanrusch's fork): "Spotify - Music and Podcasts" reads "Spotify", and a long name
       in the dock ends in "…" inside the focused glass.
+- [ ] Requests from the TV (2026-11-15, branch `fix/ux-requests`, with the Ciné Pierro plugin of cine-pierro `fix/ux-tv-requests`,
+      contract revision 12) **(verify)**. Request on a film opens « Quelle qualité ? » (`components/QualityPanel.tsx`): 4K, 1080p, 720p and
+      Meilleure dispo, each with its sources once the server has looked (a few seconds), the focus on the sharpest that comes; OK on one asks
+      in that picture (Seerr shows the profile, HD-1080p for 1080p); « Tout de suite » is a row ticked with OK when Ciné Pierro's `/me` says
+      `now`. A series: its seasons first, the focus on the first season (never on a row that sends), « Toutes les saisons manquantes » ticks
+      them all, « Demander (n) » then the pictures. Lumen without a plugin: a film's Request asks « Le demander ? » first. A series partly
+      here has « + Saisons manquantes » beside Play. The New season tile asks through the plugin (the person's own request) when it is on.
+      Badges: « Refusée », « À approuver », « 37 % » on the home row and the posters. OK on a request of the home row opens Films & series on
+      it (« Tes demandes »). « Noter » starts from the score shown. A film finished from Films & series asks its score over that screen
+      (check the panel is above it, and that Films & series takes no keys meanwhile).
 
 ---
 

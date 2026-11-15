@@ -41,17 +41,40 @@ function read (): Promise<void> {
 
 const moving = () => !!last && Object.keys(last.items).some((k) => last && /waiting|copying|scanning/.test(last.items[k].state));
 
-/** Marks on screen: reads the server now, then every minute (every 5 s while a copy moves). Returns a number that changes with each new answer. */
+// One loop for every screen that shows marks (the home screen, Films & series, the player's episode list): it runs while at least one of
+// them is on and Lumen is in front, and stops in standby or with another app in front (it reads again on the return).
+let users = 0;
+let timer = 0;
+let readAt = 0;
+function stopLoop (): void { window.clearTimeout(timer); timer = 0; }
+function tick (): void {
+	timer = 0;
+	readAt = Date.now();
+	read().then(() => { if (!timer && users > 0 && !document.hidden) timer = window.setTimeout(tick, moving() ? MOVING_MS : EVERY_MS); });
+}
+/** (re)starts the loop: reads now unless an answer is only a few seconds old */
+function startLoop (): void {
+	if (users <= 0 || document.hidden) { stopLoop(); return; }
+	if (timer) return;
+	const since = Date.now() - readAt;
+	if (since >= MOVING_MS) tick();
+	else timer = window.setTimeout(tick, MOVING_MS - since);
+}
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (document.hidden) stopLoop(); else startLoop(); });
+
+/** Marks on screen: reads the server now, then every minute (every 5 s while a copy moves), in one loop shared by every screen that asks,
+ *  paused while Lumen is out of sight. Returns a number that changes with each new answer. */
 export function usePrepared (on = true): number {
 	const [n, setN] = useState(0);
 	useEffect(() => {
 		if (!on) return undefined;
 		const bump = () => setN((x) => x + 1);
 		listeners.add(bump);
-		let timer = 0;
-		const tick = () => { read().then(() => { timer = window.setTimeout(tick, moving() ? MOVING_MS : EVERY_MS); }); };
-		tick();
-		return () => { listeners.delete(bump); window.clearTimeout(timer); };
+		// an answer read while this screen was not listening is drawn now
+		bump();
+		users++;
+		startLoop();
+		return () => { listeners.delete(bump); users--; if (users <= 0) stopLoop(); };
 	}, [on]);
 	return n;
 }

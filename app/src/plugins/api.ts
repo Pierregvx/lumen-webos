@@ -98,8 +98,9 @@ export interface PageAction { label: string; applies: (t: SeerrTitle) => boolean
 export interface Chip { text: string; tone?: 'ok' | 'busy' | 'asked' | 'none' }
 
 export interface CatalogSource {
-	/** Discover's rows, in order, as they come; `onForYou` the day's picks (null: none) */
-	discover: (onRows: (rows: Row[]) => void, onForYou: (titles: SeerrTitle[] | null) => void) => void;
+	/** Discover's rows, in order, as they come; `onForYou` the day's picks (null: none); `onFail` when the server did not answer (Lumen
+	 *  then says so at once, with OK to try again; without it, Lumen says so after a while with no row) */
+	discover: (onRows: (rows: Row[]) => void, onForYou: (titles: SeerrTitle[] | null) => void, onFail?: () => void) => void;
 	/** titles not in the library matching `text` (the library's are Jellyfin's) */
 	search: (text: string) => Promise<SeerrTitle[]>;
 	/** the full record: cast, seasons, the person's score (`mine`), `later`, `release` */
@@ -109,8 +110,13 @@ export interface CatalogSource {
 	page: (ref: PageRef) => Promise<Page>;
 	/** Discover's row of platforms */
 	platforms: () => Promise<Tile[]>;
-	/** true, or a message to show */
-	request: (t: SeerrTitle, seasons?: number[]) => Promise<true | string>;
+	/** true, or a message to show. `options`: the picture and « Right now » chosen in the request panel (a catalog without
+	 *  `requestOffer` gets none) */
+	request: (t: SeerrTitle, seasons?: number[], options?: RequestOptions) => Promise<true | string>;
+	/** what the request panel offers before a request is sent (the pictures, « Right now »); none: the panel only confirms */
+	requestOffer?: (t: SeerrTitle) => RequestOffer | null;
+	/** what each picture can expect (its sources), drawn in the panel as it comes; it may take a few seconds */
+	requestFacts?: (t: SeerrTitle, seasons?: number[]) => Promise<RequestFacts | null>;
 	/** the person's requests not in the library yet (the home screen's row) */
 	requestsMine: () => Promise<SeerrTitle[]>;
 }
@@ -119,6 +125,16 @@ export interface CatalogSource {
  *  `primaryOf` / `backdropOf` with the Jellyfin server Lumen is signed in to). */
 export interface LibraryRows { resume: MediaItem[]; latest: MediaItem[]; movies: MediaItem[]; series: MediaItem[] }
 export interface LibrarySource { read: () => Promise<LibraryRows> }
+/** the picture a request is made in: the best that comes, or a resolution */
+export type RequestQuality = 'best' | '2160p' | '1080p' | '720p';
+/** what a request carries besides its seasons; `now`: downloaded at once rather than in the off-peak hours */
+export interface RequestOptions { quality?: RequestQuality; now?: boolean }
+/** the request panel's choices, in order, and whether « Right now » is offered */
+export interface RequestOffer { qualities: RequestQuality[]; now: boolean }
+/** how a picture can be had: fast, fine, slow (few sources) or not found for now */
+export type SourceLevel = 'fast' | 'ok' | 'slow' | 'none';
+/** each picture's sources (a missing one: not known); `pick`, the one the panel starts on; `note`, a line on why */
+export interface RequestFacts { levels: Partial<Record<RequestQuality, {level: SourceLevel; seeders?: number; size?: number}>>; pick?: RequestQuality; note?: string }
 
 export interface TitleAction { id: string; label: string; run: () => Promise<ActionResult> }
 /** what Lumen does after an action: say something, open a page, a form or a short list, or read the title again */

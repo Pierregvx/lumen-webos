@@ -11,10 +11,10 @@ import {t as tr} from '../lib/i18n';
 import {useKeys, clamp, type NavKey} from '../hooks/useKeys';
 import {useOkPress} from '../hooks/useOkPress';
 import {useRealPointer} from '../hooks/useRealPointer';
-import {releaseVideo, setVideoPaused} from '../lib/wallpaperVideo';
+import {releaseVideo, setVideoHeldByPlayer} from '../lib/wallpaperVideo';
 import {imageUrl} from '../lib/jellyfin';
 import {episodeAfter, openStream, reportProgress, reportStart, reportStopped, type Stream, type SubTrack} from '../lib/player';
-import {countdownStart, cueAt, parseVtt, pickSubtitle, savedSubtitle, saveSubtitle, saveSubOffset, STILL_THERE_AFTER, subOffset, type Cue} from '../lib/playerLogic';
+import {countdownStart, cueAt, parseVtt, pickSubtitle, saveAudio, savedAudio, savedSubtitle, saveSubtitle, saveSubOffset, STILL_THERE_AFTER, subOffset, type Cue} from '../lib/playerLogic';
 import {loggedFetch} from '../lib/log';
 import {episodesOf, nextEpisode, type JellyfinServer, type MediaItem} from '../lib/jellyfin';
 import {prepLabel, prepOf, usePrepared} from '../lib/prepared';
@@ -56,7 +56,13 @@ const EP_COL = 1;
 /** episode cards that fit across the screen */
 const EP_SHOWN = 4;
 
-type Button = 'pause' | 'subs' | 'episodes' | 'next';
+type Button = 'pause' | 'subs' | 'audio' | 'episodes' | 'next';
+/** the video's own audio tracks (HTMLMediaElement.audioTracks, which webOS's player gives for a file with several), not in TypeScript's DOM types */
+type TrackList = {length: number; [i: number]: {enabled: boolean}};
+const audioTracksOf = (v: HTMLVideoElement | null): TrackList | null => {
+	const list = v ? (v as unknown as {audioTracks?: TrackList}).audioTracks : undefined;
+	return list && typeof list.length === 'number' ? list : null;
+};
 /** the episode list: which row has the focus, the season shown, the episode focused in it and the first card shown (the keys and the wheel
  *  scroll the row; the pointer only moves the focus, so the card under it stays put) */
 interface Picker { row: 'seasons' | 'episodes'; season: number; at: number; first: number }
@@ -69,7 +75,7 @@ const clock = (s: number) => {
 	return (h ? h + ':' + String(m).padStart(2, '0') : String(m)) + ':' + String(sec).padStart(2, '0');
 };
 
-export function Player ({server, item, active, onClose, onFallback, onToast}: Props) {
+export function Player ({server, item, active, onClose, onFallback}: Props) {
 	const video = useRef<HTMLVideoElement>(null);
 	const [stream, setStream] = useState<Stream | null>(null);
 	/** what was asked for; the next episode replaces it */
@@ -90,22 +96,31 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 	const [picker, setPicker] = useState<Picker | null>(null);
 	const [started, setStarted] = useState(false);
 	const failed = useRef(false);
+	/** Lumen is out of sight (standby, another app in front): the hand-over timers wait, so Jellyfin's app is not opened over that */
+	const [away, setAway] = useState(() => document.hidden);
 
 	// the page goes transparent and the wallpaper video lets go while the player is up
 	useEffect(() => {
 		document.documentElement.classList.add('playing');
-		setVideoPaused(true);
+		setVideoHeldByPlayer(true);
 		releaseVideo();
-		return () => { document.documentElement.classList.remove('playing'); setVideoPaused(false); };
+		return () => { document.documentElement.classList.remove('playing'); setVideoHeldByPlayer(false); };
 	}, []);
 
+	/** the file would not play here: what to hand to Jellyfin's app, asked first (OK opens it, Back closes), not opened on its own */
+	const [stuck, setStuck] = useState<MediaItem | null>(null);
+	/** the asking box's row: 0 open in Jellyfin, 1 close */
+	const [stuckAt, setStuckAt] = useState(0);
 	const fallBack = useCallback((it: MediaItem) => {
 		if (failed.current) return;
 		failed.current = true;
-		onToast(tr('Couldn\'t play it here: opening Jellyfin'), 'error');
+		const v = video.current;
+		if (v) v.pause();
+		setStuckAt(0);
 		// a file that stopped part-way goes on in Jellyfin from where it got to
-		onFallback(lastTicks.current > 0 ? {...it, resumeTicks: lastTicks.current} : it);
-	}, [onFallback, onToast]);
+		setStuck(lastTicks.current > 0 ? {...it, resumeTicks: lastTicks.current} : it);
+	}, []);
+	const stuckPress = (i: number) => { if (!stuck) return; if (i === 0) onFallback(stuck); else onClose(); };
 
 	useEffect(() => {
 		let live = true;
@@ -145,12 +160,12 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 		setCurrent({...nextEp, resumeTicks: 0});
 	};
 
-	// a stream that never starts hands over to Jellyfin's app
+	// a stream that never starts hands over to Jellyfin's app (counted again from the return to the front)
 	useEffect(() => {
-		if (!stream || started) return undefined;
+		if (!stream || started || away) return undefined;
 		const timer = window.setTimeout(() => { if (now) fallBack(now); }, START_LIMIT_MS);
 		return () => window.clearTimeout(timer);
-	}, [stream, started]);
+	}, [stream, started, away]);
 
 	// ----- Jellyfin hears about it -----
 	/** the last position seen while playing: when the player closes the video may already be emptied, so Stopped reports this */
@@ -173,19 +188,27 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 	useEffect(() => {
 		if (!stream) return undefined;
 		const timer = window.setInterval(() => { if (startedRef.current && video.current) reportProgress(server, stream, pos(), video.current.paused); }, REPORT_EVERY_MS);
-		return () => { window.clearInterval(timer); stopReport(stream); };
+		// this stream's <video> goes with it (the next episode gets a new one): let go of its decoder now, not when it is collected
+		const v = video.current;
+		return () => {
+			window.clearInterval(timer);
+			stopReport(stream);
+			if (v) { v.pause(); v.removeAttribute('src'); v.load(); }
+		};
 	}, [stream]);
-	// the picture freezes after it started (server asleep, network gone): say so, then Jellyfin's app takes over from there
+	// the picture freezes after it started (server asleep, network gone): say so, then Jellyfin's app takes over from there; not while
+	// paused (nothing is waited for) or out of sight
 	const [stalled, setStalled] = useState(false);
 	useEffect(() => {
-		if (!stalled || !now) return undefined;
+		if (!stalled || !now || paused || away) return undefined;
 		const timer = window.setTimeout(() => fallBack(now), STALL_LIMIT_MS);
 		return () => window.clearTimeout(timer);
-	}, [stalled]);
+	}, [stalled, paused, away]);
 	// the TV going to standby or another app in front: pause and say where it stopped
 	useEffect(() => {
 		const onVisibility = () => {
 			const v = video.current;
+			setAway(document.hidden);
 			if (document.hidden && v && stream && startedRef.current) { v.pause(); reportProgress(server, stream, pos(), true); }
 		};
 		document.addEventListener('visibilitychange', onVisibility);
@@ -274,14 +297,49 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 		setMenu(null);
 	};
 
+	// ----- the audio track: the file's tracks switched on the video itself, when the TV's player gives them (audioTracks) and they match
+	// Jellyfin's list; the language picked is kept for the film or the series, and the automatic subtitles follow it -----
+	const [audioMenu, setAudioMenu] = useState<number | null>(null);
+	/** the track playing (its place in stream.audios), -1 while unknown; the button only shows when the tracks can be switched */
+	const [audioAt, setAudioAt] = useState(-1);
+	const [canAudio, setCanAudio] = useState(false);
+	const audios = stream ? stream.audios : [];
+	const enableAudio = (i: number): boolean => {
+		const list = audioTracksOf(video.current);
+		if (!list || list.length !== audios.length || !audios[i]) return false;
+		for (let k = 0; k < list.length; k++) list[k].enabled = k === i;
+		setAudioAt(i);
+		// subtitles chosen by themselves follow the language heard (none on French, English on anything else)
+		if (stream && now && !picked.current) setSub(pickSubtitle(stream.subtitles, audios[i].lang, savedSubtitle(now.seriesId || now.id)));
+		return true;
+	};
+	/** reads the video's tracks once it knows them: whether they can be switched, which one plays, and the language kept for the title */
+	const readAudio = () => {
+		const list = audioTracksOf(video.current);
+		const ok = !!list && audios.length > 1 && list.length === audios.length;
+		setCanAudio(ok);
+		if (!ok || !list || !now) { setAudioAt(-1); return; }
+		let on = -1;
+		for (let k = 0; k < list.length; k++) if (list[k].enabled) { on = k; break; }
+		setAudioAt(on);
+		const want = savedAudio(now.seriesId || now.id);
+		const at = want ? audios.findIndex((a) => (a.lang || '').toLowerCase() === want) : -1;
+		if (at >= 0 && at !== on) enableAudio(at);
+	};
+	const chooseAudio = (i: number) => {
+		if (enableAudio(i) && now) { const lang = (audios[i].lang || '').toLowerCase(); if (lang) saveAudio(now.seriesId || now.id, lang); }
+		setAudioMenu(null);
+	};
+	useEffect(() => { setCanAudio(false); setAudioAt(-1); setAudioMenu(null); }, [stream]);
+
 	// ----- the bar: shown on any key, hidden 4 s after the last one (kept while paused, on the buttons or in the menu) -----
 	const [poke, setPoke] = useState(0);
 	const wake = (keepChain = false) => { setBar(true); setPoke((n) => n + 1); if (!keepChain) chain.current = 0; if (video.current) setTime(video.current.currentTime); };
 	useEffect(() => {
-		if (!bar || paused || zone === 'buttons' || overBar || menu !== null || picker) return undefined;
+		if (!bar || paused || zone === 'buttons' || overBar || menu !== null || audioMenu !== null || picker) return undefined;
 		const timer = window.setTimeout(() => setBar(false), BAR_MS);
 		return () => window.clearTimeout(timer);
-	}, [bar, poke, paused, zone, overBar, menu, picker]);
+	}, [bar, poke, paused, zone, overBar, menu, audioMenu, picker]);
 
 	// ----- the pointer: moving it is a key press for the bar; it hiding (an arrow pressed, or left still) lets go of the bar -----
 	const realPointer = useRealPointer();
@@ -361,10 +419,11 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 		setCurrent(ep);
 	};
 
-	const buttons: Button[] = (['pause', 'subs'] as Button[]).concat(seasons.length && episodes.length > 1 ? ['episodes'] : [], nextEp ? ['next'] : []);
+	const buttons: Button[] = (['pause', 'subs'] as Button[]).concat(canAudio ? ['audio'] : [], seasons.length && episodes.length > 1 ? ['episodes'] : [], nextEp ? ['next'] : []);
 	const press = (b: Button) => {
 		if (b === 'pause') togglePause();
 		else if (b === 'subs') setMenu(Math.max(0, subChoices.findIndex((c) => (c ? !!sub && sub.index === c.index : !sub))));
+		else if (b === 'audio') setAudioMenu(Math.max(0, audioAt));
 		else if (b === 'episodes') openPicker();
 		else if (b === 'next') goNext();
 	};
@@ -388,7 +447,18 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 	};
 
 	const subChoices: (SubTrack | null)[] = ([null] as (SubTrack | null)[]).concat(stream ? stream.subtitles : []);
+	// the subtitle menu's focused row in view: a file with many tracks makes a list taller than the box, which clips it
+	const subList = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		const el = menu !== null && subList.current ? subList.current.children[menu + 1] as HTMLElement | undefined : undefined;
+		if (el) el.scrollIntoView({block: 'nearest'});
+	}, [menu]);
 	const handleKey = useCallback((key: NavKey, e: KeyboardEvent): boolean => {
+		if (stuck) {
+			if (key === 'back') onClose();
+			else if (key === 'up' || key === 'down') setStuckAt(key === 'down' ? 1 : 0);
+			return true;
+		}
 		if (picker) {
 			wake();
 			if (key === 'back') setPicker(null);
@@ -402,6 +472,12 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 				const at = clamp(picker.at + (key === 'right' ? 1 : -1), 0, inSeason.length - 1);
 				setPicker({...picker, at, first: firstFor(at, inSeason.length)});
 			}
+			return true;
+		}
+		if (audioMenu !== null) {
+			wake();
+			if (key === 'back') setAudioMenu(null);
+			else if (key === 'up' || key === 'down') setAudioMenu((m) => clamp((m || 0) + (key === 'down' ? 1 : -1), 0, audios.length - 1));
 			return true;
 		}
 		if (menu !== null) {
@@ -428,10 +504,12 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 		if (key === 'down') { setButton(0); setZone('buttons'); }
 		else if (key === 'left' || key === 'right') setJump((j) => j + (key === 'right' ? 1 : -1) * (e.repeat ? HELD_JUMP_S : JUMP_S));
 		return true;
-	}, [menu, zone, subChoices.length, onClose, card, buttons.length, offset, picker, seasons.length, inSeason.length]);
+	}, [menu, zone, subChoices.length, onClose, card, buttons.length, offset, picker, seasons.length, inSeason.length, stuck, audioMenu, audios.length]);
 	useKeys(handleKey, active);
 	useOkPress({onPress: () => !(overSeek.current && byPointer.current) && once(() => {
-		if (picker) { if (picker.row === 'seasons') setPicker({...picker, row: 'episodes'}); else if (inSeason[picker.at]) pick(inSeason[picker.at]); }
+		if (stuck) stuckPress(stuckAt);
+		else if (picker) { if (picker.row === 'seasons') setPicker({...picker, row: 'episodes'}); else if (inSeason[picker.at]) pick(inSeason[picker.at]); }
+		else if (audioMenu !== null) chooseAudio(audioMenu);
 		else if (menu !== null) { if (menu >= 0) chooseSub(subChoices[menu] || null); }
 		else if (card) cardPress(cardButton);
 		else if (zone === 'buttons') press(buttons[button]);
@@ -462,13 +540,15 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 		// a new video: the previous one's Stopped has gone out with its own position by now
 		lastTicks.current = stream ? stream.startTicks : 0;
 		if (stream && stream.startTicks) v.currentTime = stream.startTicks / 1e7;
+		readAudio();
 	};
 	const onPlaying = () => {
 		setPaused(false);
 		setStalled(false);
 		if (!startedRef.current && stream) { startedRef.current = true; setStarted(true); startedFor.current = stream.playSessionId; reportStart(server, stream, pos()); }
 	};
-	const onPause = () => { setPaused(true); if (stream && startedRef.current) reportProgress(server, stream, pos(), true); };
+	// the pause that comes as a video is let go of (closing, the next episode) is not reported: its Stopped has gone out already
+	const onPause = () => { setPaused(true); if (stream && startedRef.current && stoppedFor.current !== stream.playSessionId) reportProgress(server, stream, pos(), true); };
 	const onTime = () => {
 		const v = video.current;
 		if (!v) return;
@@ -505,13 +585,37 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 	};
 
 	const shown = jump ? clamp(time + jump, 0, duration) : time;
+	const audioOf = (a: {lang?: string; title?: string} | undefined) => (a ? (a.lang ? a.lang.toUpperCase() : a.title || '?') : '?');
 	const subLabel = sub ? (sub.lang ? sub.lang.toUpperCase() : sub.title || '?') : tr('Off');
 	return (
 		<div class="player" onClick={(e) => { if (e.target === e.currentTarget || e.target === video.current) { wake(); once(togglePause); } }}>
 			{stream && <video ref={video} class="player__video" src={stream.url} autoPlay onLoadedMetadata={onMeta} onPlaying={onPlaying}
 				onPause={onPause} onTimeUpdate={onTime} onEnded={onEnded} onWaiting={() => { if (startedRef.current) setStalled(true); }} onError={() => { if (now) fallBack(now); }} />}
-			{!started && <div class="player__loading">{now ? now.title : ''}</div>}
-			{stalled && <div class="player__loading">{tr('Waiting for Jellyfin…')}</div>}
+			{!started && !stuck && (
+				// the opening: the title's picture and a turning ring, until the picture plays (the page is see-through, so it was black)
+				<div class="player__opening">
+					{(() => { const it = now || current; const pic = imageUrl(server, it, 'Backdrop', 1280); return pic ? <img class="player__opening-image" src={pic} alt="" decoding="async" /> : null; })()}
+					<div class="player__opening-text">
+						<span class="player__spinner" />
+						<div class="player__opening-title">{(now || current).title}</div>
+						<div class="player__opening-note">{tr('Opening…')}</div>
+					</div>
+				</div>
+			)}
+			{stuck && (
+				<div class="media-ask" onClick={(e) => e.stopPropagation()}>
+					<div class="media-ask__box">
+						<h2 class="media-ask__title">{tr('Couldn\'t play it here')}</h2>
+						<div class="player__stuck-title">{stuck.title}</div>
+						{[tr('Open it in Jellyfin'), tr('Close')].map((label, i) => (
+							<div key={i} class={`media-ask__row${i === stuckAt ? ' media-ask__row--focused' : ''}`} onMouseEnter={hover(() => setStuckAt(i))} onClick={click(() => stuckPress(i))}>
+								<span>{label}</span>
+							</div>
+						))}
+					</div>
+				</div>
+			)}
+			{stalled && !stuck && <div class="player__loading">{tr('Waiting for Jellyfin…')}</div>}
 			{subLoad && !picker && (subLoad.state === 'pending' || lastTicks.current / 1e7 > subLoad.until) && (
 				<div class={`player__subload${bar ? ' player__subload--raised' : ''}`}>
 					{tr('Downloading subtitles…')}
@@ -533,7 +637,7 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 						<span key={b} class={`player__btn${zone === 'buttons' && i === button ? ' player__btn--focused' : ''}`}
 							onMouseEnter={hover(() => { setZone('buttons'); setButton(i); })} onClick={click(() => { setZone('buttons'); setButton(i); press(b); })}>
 							{b === 'pause' ? (paused ? '▶ ' + tr('Play') : '❚❚ ' + tr('Pause')) : b === 'next' ? tr('Next episode') + ' ›' : b === 'episodes' ? tr('Episodes')
-								: tr('Subtitles') + ' · ' + subLabel}
+								: b === 'audio' ? tr('Audio') + ' · ' + audioOf(audios[audioAt]) : tr('Subtitles') + ' · ' + subLabel}
 						</span>
 					))}
 				</div>
@@ -591,10 +695,26 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 					</div>
 				</div>
 			)}
+			{audioMenu !== null && (
+				<div class="media-ask" onClick={(e) => { e.stopPropagation(); if (e.target === e.currentTarget) setAudioMenu(null); }}>
+					<div class="media-ask__box">
+						<h2 class="media-ask__title">{tr('Audio')}</h2>
+						<div class="media-ask__list">
+							{audios.map((a, i) => (
+								<div key={a.index} class={`media-ask__row${i === audioMenu ? ' media-ask__row--focused' : ''}`} onMouseEnter={hover(() => setAudioMenu(i))} onClick={click(() => chooseAudio(i))}>
+									<span>{a.title || a.lang || '?'}</span>
+									<span class="media-ask__tick">{i === audioAt ? '✓' : ''}</span>
+								</div>
+							))}
+						</div>
+					</div>
+				</div>
+			)}
 			{menu !== null && (
 				<div class="media-ask" onClick={(e) => { e.stopPropagation(); if (e.target === e.currentTarget) setMenu(null); }}>
 					<div class="media-ask__box">
 						<h2 class="media-ask__title">{tr('Subtitles')}</h2>
+						<div class="media-ask__list" ref={subList}>
 						<div class={`media-ask__row${menu === -1 ? ' media-ask__row--focused' : ''}`} onMouseEnter={hover(() => setMenu(-1))}>
 							<span>{tr('Timing')} <span class="player__nudge" onClick={click(() => shiftSubs(-SUB_STEP_S))}>‹</span> <span class="player__nudge" onClick={click(() => shiftSubs(SUB_STEP_S))}>›</span></span>
 							<span>{offset === 0 ? tr('In sync') : `${offset > 0 ? tr('Earlier') : tr('Later')} ${Math.abs(offset).toFixed(2)} s`}</span>
@@ -605,6 +725,7 @@ export function Player ({server, item, active, onClose, onFallback, onToast}: Pr
 								<span class="media-ask__tick">{(c ? !!sub && sub.index === c.index : !sub) ? '✓' : ''}</span>
 							</div>
 						))}
+						</div>
 					</div>
 				</div>
 			)}

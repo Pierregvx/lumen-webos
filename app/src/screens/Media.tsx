@@ -22,6 +22,7 @@ import {useOkPress} from '../hooks/useOkPress';
 import {prepLabel, prepOf, readyIn, usePrepared} from '../lib/prepared';
 import {Poster} from '../components/Poster';
 import {RequestPanel} from '../components/RequestPanel';
+import {QualityPanel} from '../components/QualityPanel';
 import {RatePanel} from '../components/RatePanel';
 import {rate, ratings} from '../lib/ratings';
 import {byGenre, byType, findByTmdb, genres, imageUrl, latest, search as searchJellyfin, type JellyfinServer, type MediaItem} from '../lib/jellyfin';
@@ -31,8 +32,8 @@ import {launchApp} from '../lib/launch';
 import {SYSTEM_APP} from '../config/constants';
 import type {MediaState} from '../hooks/useMedia';
 import {cachedPicks, markPickRequested, picks as aiPicks, recoServer, sendRatings} from '../lib/recos';
-import {catalog as pluginCatalog, library as pluginLibrary, plugins, usePlugins} from '../plugins';
-import type {ActionResult, Chip, ChoiceSpec, FormSpec, Page, PageAction, PageRef, Row, Tile, TitleRef} from '../plugins/api';
+import {catalog as pluginCatalog, catalogName, library as pluginLibrary, plugins, usePlugins} from '../plugins';
+import type {ActionResult, Chip, ChoiceSpec, FormSpec, Page, PageAction, PageRef, RequestFacts, RequestOffer, RequestOptions, Row, Tile, TitleRef} from '../plugins/api';
 import {ChoicePanel} from '../components/ChoicePanel';
 import {FormPanel} from '../components/FormPanel';
 
@@ -64,7 +65,7 @@ interface Place {
 type Kind = 'all' | 'movie' | 'tv';
 const KINDS: {id: Kind; label: string}[] = [{id: 'all', label: 'All'}, {id: 'movie', label: 'Films'}, {id: 'tv', label: 'Series'}];
 /** Lumen's own buttons, the page's button, and a plugin's (its index in the plugins' list) */
-type Button = 'play' | 'trailer' | 'request' | 'status' | 'cast' | 'rate' | 'page' | number;
+type Button = 'play' | 'trailer' | 'request' | 'more' | 'status' | 'cast' | 'rate' | 'page' | number;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 /** « 18 Nov », with the year when it is not this one's */
 function shortDate (iso: string): string {
@@ -82,6 +83,8 @@ function longDate (iso: string): string {
 
 interface Props {
 	state: MediaState;
+	/** a title to open at once (the home row's request, OK on it): a page with the person's requests, its buttons in focus */
+	openRequest?: {title: SeerrTitle; seq: number} | null;
 	/** show Claude's picks (Settings > Films & series > For you row) */
 	forYou: boolean;
 	/** play a library title in Lumen's player */
@@ -163,9 +166,26 @@ function rateTarget (e: Entry | null | undefined): MediaItem | null {
 /** what each tab read last, kept while Lumen runs so the screen opens at once the second time; for one sign-in only */
 const cache: Record<string, Shelf[]> = {};
 let cacheOwner = '';
+/** the titles' full records already read (by entry key: the record and the plugin's chips), so a poster the focus comes back to asks the
+ *  server nothing for a while; emptied when a title's state changes (a request, a plugin's button) */
+const RECORD_MS = 5 * 60000;
+const RECORD_MAX = 50;
+const records = new Map<string, {at: number; more: SeerrTitle; chips?: Chip[]}>();
+function keepRecord (key: string, more: SeerrTitle): void {
+	records.delete(key);
+	records.set(key, {at: Date.now(), more});
+	// the oldest go first (a Map keeps the order things were set in)
+	while (records.size > RECORD_MAX) { const first = records.keys().next(); if (first.done) break; records.delete(first.value); }
+}
 
-function loadLibrary (s: JellyfinServer, onPart: (list: Shelf[]) => void): void {
+/** the TV says it has no network (navigator.onLine is only trusted when false) */
+const offline = () => typeof navigator !== 'undefined' && navigator.onLine === false;
+
+/** `onFail`: Recently added, Films and Series all failed (the server is off, or the network) */
+function loadLibrary (s: JellyfinServer, onPart: (list: Shelf[]) => void, onFail: () => void): void {
 	const list: Shelf[] = [];
+	let fails = 0;
+	const fail = () => { if (++fails === 3) onFail(); };
 	const put = (shelf: Shelf, at: number) => {
 		if (!shelf.items.length) return;
 		list[at] = shelf;
@@ -173,9 +193,9 @@ function loadLibrary (s: JellyfinServer, onPart: (list: Shelf[]) => void): void 
 	};
 	const entries = (items: MediaItem[]) => items.map((it) => fromJellyfin(s, it));
 	const own = () => {
-		latest(s).then((items) => put({id: 'latest', label: 'Recently added', items: entries(items)}, 0), () => undefined);
-		byType(s, 'Movie').then((items) => put({id: 'movies', label: 'Films', items: entries(items)}, 1), () => undefined);
-		byType(s, 'Series').then((items) => put({id: 'series', label: 'Series', items: entries(items)}, 2), () => undefined);
+		latest(s).then((items) => put({id: 'latest', label: 'Recently added', items: entries(items)}, 0), fail);
+		byType(s, 'Movie').then((items) => put({id: 'movies', label: 'Films', items: entries(items)}, 1), fail);
+		byType(s, 'Series').then((items) => put({id: 'series', label: 'Series', items: entries(items)}, 2), fail);
 	};
 	// a plugin's library (its server reads Jellyfin) gives the first three rows; when it fails, Jellyfin is read here
 	const lib = pluginLibrary();
@@ -191,14 +211,16 @@ function loadLibrary (s: JellyfinServer, onPart: (list: Shelf[]) => void): void 
 	}), () => undefined);
 }
 
-function loadDiscover (sr: SeerrServer, onPart: (list: Shelf[]) => void): void {
+/** `onFail`: Seerr's three lists all failed */
+function loadDiscover (sr: SeerrServer, onPart: (list: Shelf[]) => void, onFail: () => void): void {
 	const list: Shelf[] = [];
+	let fails = 0;
 	const lists: {id: 'trending' | 'popular' | 'upcoming'; label: string}[] = [{id: 'trending', label: 'Trending'}, {id: 'popular', label: 'Popular films'}, {id: 'upcoming', label: 'Coming soon'}];
 	lists.forEach((l, i) => discover(sr, l.id).then((titles) => {
 		if (!titles.length) return;
 		list[i] = {id: l.id, label: l.label, items: titles.map(fromSeerr)};
 		onPart(list.filter(Boolean));
-	}, () => undefined));
+	}, () => { if (++fails === lists.length) onFail(); }));
 	// the categories after Seerr's lists, each in its place whatever order they answer in
 	categories(sr, null, (row, at) => {
 		list[lists.length + at] = {id: 'cat:' + row.id, label: row.label, items: row.titles.map(fromSeerr)};
@@ -206,10 +228,12 @@ function loadDiscover (sr: SeerrServer, onPart: (list: Shelf[]) => void): void {
 	});
 }
 
-/** a Seerr status as the hero's button shows it */
-const statusText = (a: Availability, percent?: number) => a === 'downloading' ? `${tr('Downloading')} · ${percent || 0} %` : tr('Requested');
+/** a Seerr status as the hero's button shows it: a request waiting for the administrator says so */
+const statusText = (a: Availability, percent?: number, waiting?: boolean) => a === 'downloading' ? `${tr('Downloading')} · ${percent || 0} %` : tr(waiting ? 'To approve' : 'Requested');
+/** a series' seasons not in the library, not asked and already out: what « + Missing seasons » offers */
+const missingSeasons = (t: SeerrTitle | null): number[] => (t && t.type === 'tv' && t.tmdbId ? (t.seasons || []).filter((x) => x.availability === 'none' && x.aired !== false).map((x) => x.number) : []);
 
-export function Media ({state, forYou: showForYou, onPlay, active, onClose, onToast}: Props) {
+export function Media ({state, openRequest, forYou: showForYou, onPlay, active, onClose, onToast}: Props) {
 	const s = state.jellyfin;
 	// the banners follow what is prepared on the NAS's fast disk
 	usePrepared(active);
@@ -221,14 +245,16 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	const tabs = useMemo((): MediaTab[] => (seerrOn ? ['library', 'discover', 'search'] : ['library', 'search']), [seerrOn]);
 	const [tab, setTab] = useState<MediaTab>('library');
 	const owner = (s ? s.url + s.token : '') + '|' + (cat ? 'plugin' + pluginsNow : sr ? sr.url + sr.key : '');
-	if (owner !== cacheOwner) { Object.keys(cache).forEach((k) => { delete cache[k]; }); cacheOwner = owner; }
+	if (owner !== cacheOwner) { Object.keys(cache).forEach((k) => { delete cache[k]; }); records.clear(); cacheOwner = owner; }
 	const [shelves, setShelves] = useState<Record<string, Shelf[]>>(() => ({...cache}));
 	const [zone, setZone] = useState<'tabs' | 'field' | 'buttons' | 'rows'>('rows');
 	const [rows, setRows] = useState<Record<string, number>>({});
 	// a poster drawn under a resting pointer (Discover opening, a row scrolling in) is not a hover
 	const realPointer = useRealPointer();
 	const [cols, setCols] = useState<Record<string, number>>({});
-	const [button, setButton] = useState(0);
+	/** the focused button, kept by what it is (a button arriving late, Trailer with the full record, does not move the focus onto it); its
+	 *  place stands in when it is gone, and an empty id keeps the place (the first button) */
+	const [focusBtn, setFocusBtn] = useState<{id: string; at: number}>({id: '', at: 0});
 	const [hero, setHero] = useState<Entry | null>(null);
 	/** Seerr's full record of the hero (seasons, trailer, fresh status) */
 	const [more, setMore] = useState<SeerrTitle | null>(null);
@@ -249,6 +275,8 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	const [query, setQuery] = useState('');
 	const [typing, setTyping] = useState(false);
 	const [asking, setAsking] = useState<SeerrTitle | null>(null);
+	/** the request panel's last step (QualityPanel): the title, a series' seasons, what the catalog offers, and its sources as they come */
+	const [choosing, setChoosing] = useState<{title: SeerrTitle; seasons?: number[]; offer: RequestOffer | null; facts?: Promise<RequestFacts | null>} | null>(null);
 	/** the Rate button's panel is up, for this title */
 	const [rating, setRating] = useState<MediaItem | null>(null);
 	/** bumped when a rating is kept, so the Rate button shows the new score */
@@ -258,6 +286,14 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	/** the latest search sent: an older one that answers later is dropped */
 	const searchSeq = useRef(0);
 	const [seerrDown, setSeerrDown] = useState(false);
+	/** bumped by OK on « … is not answering »: the tab is read again */
+	const [retry, setRetry] = useState(0);
+	/** the search: waiting for its answer, or failed (the name of the server that did not answer) */
+	const [searching, setSearching] = useState(false);
+	const [searchDown, setSearchDown] = useState('');
+	/** who Discover, search and requests come from: the plugin's name (Ciné Pierro), or Seerr */
+	const source = (cat && catalogName()) || 'Seerr';
+	const didNotAnswer = () => tr('{name} did not answer').replace('{name}', source);
 	/** the pages opened over the tabs, the last one showing */
 	const [places, setPlaces] = useState<Place[]>([]);
 	const place = places.length ? places[places.length - 1] : null;
@@ -267,15 +303,19 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	/** what the rows' positions are kept under: the tab, or the page over it with its kind */
 	const view = place ? place.key + ':' + kind : tab;
 	const inSearch = tab === 'search' && !place;
+	/** the tab's server did not answer: OK reads it again */
+	const canRetry = !place && ((tab === 'library' && !!s && failed) || (tab === 'discover' && seerrDown));
 
 	const show = useCallback((id: string, list: Shelf[]) => { cache[id] = list; setShelves((all) => ({...all, [id]: list})); }, []);
 
 	useEffect(() => {
 		if (!s) return undefined;
+		// no network: said at once; else after 9 s with no row, or as soon as the first rows all fail
+		if (!cache.library && offline()) setFailed(true);
 		const timer = window.setTimeout(() => { if (!cache.library) setFailed(true); }, 9000);
-		loadLibrary(s, (list) => { show('library', list); setFailed(false); });
+		loadLibrary(s, (list) => { show('library', list); setFailed(false); }, () => { if (!cache.library) setFailed(true); });
 		return () => window.clearTimeout(timer);
-	}, [s && s.token]);
+	}, [s && s.token, retry]);
 	// Discover's first row: the AI picks from the picks server (lib/recos.ts). The last ones kept draw at once; when they are not today's, the
 	// server is asked again (it makes them each morning, so they are usually ready)
 	const [forYou, setForYou] = useState<Shelf | null>(() => {
@@ -300,28 +340,38 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 
 	useEffect(() => {
 		if (!seerrOn || tab !== 'discover' || cache.discover) return undefined;
+		if (offline()) setSeerrDown(true);
 		const timer = window.setTimeout(() => { if (!cache.discover) setSeerrDown(true); }, 9000);
+		const down = () => { if (!cache.discover) setSeerrDown(true); };
 		if (cat) cat.discover((rows) => { show('discover', shelvesOf(rows)); setSeerrDown(false); }, (titles) => {
 			if (!titles || !titles.length || !showForYou) return;
 			if (!forYouShown.current) setRows((all) => ({...all, discover: (all.discover || 0) + 1}));
 			forYouShown.current = true;
 			setForYou({id: 'foryou', label: 'For you', items: titles.map(fromSeerr)});
-		});
-		else if (sr) loadDiscover(sr, (list) => { show('discover', list); setSeerrDown(false); });
+		}, down);
+		else if (sr) loadDiscover(sr, (list) => { show('discover', list); setSeerrDown(false); }, down);
 		return () => window.clearTimeout(timer);
-	}, [sr && sr.key, cat, tab]);
+	}, [sr && sr.key, cat, tab, retry]);
 
 	// search: both servers, a moment after the last key; the library's copy of a title wins
 	useEffect(() => {
 		const text = query.trim();
-		if (text.length < 2) { show('search', []); return undefined; }
+		// « Searching… » from the first key to the answer, not « Nothing found »
+		setSearchDown('');
+		if (text.length < 2) { searchSeq.current++; setSearching(false); show('search', []); return undefined; }
+		setSearching(true);
 		const timer = window.setTimeout(() => {
 			const seq = ++searchSeq.current;
+			let downName = '';
 			Promise.all([
-				s ? searchJellyfin(s, text).catch(() => [] as MediaItem[]) : Promise.resolve([] as MediaItem[]),
-				cat ? cat.search(text).catch(() => [] as SeerrTitle[]) : sr ? searchSeerr(sr, text).catch(() => [] as SeerrTitle[]) : Promise.resolve([] as SeerrTitle[])
+				s ? searchJellyfin(s, text).catch(() => { downName = downName || 'Jellyfin'; return [] as MediaItem[]; }) : Promise.resolve([] as MediaItem[]),
+				cat ? cat.search(text).catch(() => { downName = source; return [] as SeerrTitle[]; })
+					: sr ? searchSeerr(sr, text).catch(() => { downName = source; return [] as SeerrTitle[]; }) : Promise.resolve([] as SeerrTitle[])
 			]).then(([mine, theirs]) => {
 				if (seq !== searchSeq.current) return;
+				setSearching(false);
+				// nothing came and a server failed: say which, not « Nothing found » as if the title did not exist
+				setSearchDown(!mine.length && !theirs.length ? downName : '');
 				const have: Record<string, true> = {};
 				// TMDB numbers films and series apart: match on both
 				mine.forEach((it) => { if (it.tmdbId) have[(it.type === 'Movie' ? 'movie' : 'tv') + it.tmdbId] = true; });
@@ -358,28 +408,57 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	}, [place]);
 	const r = clamp(rows[view] || 0, 0, Math.max(0, list.length - 1));
 	const shelf = list[r];
+	// shelves come in whatever order the servers answer, each in its own place: one landing above the focused shelf would move the
+	// focus onto another. Once the focus has left the top row, it stays on its shelf as the list grows (a key moving it is left alone).
+	const anchor = useRef<{view: string; list: Shelf[]; r: number; id: string}>({view: '', list: [], r: 0, id: ''});
+	useEffect(() => {
+		const was = anchor.current;
+		if (was.view === view && was.list !== list && was.r === r && r > 0 && was.id && (!shelf || shelf.id !== was.id)) {
+			const j = list.findIndex((x) => x.id === was.id);
+			if (j >= 0) { anchor.current = {...was, list, r: j}; setRows((all) => ({...all, [view]: j})); return; }
+		}
+		anchor.current = {view, list, r, id: shelf ? shelf.id : ''};
+	}, [list, r, view]);
 	const colKey = (sh: Shelf) => view + ':' + sh.id;
 	const c = shelf ? clamp(cols[colKey(shelf)] || 0, 0, shelf.items.length - 1) : 0;
 	const item = shelf ? shelf.items[c] : undefined;
 
 	// the large picture and its text follow the focus once it stops moving; a Seerr title then reads its full record
+	// A record read in the last few minutes is used as it is, with no request; a plugin's button asking to read the title again (reread)
+	// keeps what shows until the new record comes, so its buttons do not go and come back under the focus.
+	const readFor = useRef({key: '', reread: 0});
 	useEffect(() => {
 		const timer = window.setTimeout(() => {
+			const key = item ? item.key : '';
+			const again = readFor.current.key === key && readFor.current.reread !== reread;
+			readFor.current = {key, reread};
 			setHero(item || null);
-			setMore(null);
-			setChips(null);
+			if (again) records.delete(key);
+			else { setMore(null); setChips(null); }
+			const kept = key ? records.get(key) : undefined;
+			if (kept && Date.now() - kept.at < RECORD_MS) {
+				setMore(kept.more); setMoreKey(key);
+				if (kept.chips) setChips({key, list: kept.chips});
+				return;
+			}
 			// a library title is read too, for its cast
 			const asked = tmdbOf(item);
-			const key = item ? item.key : '';
 			const ref = refOf(item, null);
 			if (cat && ref) cat.title(ref).then((d) => {
+				keepRecord(key, d);
 				setMore(d); setMoreKey(key);
-				if (cat.chips) cat.chips({...ref, tmdbId: ref.tmdbId || d.tmdbId, details: d}, d).then((list) => setChips({key, list}), () => undefined);
+				if (cat.chips) cat.chips({...ref, tmdbId: ref.tmdbId || d.tmdbId, details: d}, d).then((list) => {
+					const k = records.get(key);
+					if (k && k.more === d) k.chips = list;
+					setChips({key, list});
+				}, () => undefined);
 			}, () => undefined);
-			else if (asked && sr) details(sr, asked).then((d) => { if (d.tmdbId === asked.tmdbId && d.type === asked.type) { setMore(d); setMoreKey(key); } }, () => undefined);
+			else if (asked && sr) details(sr, asked).then((d) => { if (d.tmdbId === asked.tmdbId && d.type === asked.type) { keepRecord(key, d); setMore(d); setMoreKey(key); } }, () => undefined);
 		}, hero ? HERO_AFTER_MS : 0);
 		return () => window.clearTimeout(timer);
 	}, [item && item.key, reread]);
+	// a plugin said its data changed: the records it gave may be old
+	useEffect(() => { records.clear(); }, [pluginsNow]);
 
 	const t = hero && hero.sr ? (more && more.tmdbId === hero.sr.tmdbId ? more : hero.sr) : null;
 	const trailer = hero ? (hero.jf ? hero.jf.trailerYoutubeId : t && t.trailerYoutubeId) : undefined;
@@ -400,11 +479,19 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		if (!hero || hero.brand || hero.person || hero.tile) return [];
 		const first: Button = hero.jf || (t && t.availability === 'available') ? 'play' : t && t.availability === 'none' ? 'request' : 'status';
 		const list: Button[] = trailer ? [first, 'trailer'] : [first];
+		// a series partly here (Severance's season 1, not its season 2): its missing seasons can be asked from its sheet, as on the page
+		if (first === 'play' && seerrOn && missingSeasons(heroMore).length) list.push('more');
 		if (pageAction) list.push('page');
 		// Cast sits with the other buttons on every title Seerr knows; a title with no actors says so on press
 		const withCast = tmdbOf(hero) ? list.concat('cast') : list;
 		return (rateTarget(hero) ? withCast.concat('rate') : withCast).concat(actions.map((_, i) => i));
-	}, [hero, t, trailer, actions, pageAction]);
+	}, [hero, t, trailer, actions, pageAction, heroMore, seerrOn]);
+	/** what each button is, apart from its place: a plugin's by its plugin and id */
+	const buttonIds = buttons.map((b) => (typeof b === 'number' ? 'a:' + (actions[b] ? actions[b].plugin + '/' + actions[b].id : b) : b));
+	const foundBtn = focusBtn.id ? buttonIds.indexOf(focusBtn.id) : -1;
+	const button = foundBtn >= 0 ? foundBtn : clamp(focusBtn.at, 0, Math.max(0, buttons.length - 1));
+	/** the focus on the button at this place (0: the first, whatever it becomes) */
+	const setButton = (i: number) => setFocusBtn({id: i > 0 ? buttonIds[i] || '' : '', at: i});
 	/** the score already given to the hero (null: skipped, undefined: none) */
 	const heroTarget = rateTarget(hero);
 	const heroScore = useMemo(() => {
@@ -448,6 +535,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		const asked = (sh: Shelf): Shelf => ({...sh, items: sh.items.map((e) => (e.sr && e.sr.type === type && e.sr.tmdbId === tmdbId && e.sr.availability === 'none' ? {...e, sr: {...e.sr, availability: 'requested' as Availability}} : e))});
 		setPlaces((all) => all.map((p) => ({...p, shelves: p.shelves ? p.shelves.map(asked) : null, more: p.more ? p.more.map(asked) : undefined})));
 		markPickRequested(type, tmdbId);
+		records.clear();
 		setForYou((f) => (f ? {...f, items: f.items.map((e) => (e.sr && e.sr.type === type && e.sr.tmdbId === tmdbId && e.sr.availability === 'none' ? {...e, sr: {...e.sr, availability: 'requested' as Availability}} : e))} : f));
 		setMore((m) => (m && m.type === type && m.tmdbId === tmdbId ? {...m, availability: 'requested'} : m));
 		setHero((h) => (h && h.sr && h.sr.type === type && h.sr.tmdbId === tmdbId ? {...h, sr: {...h.sr, availability: 'requested'}} : h));
@@ -455,21 +543,38 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	}, [state]);
 
 	const sending = useRef('');
-	const ask = useCallback((title: SeerrTitle, seasons?: number[]) => {
+	const ask = useCallback((title: SeerrTitle, seasons?: number[], options?: RequestOptions) => {
 		if (!seerrOn || sending.current === title.type + title.tmdbId) return;
 		sending.current = title.type + title.tmdbId;
-		(cat ? cat.request(title, seasons).catch(() => 'Seerr did not take the request') : sr ? request(sr, title, seasons) : Promise.resolve('Seerr did not take the request')).then((r) => {
+		(cat ? cat.request(title, seasons, options).catch(() => 'Seerr did not take the request') : sr ? request(sr, title, seasons) : Promise.resolve('Seerr did not take the request')).then((r) => {
 			sending.current = '';
-			if (r === true) { markRequested(title.type, title.tmdbId); onToast(tr('Requested') + ' · ' + title.title); }
-			else onToast(tr(r), 'error');
+			if (r !== true) { onToast(tr(r), 'error'); return; }
+			markRequested(title.type, title.tmdbId);
+			// a series' seasons asked: their chips and « + Missing seasons » follow (the record is read again)
+			if (seasons && seasons.length) {
+				setMore((m) => (m && m.type === title.type && m.tmdbId === title.tmdbId && m.seasons ? {...m, seasons: m.seasons.map((x) => (seasons.indexOf(x.number) >= 0 ? {...x, availability: 'requested' as Availability} : x))} : m));
+				setReread((n) => n + 1);
+			}
+			onToast(tr('Requested') + ' · ' + title.title + (seasons && seasons.length === 1 ? ` · ${tr('Season')} ${seasons[0]}` : ''));
 		});
 	}, [sr, cat, markRequested, onToast]);
 
+	/** the request's last step: the pictures and « Right now » a catalog offers (Ciné Pierro), or a plain confirmation; a series' seasons
+	 *  without an offer were confirmed by their own panel, so they go at once */
+	const choose = (title: SeerrTitle, seasons?: number[]) => {
+		const offer = cat && cat.requestOffer ? cat.requestOffer(title) || null : null;
+		if (!offer && seasons && seasons.length) { ask(title, seasons); return; }
+		const facts = offer && cat && cat.requestFacts ? cat.requestFacts(title, seasons) : undefined;
+		setChoosing({title, seasons, offer, facts});
+	};
+
 	/** a series: the panel needs its seasons, which only the full record has */
 	const askSeasons = (title: SeerrTitle) => {
-		if (title.seasons) { setAsking(title); return; }
+		// a series Seerr gives no seasons for: all of it, after the last step
+		const open = (d: SeerrTitle) => ((d.seasons || []).some((x) => x.availability === 'none') ? setAsking(d) : choose(d));
+		if (title.seasons) { open(title); return; }
 		const read = cat ? cat.title({type: title.type, title: title.title, tmdbId: title.tmdbId, here: false}) : sr ? details(sr, title) : null;
-		if (read) read.then((d) => setAsking(d), () => onToast(tr('Seerr did not answer'), 'error'));
+		if (read) read.then(open, () => onToast(didNotAnswer(), 'error'));
 	};
 
 	/** a page over the tabs: shown at once (its shelves, or Loading…), filled when they come */
@@ -499,11 +604,25 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		setHero(null);
 		setButton(0);
 		if (later) later.then((list) => setPlaces((all) => all.map((p) => (p.key === key ? {...p, shelves: list} : p))), () => {
-			onToast(tr('Seerr did not answer'), 'error');
+			onToast(didNotAnswer(), 'error');
 			setPlaces((all) => all.filter((p) => p.key !== key));
 		});
 	};
 	const closePlace = () => { setPlaces((all) => all.slice(0, -1)); setHero(null); setZone('rows'); };
+	// OK on a request of the home row: a page of the person's requests over the tabs, that title's buttons in focus (its trailer, its
+	// cast, where it is: Requested, To approve, Downloading · 37 %); Back returns to its row, then to the tabs, then home
+	useEffect(() => {
+		if (!openRequest) return;
+		const asked = openRequest.title;
+		const same = (x: SeerrTitle) => x.type === asked.type && x.tmdbId === asked.tmdbId;
+		const items = (state.pending.some(same) ? state.pending : [asked]).map(fromSeerr);
+		const at = Math.max(0, items.findIndex((e) => !!e.sr && same(e.sr)));
+		const key = 'requests:' + openRequest.seq;
+		openPlace(key, tr('Your requests'), [{id: 'requests', label: 'Your requests', items}]);
+		setCols((all) => ({...all, [key + ':all:requests']: at}));
+		setHero(items[at]);
+		setZone('buttons');
+	}, [openRequest && openRequest.seq]);
 	const rowsOf = (first: {id: string; label: string; titles: SeerrTitle[]}, second: {id: string; label: string; titles: SeerrTitle[]}): Shelf[] =>
 		[first, second].filter((x) => x.titles.length).map((x) => ({id: x.id, label: x.label, items: x.titles.map(fromSeerr)}));
 	/** OK on a platform's logo or an actor: their page */
@@ -538,8 +657,10 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		}
 		else if (b === 'trailer' && trailer) openTrailer(trailer).catch(() => onToast(tr('Couldn\'t open YouTube'), 'error'));
 		else if (b === 'play') play(e);
-		else if (b === 'request' && t) { if (t.type === 'tv') askSeasons(t); else ask(t); }
-		else if (b === 'status' && t) onToast(statusText(t.availability, t.percent));
+		else if (b === 'request' && t) { if (t.type === 'tv') askSeasons(t); else choose(t); }
+		// only the seasons missing: the panel lists the record's seasons that are not here
+		else if (b === 'more' && heroMore) setAsking({...heroMore, seasons: (heroMore.seasons || []).filter((x) => x.aired !== false)});
+		else if (b === 'status' && t) onToast(statusText(t.availability, t.percent, t.pendingApproval));
 		else if (b === 'rate') setRating(rateTarget(e));
 	};
 
@@ -559,7 +680,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	const stopTyping = () => { setTyping(false); if (field.current) field.current.blur(); };
 
 	const handleKey = useCallback((key: NavKey): boolean => {
-		if (asking || rating || form || choice) return true;    // a panel has the keys
+		if (asking || choosing || rating || form || choice) return true;    // a panel has the keys
 		if (typing) {
 			if (key === 'back') { stopTyping(); return true; }
 			if (key === 'down') { stopTyping(); setZone(list.length ? 'rows' : 'field'); return true; }
@@ -596,7 +717,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		if (zone === 'buttons') {
 			if (key === 'up') setZone(inSearch ? 'field' : 'tabs');
 			else if (key === 'down') setZone(list.length ? 'rows' : 'buttons');
-			else if (key === 'left' || key === 'right') setButton((b) => clamp(b + (key === 'right' ? 1 : -1), 0, buttons.length - 1));
+			else if (key === 'left' || key === 'right') setButton(clamp(button + (key === 'right' ? 1 : -1), 0, buttons.length - 1));
 			return true;
 		}
 		if (!shelf) { if (key === 'up') setZone(inSearch ? 'field' : 'tabs'); return true; }
@@ -604,13 +725,14 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 		else if (key === 'down') setRows((all) => ({...all, [view]: clamp(r + 1, 0, list.length - 1)}));
 		else if (key === 'left' || key === 'right') setCols((all) => ({...all, [colKey(shelf)]: clamp(c + (key === 'right' ? 1 : -1), 0, shelf.items.length - 1)}));
 		return true;
-	}, [asking, rating, form, choice, typing, zone, tab, tabs, hero, buttons, list.length, shelf, r, c, onClose, place, view, inSearch, both, kind]);
+	}, [asking, choosing, rating, form, choice, typing, zone, tab, tabs, hero, buttons, button, buttonIds.join(), list.length, shelf, r, c, onClose, place, view, inSearch, both, kind]);
 	useKeys(handleKey, active);
 
 	useOkPress({onPress: () => {
-		if (asking || rating || form || choice || typing) return;
+		if (asking || choosing || rating || form || choice || typing) return;
 		if (zone === 'field') startTyping();
 		else if (zone === 'buttons') press(buttons[button], hero);
+		else if (zone === 'rows' && !list.length && canRetry) { setFailed(false); setSeerrDown(false); setRetry((n) => n + 1); }
 		else if (zone === 'rows' && item && (item.brand || item.person || item.tile)) openEntry(item);
 		else if (zone === 'rows' && item) {
 			// OK on a poster, in any row: its buttons in the hero (Play first, so OK twice plays); Back returns to the row
@@ -618,8 +740,16 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 			setButton(0);
 			setZone('buttons');
 		}
-	}, onLongPress: () => undefined}, active && !asking && !rating && !form && !choice && !typing);
+	}, onLongPress: () => undefined}, active && !asking && !choosing && !rating && !form && !choice && !typing);
 
+	// the buttons are a row that scrolls: the one in focus is kept in view (many plugin actions do not fit the screen)
+	useEffect(() => {
+		const row = document.querySelector('.media__buttons') as HTMLElement | null;
+		const on = row && row.querySelector('.media-btn--focused') as HTMLElement | null;
+		if (!row || !on) return;
+		if (on.offsetLeft < row.scrollLeft + 20) row.scrollLeft = Math.max(0, on.offsetLeft - 20);
+		else if (on.offsetLeft + on.offsetWidth > row.scrollLeft + row.clientWidth - 20) row.scrollLeft = on.offsetLeft + on.offsetWidth - row.clientWidth + 20;
+	}, [zone, button, buttons]);
 	// the hero picture: the new one fades in over the last one; a title with no picture clears it, so it never shows the one before's
 	const heroUrl = hero && hero.backdropUrl || '';
 	const [pictures, setPictures] = useState({now: '', under: ''});
@@ -636,9 +766,12 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 	const label = (b: Button) => typeof b === 'number' ? (actions[b] ? tr(actions[b].label) : '') : b === 'page' ? (pageAction ? tr(pageAction.label) : '')
 		: b === 'play' ? '▶ ' + tr(hero && hero.jf && hero.jf.progress ? 'Resume' : 'Play')
 		: b === 'trailer' ? tr('Trailer') : b === 'cast' ? tr('Cast') : b === 'rate' ? (typeof heroMine === 'number' ? `★ ${heroMine}/10` : '☆ ' + tr('Rate'))
-		: b === 'request' ? '+ ' + tr('Request') : t ? statusText(t.availability, t.percent) : '';
-	const empty = place ? (place.shelves ? 'Nothing found' : 'Loading…') : tab === 'library' ? (!s ? 'Sign in to Jellyfin in Settings > Films & series' : failed ? 'Jellyfin is not answering' : 'Loading…')
-		: tab === 'discover' ? (seerrDown ? 'Seerr is not answering' : 'Loading…') : query.trim().length < 2 ? 'Type a title' : 'Nothing found';
+		: b === 'request' ? '+ ' + tr('Request') : b === 'more' ? '+ ' + tr('Missing seasons') : t ? statusText(t.availability, t.percent, t.pendingApproval) : '';
+	/** « Ciné Pierro is not answering », or that the TV has no network */
+	const notAnswering = (name: string) => (offline() ? tr('No network: check the TV\'s connection') : tr('{name} is not answering').replace('{name}', name));
+	const emptyText = place ? tr(place.shelves ? 'Nothing found' : 'Loading…') : tab === 'library' ? (!s ? tr('Sign in to Jellyfin in Settings > Films & series') : failed ? notAnswering('Jellyfin') : tr('Loading…'))
+		: tab === 'discover' ? (seerrDown ? notAnswering(source) : tr('Loading…'))
+		: query.trim().length < 2 ? tr('Type a title') : searching ? tr('Searching…') : searchDown ? notAnswering(searchDown) : tr('Nothing found');
 
 	return (
 		<div class={`screen screen--media screen--media-${tab}`}>
@@ -682,7 +815,7 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 					</div>
 				</div>
 			)}
-			{!list.length && <div class="media__empty">{tr(empty)}</div>}
+			{!list.length && <div class="media__empty">{emptyText}{canRetry && <div class="media__retry">{tr('OK to try again')}</div>}</div>}
 			{tab === 'discover' && !place && showForYou && forYouNote && <div class="media__note">{tr(forYouNote)}</div>}
 			<div class="media__rows">
 				<div class="media__track" style={{transform: `translateY(${-r * ROW_STEP}px)`}}>
@@ -695,7 +828,8 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 								<h2 class="media__label">{tr(sh.label)}</h2>
 								<div class="media__strip" style={{transform: `translateX(${-offset}px)`}}>
 									{sh.items.map((e, k) => (
-										<Poster key={e.key} model={{key: e.key, title: e.title, imageUrl: e.posterUrl, availability: e.sr ? e.sr.availability : undefined, percent: e.sr && e.sr.percent, logo: !!e.brand || !!(e.tile && e.tile.logo),
+										<Poster key={e.key} model={{key: e.key, title: e.title, imageUrl: e.posterUrl, availability: e.sr ? e.sr.availability : undefined, percent: e.sr && e.sr.percent,
+													declined: !!e.sr && !!e.sr.declined, waiting: !!e.sr && !!e.sr.pendingApproval, logo: !!e.brand || !!(e.tile && e.tile.logo),
 												tile: !!e.tile && !e.tile.logo, mine: scoreOf(e), date: e.date ? shortDate(e.date) : undefined, ...quietOf(e)}}
 											focused={zone === 'rows' && i === r && k === at} load={near && k >= at - FOCUS_COL - 1 && k <= at + 8}
 											onHover={() => { if (!realPointer.current) return; setZone('rows'); setRows((all) => ({...all, [view]: i})); setCols((all) => ({...all, [colKey(sh)]: k})); }}
@@ -707,8 +841,10 @@ export function Media ({state, forYou: showForYou, onPlay, active, onClose, onTo
 					})}
 				</div>
 			</div>
-			{rating && <RatePanel title={rating.title} active={active} change start={typeof heroScore === 'number' ? heroScore : undefined} onDone={doneRating} />}
-			{asking && <RequestPanel title={asking} active={active} onRequest={(seasons) => { ask(asking, seasons); setAsking(null); }} onClose={() => setAsking(null)} />}
+			{rating && <RatePanel title={rating.title} active={active} change start={heroMine} onDone={doneRating} />}
+			{asking && <RequestPanel title={asking} active={active} onRequest={(seasons) => { const x = asking; setAsking(null); choose(x, seasons); }} onClose={() => setAsking(null)} />}
+			{choosing && <QualityPanel title={choosing.title} seasons={choosing.seasons} offer={choosing.offer} facts={choosing.facts} active={active}
+				onRequest={(options) => { const x = choosing; setChoosing(null); ask(x.title, x.seasons, options); }} onClose={() => setChoosing(null)} />}
 			{form && <FormPanel form={form} active={active} onClose={() => setForm(null)}
 				onSend={(option, text) => form.send(option, text).then((r) => { setForm(null); follow(r, hero); }, failedAction)} />}
 			{choice && <ChoicePanel title={choice.title} note={choice.note ? tr(choice.note) : undefined} rows={choice.rows.map((x) => tr(x))} active={active} onClose={() => setChoice(null)}
