@@ -43,6 +43,9 @@ export interface MediaItem {
 	backdropOf?: string;
 	thumbOf?: string;
 	primaryOf?: string;
+	/** a poster given whole, drawn in place of Jellyfin's Primary (a plugin's library: its own choice of poster, e.g. TMDB's in another
+	 *  language than Jellyfin's) */
+	posterUrl?: string;
 	/** an episode's own picture (its Primary is a still from it, not a poster) */
 	stillOf?: string;
 }
@@ -299,6 +302,7 @@ export function nextEpisode (s: JellyfinServer, seriesId: string): Promise<Media
 /** `Still` is an episode's own picture, else its series' Thumb. */
 export function imageUrl (s: JellyfinServer, item: MediaItem, kind: 'Primary' | 'Backdrop' | 'Thumb' | 'Still', width: number): string {
 	if (kind === 'Still') return item.stillOf ? `${s.url}/Items/${item.stillOf}/Images/Primary?fillWidth=${width}&quality=80` : imageUrl(s, item, 'Thumb', width);
+	if (kind === 'Primary' && item.posterUrl) return item.posterUrl;
 	const of = kind === 'Backdrop' ? item.backdropOf : kind === 'Thumb' ? item.thumbOf || item.backdropOf : item.primaryOf;
 	if (!of) return '';
 	const k = kind === 'Thumb' && !item.thumbOf ? 'Backdrop' : kind;

@@ -122,7 +122,7 @@ export interface CatalogSource {
 }
 
 /** The library's rows as Lumen's own Jellyfin items (their ids are Jellyfin's, so a title opens and plays as before; images are drawn from
- *  `primaryOf` / `backdropOf` with the Jellyfin server Lumen is signed in to). */
+ *  `primaryOf` / `backdropOf` with the Jellyfin server Lumen is signed in to; `posterUrl`, when set, is drawn as the poster instead). */
 export interface LibraryRows { resume: MediaItem[]; latest: MediaItem[]; movies: MediaItem[]; series: MediaItem[] }
 export interface LibrarySource { read: () => Promise<LibraryRows> }
 /** the picture a request is made in: the best that comes, or a resolution */
